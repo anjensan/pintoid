@@ -28,7 +28,7 @@
 
 (defn ws-handler [req]
   (println "connection from" (:remote-addr req))
-  (add-new-client-connection wsc))
+  (add-new-client-connection (:ws-channel req)))
 
 
 (defroutes app-routes

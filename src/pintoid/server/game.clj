@@ -40,7 +40,7 @@
 
 (defmacro world-let!
   [[s] & body]
-  `(send world (fn [~s] ~@body))))
+  `(send world (fn [~s] ~@body)))
 
 
 (defmacro world->!

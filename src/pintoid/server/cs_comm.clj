@@ -32,15 +32,6 @@
   (swap! client-chans dissoc pid))
 
 
-(defn add-new-client-connection [req]
-  (let [pid (swap! clients-counter inc)
-        ws-channel (:ws-channel req)]
-    (swap! client-chans assoc pid ws-channel)
-    (spawn-wschan-reading-loop pid ws-channel)
-    (handle-client-message pid {:cmd :connected :req req})
-    pid))
-
-
 (defn handle-client-error [pid cmd error]
   (handle-client-message pid {:cmd cmd :error error}))
 
@@ -55,6 +46,15 @@
             (recur))
           (handle-client-error pid :failure error)))
       (handle-client-error pid :disconnect nil))))
+
+
+(defn add-new-client-connection [req]
+  (let [pid (swap! clients-counter inc)
+        ws-channel (:ws-channel req)]
+    (swap! client-chans assoc pid ws-channel)
+    (spawn-wschan-reading-loop pid ws-channel)
+    (handle-client-message pid {:cmd :connected :req req})
+    pid))
 
 
 ;; ---
@@ -74,24 +74,23 @@
 
 ;; --- handlers here!
 
-(defmethod handle-command :failure [pid params]
+(defmethod handle-client-message :failure [pid params]
   (println "client failure" (:error params)))
 
 
-(defmethod handle-command :connected [pid m]
+(defmethod handle-client-message :connected [pid m]
   (println "new player" pid)
   ;; TODO: add player to game
   )
 
 
-(defmethod handle-command :disconnect [pid _]
+(defmethod handle-client-message :disconnect [pid _]
   (println "player" pid "disconnected")
   ;; TODO: remove player from game
   (drop-client-connection pid))
 
 
-(defmethod handle-command :move-player [pid m]
-  (println "move player" pid "by", (:dx params 0) (:dy params 0))
+(defmethod handle-client-message :move-player [pid m]
+  (println "move player" pid "by", (:dx m 0) (:dy m 0))
   ;; TODO: move player
   )
-
