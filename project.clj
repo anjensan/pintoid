@@ -9,7 +9,7 @@
                  [jarohen/chord "0.4.2"]
                  [compojure/compojure "1.2.0"]
                  [hiccup/hiccup "1.0.5"]
-                 [prismatic/dommy "0.1.3"]]
+                 [prismatic/dommy "1.0.0"]]
 
   :plugins [[lein-pdo "0.1.1"]
             [lein-cljsbuild "1.0.3"]
@@ -32,7 +32,7 @@
   {
    :builds
    [{:source-paths ["src"]
-     :compiler {:output-to "target/resources/js/myfaga_proto.js"
+     :compiler {:output-to "target/resources/js/pintoid.js"
                 :optimizations :whitespace
                 :pretty-print true
                 :externs ["resources/js/pixi.js"]
