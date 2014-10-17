@@ -1,12 +1,13 @@
 (ns pintoid.server.handler
-   (:require
-    [ring.util.response :refer [response redirect]]
-    [compojure.core :refer [defroutes GET POST]]
-    [compojure.route :refer [resources]]
-    [chord.http-kit :refer [wrap-websocket-handler]]
-    [hiccup.page :refer [html5 include-js include-css]]
-    [hiccup.form :refer [form-to email-field submit-button]]
-    ))
+  (:use [pintoid.server.cs-comm])
+  (:require
+   [ring.util.response :refer [response redirect]]
+   [compojure.core :refer [defroutes GET POST]]
+   [compojure.route :refer [resources]]
+   [chord.http-kit :refer [wrap-websocket-handler]]
+   [hiccup.page :refer [html5 include-js include-css]]
+   [hiccup.form :refer [form-to email-field submit-button]]
+   ))
 
 
 (defn game-page []
@@ -26,9 +27,8 @@
 
 
 (defn ws-handler [req]
-  (println "New WS connection" req)
-  ;; TODO: spawn player handler
-  )
+  (println "connection from" (:remote-addr req))
+  (add-new-client-connection wsc))
 
 
 (defroutes app-routes
