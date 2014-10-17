@@ -1,6 +1,6 @@
 {
  :frodo/config
  {:web
-  {:port 3000 :handler pintoid.server.core/app}
-  :nrepl {:port 8080 :cljs-repl? true}}
+  {:port 8080 :handler pintoid.server.core/app}
+   :nrepl {:port 7888 :cljs-repl? true}}
  }

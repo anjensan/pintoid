@@ -9,7 +9,7 @@
     ))
 
 
-(defn render-game-page []
+(defn game-page []
   (html5
    [:head
     [:title "Pintoid"]
@@ -21,13 +21,8 @@
     ]))
 
 
-(defn render-index-page []
+(defn index-page []
   (redirect "/game"))
-
-
-(defn handle-gogame-form [{email "email" :as xxx}]
-  ; put 'email' to session & redirect to game
-  (assoc (redirect "/game") :session {:email email}))
 
 
 (defn ws-handler [req]
@@ -37,9 +32,9 @@
 
 
 (defroutes app-routes
-  (GET "/" [] (response (render-index-page)))
+  (GET "/" [] (page-index)))
   (GET "/ws" [] (-> ws-handler (wrap-websocket-handler {:format :json})))
-  (GET "/game" {p :params} (response (render-game-page)))
+  (GET "/game" {p :params} (page-game)))
   (resources "/js" {:root "js"})
   (resources "/img" {:root "img"})
   (resources "/css" {:root "css"}))
