@@ -83,14 +83,17 @@
 
 
 (defn- handle-new-entities [w ss]
+  :todo
   w)
 
 
 (defn- handle-rem-entities [w ss]
+  :todo
   w)
 
 
 (defn- handle-upd-entities [w ss]
+  :todo
   w)
 
 
@@ -115,7 +118,6 @@
 (defn update-entity! [eid estate1 when1 estate2 when2]
   (let [old-xy (:xy estate1)
         new-xy (:xy estate2)]
-    ;; FIXME: obj SHOLD be LAZY PROXY!!!
     (when (not= old-xy new-xy)
       (let [obj (resolve-entity-object eid)]
         (linear-move! nil obj when1 when2 old-xy new-xy)))))

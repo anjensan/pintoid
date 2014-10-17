@@ -8,8 +8,9 @@
         [pintoid.client.graphics :only
          [init-pixi-renderer
           render-graphics!
-          ]])
-
+          ]]
+        [pintoid.client.uinput :only
+         [init-user-input]])
   (:require
    [chord.client :refer [ws-ch]]
    [cljs.core.async :refer [<! >! close! timeout]]
@@ -34,9 +35,14 @@
 
 ;; client <> server websocket
 (def server-ws-channel nil)
+(def websocket-url
+  (let [wl js/window.location]
+    (str "ws://" (.-host wl) ":" (.-port wl) "/ws")))
 
 
-(defn panic-app [msg]
+;; --
+
+(defn panic! [msg]
   ;; TODO: stop drawing-loop
   (d/replace-contents!
    (sel1 :#content)
@@ -45,19 +51,38 @@
     (pr-str msg)]))
 
 
+(defmulti handle-server-message :cmd)
+
+
+(defmethod handle-server-message :default [msg]
+  (println "unknown server message" msg))
+
+
 (defn receive-server-messages [ws-chan]
-  ;; TODO
-  )
+  (go-loop []
+    (when-let [{:keys [message error]} (<! ws-chan)]
+      (if error
+        (panic! error)
+        (do
+          (handle-server-message message)
+          (recur))))))
 
 
 (defn send-message-to-server [msg]
-  ;; TODO
-  )
+  (when-let [c server-ws-channel]
+    (go (>! c msg))))
 
 
 (defn init-server-communication []
-  ;; TODO
-  )
+  (go
+    (let [{:keys [ws-channel error]}
+          (<! (ws-ch websocket-url {:format :json}))]
+      (if error
+        (panic! error)
+        (do
+          (set! server-ws-channel ws-channel)
+          (receive-server-messages ws-channel))))))
+
 
 (defn handle-keydown [e]
   (case (-.keyCode e)
@@ -98,7 +123,7 @@
 (defn window-on-load []
   (js/alert "pindroid loaded")
   (init-server-communication)
-  (init-keybindings)
+  (init-user-input)
   (start-drawing-loop))
 
 

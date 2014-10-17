@@ -41,23 +41,36 @@
 
 ;; ---
 
+(defn load-texture [n]
+  (let [url (str "/img/" (name n) ".png")]
+    (.fromImage js/PIXI.Texture url)))
+
+
+(defn create-sprite [texture-name [x y]]
+  (let [t (load-texture texture-name)
+        s (js/PIXI.Sprite. t)
+        p (.-position s)]
+    (set! (.-x p) x)
+    (set! (.-y p) y)
+    s))
+
+(defn add-to-gamefield! [pobj]
+  (.addChild pixi-gamefield pobj)
+  pobj)
+
+  
 (defmulti create-entity-pixi-object :type)
 
 (defmethod create-entity-pixi-object :default [entity]
-  (let [img-uri (:sprite-url entity default-strite-url)
-        texture (.fromImage js/PIXI.Texture img-uri)
-        pobj (js/PIXI.Sprite. texture)
-        position (.-position pobj)
-        ;; FIXME
-        [x y] (:xy entity [0 0])
-        [w h] (:wh entity [100 100])
-        ]
-    (set! (.-width pobj) w)
-    (set! (.-height pobj) h)
-    (set! (.-x position) x)
-    (set! (.-y position) y)
-    (.addChild pixi-gamefield pobj)
-    pobj))
+  (let [texture (:texture entity :clojure)
+        xy (:xy entity [0 0])
+        sprite (create-sprite texture xy)]
+    (add-to-gamefield! sprite)))
+
+
+(defmethod create-entity-pixi-object :clojure [entity]
+  (add-to-gamefield!
+   (create-sprite :clojure (:xy entity))))
 
 
 (defmethod create-entity-pixi-object :bot [entity]
