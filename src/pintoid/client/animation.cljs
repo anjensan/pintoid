@@ -11,6 +11,7 @@
 
 ;; completely skip outdated animations
 (def max-allowed-animation-lag 1000)
+(def max-allowed-actions-lag 1000)
 
 ;; current (last) *animation* time
 (def last-animation-time 0)
@@ -20,13 +21,29 @@
 (def active-animations (array))
 
 ;; anim-start-time (t1) => array of [aid [t1 t2 anim-fn! finish-anim-fn!]]
+(def pending-actions-map (array))
 (def pending-animaitons-map (array))
 
 ;; sorted list of keys from #'pending-animaitons-map
+(def pending-actions-times (array))
 (def pending-animaitons-times (array))
 
 
+(defn add-action!
+  [t act-fn!]
+  (let [tx (long t)
+        al (aget pending-actions-map tx)]
+    (if al
+      (.push al act-fn!)
+      (let [al' (array)]
+        (aset pending-actions-map tx al')
+        (.push al' (array act-fn!))
+        (.push pending-actions-times tx)
+        (.sort pending-actions-times -)))))
+
+
 (defn- add-pending-animation! [aid t avec]
+  ;; FIXME: refactor, use #'add-action!
   (let [tx (long t)
         al (aget pending-animaitons-map tx)]
     (if al
@@ -54,6 +71,17 @@
 (defn process-animations! [time]
 
   ;; (println time ">>>" pending-animaitons-times)
+
+  ;; run pending actions
+  (loop []
+    (when-let [t (first pending-actions-times)]
+      (when (<= t time)
+        (when (>= t (- time max-allowed-actions-lag))
+          (doseq [act-fn! (aget pending-actions-map t)]
+            (act-fn!)))
+        (js-delete pending-actions-map t)
+        (.shift pending-actions-times)
+        (recur))))
 
   ;; move some animations from pending state to active
   (loop []
