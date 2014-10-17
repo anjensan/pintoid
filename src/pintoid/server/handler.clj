@@ -32,9 +32,10 @@
 
 
 (defroutes app-routes
-  (GET "/" [] (page-index)))
-  (GET "/ws" [] (-> ws-handler (wrap-websocket-handler {:format :json})))
-  (GET "/game" {p :params} (page-game)))
+  (GET "/" [] (index-page))
+  (GET "/ws" [] (-> ws-handler
+                    (wrap-websocket-handler {:format :json})))
+  (GET "/game" {p :params} (game-page))
   (resources "/js" {:root "js"})
   (resources "/img" {:root "img"})
   (resources "/css" {:root "css"}))
