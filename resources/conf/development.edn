@@ -1,0 +1,6 @@
+{
+ :frodo/config
+ {:web
+  {:port 3000 :handler myfaga-proto.server.handler/app}
+  :nrepl {:port 7888 :cljs-repl? true}}
+ }
