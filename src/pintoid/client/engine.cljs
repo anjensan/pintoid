@@ -1,6 +1,12 @@
 (ns pintoid.client.engine
-  (:use [pintoid.client.animation]
-        [pintoid.client.graphics]
+  (:use [pintoid.client.animation :only
+         [add-action!
+          defer-action!
+          linear-move!]]
+        [pintoid.client.graphics :only
+         [create-entity-pixi-object
+          move-player-camera!
+          ]]
         [clojure.walk :only [keywordize-keys]]))
 
 
@@ -46,7 +52,7 @@
          (handle-new-entities ss)
          (handle-upd-entities ss)
          (update-player ss)
-         (update-time ssk)
+         (update-time ss)
          (run-actions!)))))
 
 
@@ -61,7 +67,7 @@
 
 (defn run-actions! [w]
   (let [as (:actions w)]
-    (dorun [a as] (a))
+    (doseq [a as] (a))
     (assoc w :actions ())))
                 
 
@@ -101,7 +107,7 @@
      )))
 
 
-(defn add-entity! [eid when entity]s
+(defn add-entity! [eid when entity]
   (let [obj (create-entity-pixi-object entity)]
     (swap! eid-pixiobj assoc eid obj)))
 

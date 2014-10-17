@@ -1,21 +1,27 @@
 (ns pintoid.client.graphics
-  (:use [pintoid.client.animation]))
+  (:use [pintoid.client.animation :only
+         [linear-move!
+          last-animation-time
+          ]]))
 
 ;; ---
 
 (def bg-texture-url "...")
 (def default-strite-url "...")
+(def camera-movement-duration 800)
 
 (def pixi-stage (new js/PIXI.Stage))
+(def pixi-renderer (.autoDetectRenderer js/PIXI 1200 800))
 (def pixi-gamefield (new js/PIXI.DisplayObjectContainer))
 
 
-(defn init-pixi-canvas []
+(defn init-pixi-renderer []
   (let [bg-texture (.fromImage js/PIXI.Texture bg-texture-url)
         ;; FIXME: don't use 100500 :)
         bg-sprite (new js/PIXI.TilingSprite bg-texture 100500 100500)]
     (.addChild pixi-stage pixi-gamefield)
-    (.addChild pixi-gamefield bg-sprite)))
+    (.addChild pixi-gamefield bg-sprite))
+   (.-view pixi-renderer))
 
 
 (defn- current-camera-position []
@@ -27,8 +33,8 @@
   (linear-move!
    :move-camera
    pixi-gamefield
-   current-time
-   (+ current-time camera-movement-duration)
+   last-animation-time
+   (+ last-animation-time camera-movement-duration)
    (current-camera-position)
    xy
    ))
@@ -66,3 +72,7 @@
 
 (defn delete-entity-pixi-object [entity]
   :...)
+
+
+(defn render-graphics! []
+  (.render pixi-renderer pixi-stage))

@@ -1,9 +1,20 @@
 (ns pintoid.client.core
-  (:use [pintoid.client [animation engine graphics]])
+
+  (:use [pintoid.client.engine :only
+         [world]]
+        [pintoid.client.animation :only
+         [process-animation!
+          process-deffered-actions!]]
+        [pintoid.client.graphics :only
+         [init-pixi-renderer
+          render-graphics!
+          ]])
+
   (:require
    [chord.client :refer [ws-ch]]
    [cljs.core.async :refer [<! >! close! timeout]]
    [dommy.core :as d])
+
   (:require-macros
    [dommy.core :refer [sel1]]
    [cljs.core.async.macros :refer [go go-loop]]))
@@ -60,10 +71,6 @@
   (.addEventListener js/window "keydown" handle-keydown true))
 
 
-(defn run-renerer! []
-  (.render pixi-renderer pixi-stage))
-
-
 (defn client-time []
   (.now js/Date))
 
@@ -78,14 +85,13 @@
         cgt (+ ct client-server-time-diff)
         at (- cgt animation-interpolation-lag network-latency)]
     (process-animation! at)
-    (run-renerer!)
+    (render-graphics!)
     (process-deffered-actions!))
   (js/requestAnimationFrame drawing-loop))
 
 
 (defn start-drawing-loop []
-  (d/append! (sel1 :body) (.-view pixi-renderer))
-  (init-pixi-canvas)
+  (d/append! (sel1 :body) (init-pixi-renderer))
   (drawing-loop 0))
 
 

@@ -63,14 +63,15 @@
 
 
 (defn- run-scheduled-actions [time]
-  (when-let [t (first pending-actions-times)]
-    (when (<= t time)
-      (when (>= t (- time max-allowed-actions-lag))
-        (doseq [act-fn! (aget pending-actions-map t)]
-          (act-fn!)))
-      (js-delete pending-actions-map t)
-      (.shift pending-actions-times)
-      (recur))))
+  (loop []
+    (when-let [t (first pending-actions-times)]
+      (when (<= t time)
+        (when (>= t (- time max-allowed-actions-lag))
+          (doseq [act-fn! (aget pending-actions-map t)]
+            (act-fn!)))
+        (js-delete pending-actions-map t)
+        (.shift pending-actions-times)
+        (recur)))))
 
 
 (defn- run-active-animations [time]
@@ -97,8 +98,8 @@
 
 
 (defn process-animation! [time]
-  (run-scheduled-actions)
-  (run-active-animations)
+  (run-scheduled-actions time)
+  (run-active-animations time)
   (set! last-animation-time time))
 
 
