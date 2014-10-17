@@ -5,12 +5,12 @@
 ;; -- API
 
 (declare linear-move!)
-(declare process-animations!)
+(declare process-animation!)
+(declare process-deffered-actions!)
 
 ;; -- animations
 
 ;; completely skip outdated animations
-(def max-allowed-animation-lag 1000)
 (def max-allowed-actions-lag 1000)
 
 ;; current (last) *animation* time
@@ -19,14 +19,18 @@
 ;; TODO: add init function?
 ;; animation-id => (array t1 t2 do-anim-fn! finish-anim-fn!)
 (def active-animations (array))
+(def deffered-actions (array))
 
 ;; anim-start-time (t1) => array of [aid [t1 t2 anim-fn! finish-anim-fn!]]
 (def pending-actions-map (array))
-(def pending-animaitons-map (array))
 
-;; sorted list of keys from #'pending-animaitons-map
+;; sorted list of keys from #'pending-actions-map
 (def pending-actions-times (array))
-(def pending-animaitons-times (array))
+
+
+(defn defer-action!
+  [act-fn!]
+  (.push deffered-actions act-fn!))
 
 
 (defn add-action!
@@ -42,18 +46,8 @@
         (.sort pending-actions-times -)))))
 
 
-(defn- add-pending-animation! [aid t avec]
-  ;; FIXME: refactor, use #'add-action!
-  (let [tx (long t)
-        al (aget pending-animaitons-map tx)]
-    (if al
-      (do
-        (.push al (array aid avec)))
-      (let [al' (array)]
-        (aset pending-animaitons-map tx al')
-        (.push al' (array aid avec))
-        (.push pending-animaitons-times tx)
-        (.sort pending-animaitons-times -)))))
+(defn- add-pending-animation! [aid t1 t2 avec]
+  (add-action! t1 (fn [] (aset active-animations aid avec))))
 
 
 (defn add-animation!
@@ -61,57 +55,50 @@
      (add-animation! aid t1 t2 animate-fn! nil))
   ([aid t1 t2 animate-fn! finish-fn!]
      (when (>= t2 last-animation-time)
-       (let [av (array t1 t2 animate-fn! finish-fn!)
-             aid (name aid)]
+       (let [aid (name aid)
+             av (array aid t1 t2 animate-fn! finish-fn!)]
          (if (> t1 last-animation-time)
-           (add-pending-animation! aid t1 av)
+           (add-pending-animation! aid t1 t2 av)
            (aset active-animations aid av))))))
 
 
-(defn process-animations! [time]
+(defn- run-scheduled-actions [time]
+  (when-let [t (first pending-actions-times)]
+    (when (<= t time)
+      (when (>= t (- time max-allowed-actions-lag))
+        (doseq [act-fn! (aget pending-actions-map t)]
+          (act-fn!)))
+      (js-delete pending-actions-map t)
+      (.shift pending-actions-times)
+      (recur))))
 
-  ;; (println time ">>>" pending-animaitons-times)
 
-  ;; run pending actions
-  (loop []
-    (when-let [t (first pending-actions-times)]
-      (when (<= t time)
-        (when (>= t (- time max-allowed-actions-lag))
-          (doseq [act-fn! (aget pending-actions-map t)]
-            (act-fn!)))
-        (js-delete pending-actions-map t)
-        (.shift pending-actions-times)
-        (recur))))
-
-  ;; move some animations from pending state to active
-  (loop []
-    (when-let [t (first pending-animaitons-times)]
-      (when (<= t time)
-        (when (>= t (- time max-allowed-animation-lag))
-          (doseq [aid-av (aget pending-animaitons-map t)]
-            (let [aid (aget aid-av 0)
-                  av (aget aid-av 1)]
-              (aset active-animations aid av))))
-        (js-delete pending-animaitons-map t)
-        (.shift pending-animaitons-times)
-        (recur))))
- 
-  ;; run active animations
-  (doseq [aid (js/Object.keys active-animations)]
-    (let [animation (aget active-animations aid)
-          ;; [t1 t2 an-fn! fin-fn!] animation
-          t1 (aget animation 0)
-          t2 (aget animation 1)
-          an-fn! (aget animation 2)
-          fin-fn! (aget animation 3)]
+(defn- run-active-animations [time]
+  (doseq [animation active-animations]
+    (let [;; [t1 t2 an-fn! fin-fn!] animation
+          aid (aget animation 0)
+          t1 (aget animation 1)
+          t2 (aget animation 2)
+          an-fn! (aget animation 3)
+          fin-fn! (aget animation 4)]
       (when (<= t1 time)
         (if (<= t2 time)
           (do
             (js-delete active-animations aid)
             (when fin-fn! (fin-fn!)))
           (when an-fn!
-            (an-fn! time))))))
- 
+            (an-fn! time)))))))
+
+
+(defn process-deffered-actions! []
+  (doseq [x deffered-actions]
+    (x))
+  (set! (.-length deffered-actions) 0))
+
+
+(defn process-animation! [time]
+  (run-scheduled-actions)
+  (run-active-animations)
   (set! last-animation-time time))
 
 

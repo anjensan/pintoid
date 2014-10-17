@@ -10,7 +10,7 @@
 (def pixi-gamefield (new js/PIXI.DisplayObjectContainer))
 
 
-(defn init-pixi-canvas! []
+(defn init-pixi-canvas []
   (let [bg-texture (.fromImage js/PIXI.Texture bg-texture-url)
         ;; FIXME: don't use 100500 :)
         bg-sprite (new js/PIXI.TilingSprite bg-texture 100500 100500)]

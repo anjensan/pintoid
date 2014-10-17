@@ -1,4 +1,5 @@
 (ns pintoid.client.core
+  (:use [pintoid.client [animation engine graphics]])
   (:require
    [chord.client :refer [ws-ch]]
    [cljs.core.async :refer [<! >! close! timeout]]
@@ -10,7 +11,22 @@
 (enable-console-print!)
 
 
-(defn fire-app-panic [msg]
+;; global game constatns
+
+;; (- server-time client-time)
+;; TODO: ping server every 10secs & update
+(def client-server-time-diff 0)
+(def network-latency 50)
+
+;; should be ~ (/ 2000 server-snapshots-per-second)
+(def animation-interpolation-lag 250)
+
+;; client <> server websocket
+(def server-ws-channel nil)
+
+
+(defn panic-app [msg]
+  ;; TODO: stop drawing-loop
   (d/replace-contents!
    (sel1 :#content)
    [:div
@@ -44,12 +60,32 @@
   (.addEventListener js/window "keydown" handle-keydown true))
 
 
+(defn run-renerer! []
+  (.render pixi-renderer pixi-stage))
+
+
+(defn client-time []
+  (.now js/Date))
+
+
+(defn game-time []
+  (:at @world))
+
+
 (defn drawing-loop [_]
-  ;; TODO
+  (let [gt (game-time)
+        ct (client-time)
+        cgt (+ ct client-server-time-diff)
+        at (- cgt animation-interpolation-lag network-latency)]
+    (process-animation! at)
+    (run-renerer!)
+    (process-deffered-actions!))
   (js/requestAnimationFrame drawing-loop))
 
 
 (defn start-drawing-loop []
+  (d/append! (sel1 :body) (.-view pixi-renderer))
+  (init-pixi-canvas)
   (drawing-loop 0))
 
 
