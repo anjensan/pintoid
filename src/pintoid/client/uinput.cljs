@@ -38,11 +38,20 @@
   (let [space 32
         arrow-left 37
         arrow-right 39
-        rotate-step (/ (.-PI js/Math) 30)]
+        arrow-up 38
+        arrow-down 40
+        rotate-step (/ (.-PI js/Math) 10)
+        engine-dir (cond
+                      (key-pressed? arrow-up) 1
+                      (key-pressed? arrow-down) -1
+                      :else 0)
+        ]
     (when (key-pressed? arrow-left)
       (set! angle (- angle rotate-step)))
     (when (key-pressed? arrow-right)
       (set! angle (+ angle rotate-step)))
-    {:angle angle
-     :engine-on? (key-pressed? space)}
+
+    { :angle angle
+      :engine-dir: engine-dir
+      :fire? (key-pressed? space)}
     ))
