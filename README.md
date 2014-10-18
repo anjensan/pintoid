@@ -1,5 +1,6 @@
 # pintoid
 The Game.
+http://ec2-54-85-204-43.compute-1.amazonaws.com
 
 ## License
 
