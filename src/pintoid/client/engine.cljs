@@ -100,11 +100,15 @@
   (let [add-ent-fn
         (fn [w ent-state-json]
           (let [ent (keywordize-keys (js->clj ent-state-json))
-                eid (:eid ent)]
+                eid (:eid ent)
+                entx (if (= eid (:self-eid w))
+                       (assoc ent :type :self-player)
+                       ent)
+                ]
             (log :trace "add entity" eid ent)
             (-> w
-                (update-in [:entities] assoc eid ent)
-                (add-action add-entity! eid at ent))))]
+                (update-in [:entities] assoc eid entx)
+                (add-action add-entity! eid at entx))))]
     (reduce add-ent-fn w es)))
 
 

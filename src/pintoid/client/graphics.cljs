@@ -78,20 +78,27 @@
 (defn get-texture [n]
   (or (get @pixi-textures n) (add-texture n)))
 
-(defn create-sprite [texture-name [x y]]
-  (let [t (get-texture texture-name)
-        s (js/PIXI.Sprite. t)
-        p (.-position s)]
-    (set! (.-x p) x)
-    (set! (.-y p) y)
-    s))
+(defn create-sprite
+  ([texture-name [x y] [ax ay]]
+     (let [t (get-texture texture-name)
+           s (js/PIXI.Sprite. t)
+           p (.-position s)
+           a (.-anchor s)]
+       (set! (.-x p) x)
+       (set! (.-y p) y)
+       (set! (.-x a) ax)
+       (set! (.-y a) ay)
+       s))
+  ([texture-name xy]
+     (create-sprite texture-name xy [0.5 0.5])))
+
 
 (defn add-to-gamefield! [pobj]
   (.addChild pixi-gamefield pobj)
   pobj)
 
 
-(defmulti create-entity-pixi-object :type)
+(defmulti create-entity-pixi-object (comp keyword :type))
 
 (defmethod create-entity-pixi-object :default [entity]
   (let [texture (:texture entity :clojure)
@@ -100,18 +107,22 @@
     (add-to-gamefield! sprite)))
 
 
+(defmethod create-entity-pixi-object :player [entity]
+  (add-to-gamefield!
+   (create-sprite :racket_blue (:xy entity))))
+
+
+(defmethod create-entity-pixi-object :self-player [entity]
+  (add-to-gamefield!
+   (create-sprite :racket_red (:xy entity))))
+
+
 (defmethod create-entity-pixi-object :clojure [entity]
   (add-to-gamefield!
    (create-sprite :clojure (:xy entity))))
 
 
-(defmethod create-entity-pixi-object :bot [entity]
-  :...)
-
-(defmethod create-entity-pixi-object :asteroid [entity]
-  :...)
-
-(defmethod create-entity-pixi-object :star [entity]
+(defmethod create-entity-pixi-object :rocket [entity]
   :...)
 
 

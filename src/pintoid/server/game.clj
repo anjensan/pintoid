@@ -129,7 +129,6 @@
             :xy xy
             :fxy [0 0]
             :color color
-            :texture :clojure
             :phys-move true
             :mass 10
             }]
