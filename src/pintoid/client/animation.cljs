@@ -21,11 +21,11 @@
 
 ;; TODO: add init function?
 ;; animation-id => (array t1 t2 do-anim-fn! finish-anim-fn!)
-(def active-animations (array))
+(def active-animations (js-obj))
 (def deffered-actions (array))
 
 ;; anim-start-time (t1) => array of [aid [t1 t2 anim-fn! finish-anim-fn!]]
-(def pending-actions-map (array))
+(def pending-actions-map (js-obj))
 
 ;; sorted list of keys from #'pending-actions-map
 (def pending-actions-times (array))
@@ -45,12 +45,13 @@
       (.push al act-fn!)
       (let [al' (array)]
         (aset pending-actions-map tx al')
-        (.push al' (array act-fn!))
+        (.push al' act-fn!)
         (.push pending-actions-times tx)
         (.sort pending-actions-times -)))))
 
 
 (defn- add-pending-animation! [aid t1 t2 avec]
+  (log :trace "add penging animation" aid t1 t2)
   (add-action! t1 (fn [] (aset active-animations aid avec))))
 
 
@@ -58,14 +59,12 @@
   ([aid t1 t2 animate-fn!]
      (add-animation! aid t1 t2 animate-fn! nil))
   ([aid t1 t2 animate-fn! finish-fn!]
-     (log :trace "add animation" t1 "-" t2 (limit-str 80 animate-fn!))
      (when (>= t2 last-animation-time)
        (let [aid (name aid)
              av (array aid t1 t2 animate-fn! finish-fn!)]
          (if (> t1 last-animation-time)
            (add-pending-animation! aid t1 t2 av)
-           (aset active-animations aid av))))))
-
+             (aset active-animations aid av))))))
 
 (defn- run-scheduled-actions [time]
   (loop []
@@ -80,8 +79,9 @@
 
 
 (defn- run-active-animations [time]
-  (doseq [animation active-animations]
-    (let [;; [t1 t2 an-fn! fin-fn!] animation
+  (doseq [aid (js/Object.keys active-animations)]
+    (let [animation (aget active-animations aid)
+          ;; [t1 t2 an-fn! fin-fn!] animation
           aid (aget animation 0)
           t1 (aget animation 1)
           t2 (aget animation 2)

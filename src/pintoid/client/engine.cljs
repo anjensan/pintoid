@@ -33,7 +33,7 @@
 
 (declare update-world-snapshot!)
 
-(declare handle-new-entities)
+(declare handle-add-entities)
 (declare handle-upd-entities)
 (declare handle-rem-entities)
 (declare update-game)
@@ -53,7 +53,7 @@
    world
    (-> @world
        (handle-rem-entities (aget entts "rem") at)
-       (handle-new-entities (aget entts "new") at)
+       (handle-add-entities (aget entts "add") at)
        (handle-upd-entities (aget entts "upd") at)
        (update-game game-upd)
        (assoc :at (long at))
@@ -83,7 +83,7 @@
   ;;       (add-action move-player-camera! xy))))
 
 
-(defn- handle-new-entities [w es at]
+(defn- handle-add-entities [w es at]
   (log :debug "add" (count es) "entities")
   (let [add-ent-fn
         (fn [w ent-state-json]
