@@ -16,7 +16,8 @@
     37 (println "pressed left")
     38 (println "pressed up")
     39 (println "pressed right")
-    40 (println "pressed down")))
+    40 (println "pressed down")
+    nil))
       
 
 (defn init-user-input []
