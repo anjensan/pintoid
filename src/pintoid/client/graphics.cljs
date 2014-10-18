@@ -9,7 +9,7 @@
 
 ;; ---
 
-(def bg-texture :white)
+(def bg-texture :back)
 (def textures [:white :clojure])
 
 (def camera-movement-duration 800)
