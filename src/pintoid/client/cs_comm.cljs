@@ -4,6 +4,8 @@
     [update-world-snapshot!
      update-player-state!
      ]]
+   [pintoid.client.animation :only
+    [defer-action!]]
    [pintoid.client.utils :only [panic! limit-str]])
   (:require
    [chord.client :refer [ws-ch]]
@@ -23,7 +25,8 @@
 
 
 (defmulti handle-server-message
-  (fn [m] (keyword (:cmd m))))
+  (fn [x]
+    (keyword (:cmd x))))
 
 
 (defmethod handle-server-message :default [msg]
@@ -72,10 +75,13 @@
 (defmethod handle-server-message :ping [m]
   :...)
 
+
 (defmethod handle-server-message :snapshot [m]
   (let [{:keys [at game entts-json]} m
         entts (js/JSON.parse entts-json)]
-    (update-world-snapshot! at game entts)))
+    (defer-action!
+      (fn []
+        (update-world-snapshot! at game entts)))))
 
 
 (defmethod handle-server-message :init-player [m]

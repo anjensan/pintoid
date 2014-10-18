@@ -108,7 +108,6 @@
 (defmethod create-entity-pixi-object :bot [entity]
   :...)
 
-
 (defmethod create-entity-pixi-object :asteroid [entity]
   :...)
 
