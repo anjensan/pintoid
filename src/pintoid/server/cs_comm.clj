@@ -76,7 +76,7 @@
      {:cmd :snapshot
       :at at
       :game gs
-      :entities (json/encode es)
+      :entts-json (json/encode es)
       })))
 
 

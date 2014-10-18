@@ -1,5 +1,7 @@
-;Интерполяция параболы по 3 точкам
-;  
+(ns pintoid.client.trash)
+
+;; Интерполяция параболы по 3 точкам
+
 (defn tri-inter [t1 t2 t3 v1 v2 v3]
   (let [ 
       x1 t1
@@ -28,5 +30,4 @@
             (* a x1 x2)
             )]
       (fn [time] 
-        (+ (* a time time) (* b time) c)))
-  )
+        (+ (* a time time) (* b time) c))))

@@ -24,6 +24,7 @@
 
 (declare move-entity)
 (declare next-eid)
+(declare add-new-entity)
 
 
 (defn fix-world-state []
@@ -60,15 +61,25 @@
 
 
 (defn init-world-state []
-  (world->! (assoc :at (current-time))))
+  (let [cid (next-eid)]
+    (world->!
+     (assoc :at (current-time))
+     (add-new-entity {:xy [100 100] :type :clojure}))))
 
 
 (defn run-world-simulation-tick []
   (update-world! [w]
     (let [t1 (:at w)
           t2 (current-time)]
-    (-> w
-        (assoc :at t2)))))
+      (-> w
+          (assoc :at t2)))))
+
+
+(defn add-new-entity
+  [w estate]
+  (let [eid (next-eid)
+        es (assoc estate :eid eid)]
+    (assoc-in w [:entities eid] es)))
 
 
 (defn add-new-player
@@ -86,6 +97,7 @@
      (assoc-in [:players pid] eid)
      (assoc-in [:entities eid] ps))
     ps))
+
 
 
 (defn remove-player [pid]
@@ -106,7 +118,7 @@
 (defn take-entities-snapshot [g pid]
   (let [;; TODO: send only coords of entities, compare with prev packet
         ;; entities (for [[eid es] (:entities g)] {:xy (:xy es)})
-        entities (:entities g)]
+        entities (vals (:entities g))]
     {:upd entities}))
 
 

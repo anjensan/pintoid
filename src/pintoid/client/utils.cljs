@@ -7,7 +7,7 @@
 (defn limit-str [n & ss]
   (let [s (apply str ss)]
     (if (> (count s) n)
-      (str (subs s n) "...")
+      (str (subs s 0 n) "...")
       s)))
 
 

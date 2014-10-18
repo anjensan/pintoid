@@ -8,7 +8,10 @@
           delete-entity-pixi-object
           move-player-camera!
           ]]
-        [clojure.walk :only [keywordize-keys]]))
+        [clojure.walk :only [keywordize-keys]])
+  (:require-macros
+   [pintoid.client.utils :refer [log]]))
+
 
 
 (def empty-world
@@ -33,8 +36,7 @@
 (declare handle-new-entities)
 (declare handle-upd-entities)
 (declare handle-rem-entities)
-(declare update-player)
-(declare update-time)
+(declare update-game)
 
 (declare add-action)
 (declare run-actions!)
@@ -45,17 +47,17 @@
 
 ;; ss - SnapShot -- JSON OBJECT!
 
-(defn update-world-snapshot! [ss-json-str]
-  (let [ss (js/JSON.parse ss-json-str)]
-    (reset!
-     world
-     (-> @world
-         (handle-rem-entities ss)
-         (handle-new-entities ss)
-         (handle-upd-entities ss)
-         (update-player ss)
-         (update-time ss)
-         (run-actions!)))))
+(defn update-world-snapshot! [at game-upd entts]
+  (log :debug "update world snapshot" at game-upd entts)
+  (reset!
+   world
+   (-> @world
+       (handle-rem-entities (aget entts "rem") at)
+       (handle-new-entities (aget entts "new") at)
+       (handle-upd-entities (aget entts "upd") at)
+       (update-game game-upd)
+       (assoc :at (long at))
+       (run-actions!))))
 
 
 (defn add-action
@@ -73,30 +75,50 @@
     (assoc w :actions ())))
 
 
-(defn update-time [w ss]
-  (assoc w :at (long (aget ss "at"))))
+(defn update-game [w gup]
+  w)
+  ;; (let [xy (js->clj (aget ss "player-xy"))]
+  ;;   (-> w
+  ;;       (update-in [:player :xy] xy)
+  ;;       (add-action move-player-camera! xy))))
 
 
-(defn update-player [w ss]
-  (let [xy (js->clj (aget ss "player-xy"))]
-    (-> w
-        (update-in [:player :xy] xy)
-        (add-action move-player-camera! xy))))
+(defn- handle-new-entities [w es at]
+  (log :debug "add" (count es) "entities")
+  (let [add-ent-fn
+        (fn [w ent-state-json]
+          (let [ent (keywordize-keys (js->clj ent-state-json))
+                eid (:eid ent)]
+            (log :trace "add entity" eid ent)
+            (-> w
+                (update-in [:entities] assoc eid ent)
+                (add-action add-entity! eid at ent))))]
+    (reduce add-ent-fn w es)))
 
 
-(defn- handle-new-entities [w ss]
+(defn- handle-rem-entities [w es at]
   :todo
   w)
 
 
-(defn- handle-rem-entities [w ss]
-  :todo
-  w)
+(defn merge-entity-upd [old-state patch]
+  (merge old-state (keywordize-keys (js->clj patch))))
 
 
-(defn- handle-upd-entities [w ss]
-  :todo
-  w)
+(defn- handle-upd-entities [w es at]
+  (log :debug "upd" (count es) "entities")
+  (let [t1 (:at w)
+        t2 at
+        add-ent-fn
+        (fn [w ent-patch-json]
+          (let [eid (aget ent-patch-json "eid")
+                old-state (get-in w [:entities eid])
+                new-state (merge-entity-upd old-state ent-patch-json)]
+            (log :trace "upd entity" eid patch)
+            (-> w
+                (update-in [:entities] assoc eid new-state)
+                (add-action update-entity! eid old-state t1 new-state t2 ))))]
+    (reduce add-ent-fn w es)))
 
 
 (defn resolve-entity-object [eid]
@@ -120,9 +142,9 @@
     (swap! eid-pixiobj assoc eid obj)))
 
 
-(defn update-entity! [eid estate1 when1 estate2 when2]
+(defn update-entity! [eid estate1 t1 estate2 t2]
   (let [old-xy (:xy estate1)
         new-xy (:xy estate2)]
     (when (not= old-xy new-xy)
       (let [obj (resolve-entity-object eid)]
-        (linear-move! nil obj when1 when2 old-xy new-xy)))))
+        (linear-move! nil obj t1 t2 old-xy new-xy)))))
