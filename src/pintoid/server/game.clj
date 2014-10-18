@@ -59,29 +59,42 @@
 
 ;; --
 
-(defn add-clojure-entity-test! []
-  (let [cid (next-eid)]
-    (go-loop []
-      (doseq [[dx dy] [[0 1] [1 0] [0 -1] [-1 0]]]
-        (dotimes [_ 50]
-          (<! (timeout 50))
-          (update-world!
-           [{:keys [entities] :as w}]
-           (if-let [ce (entities cid)]
-             (do
-               (let [[x y] (:xy ce)]
-                 (assoc-in w [:entities cid :xy] [(+ x dx) (+ y dy)])))
-             w))))
-      (recur))
-    (world->!
-     (assoc :at (current-time))
-     (add-new-entity {:eid cid :xy [100 100] :type :clojure}))))
+(defn add-clojure-entity-test! [n]
+  (dotimes [_ n]
+    (let [cid (next-eid)]
+      (go
+        (<! (timeout (rand-int 5000)))
+        (loop []
+          (doseq [[dx dy] [[0 1] [1 0] [0 -1] [-1 0]]]
+            (dotimes [_ 80]
+              (<! (timeout 10))
+              (update-world!
+               [{:keys [entities] :as w}]
+               (if-let [ce (entities cid)]
+                 (do
+                   (let [[x y] (:xy ce)]
+                     (assoc-in w [:entities cid :xy] [(+ x (* dx 10)) (+ y (* dy 10))])))
+                 w))))
+          (recur)))
+      (world->!
+       (assoc :at (current-time))
+       (add-new-entity
+        {:eid cid
+         :xy [(rand-int 500) (rand-int 500)]
+         })))))
 
 
 (defn init-world-state []
   (world->!
-   (assoc :at (current-time)))
-  (add-clojure-entity-test!))
+   (assoc :at (current-time))
+   (add-new-entity
+    {:type :asteroid
+     :xy [400 600]
+     :dxy [0 0]
+     :mass 100
+     :texture 
+   )
+  (add-clojure-entity-test! 50))
 
 
 (defn run-world-simulation-tick []
