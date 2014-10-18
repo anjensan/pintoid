@@ -6,8 +6,7 @@
 
 ;; ---
 
-(def bg-texture-url "...")
-(def default-strite-url "...")
+(def bg-texture :white)
 (def camera-movement-duration 800)
 
 (def pixi-stage (new js/PIXI.Stage))
@@ -15,10 +14,15 @@
 (def pixi-gamefield (new js/PIXI.DisplayObjectContainer))
 
 
+(declare texture-url)
+(declare load-texture)
+
+;; --
+
 (defn init-pixi-renderer []
-  (let [bg-texture (.fromImage js/PIXI.Texture bg-texture-url)
+  (let [texture (load-texture bg-texture)
         ;; FIXME: don't use 100500 :)
-        bg-sprite (new js/PIXI.TilingSprite bg-texture 100500 100500)]
+        bg-sprite (new js/PIXI.TilingSprite texture 100500 100500)]
     (.addChild pixi-stage pixi-gamefield)
     (.addChild pixi-gamefield bg-sprite))
    (.-view pixi-renderer))
@@ -41,9 +45,14 @@
 
 ;; ---
 
+(defn texture-url [texture]
+  (if (keyword? texture)
+    (str "/img/" (name texture) ".png")
+    (str "/img/" texture)))
+
+
 (defn load-texture [n]
-  (let [url (str "/img/" (name n) ".png")]
-    (.fromImage js/PIXI.Texture url)))
+  (.fromImage js/PIXI.Texture (texture-url n)))
 
 
 (defn create-sprite [texture-name [x y]]

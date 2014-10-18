@@ -4,6 +4,13 @@
    [dommy.core :refer [sel1]]))
 
 
+(defn limit-str [n & ss]
+  (let [s (apply str ss)]
+    (if (> (count s) n)
+      (str (subs s n) "...")
+      s)))
+
+
 (defn panic! [msg]
   ;; TODO: stop drawing-loop
   (d/replace-contents!

@@ -1,6 +1,9 @@
 (ns pintoid.client.animation
   (:require
-   [pintoid.client.utils :refer [obj-uid]]))
+   [pintoid.client.utils :refer [obj-uid limit-str]])
+  (:require-macros
+   [pintoid.client.utils :refer [log-info log-debug]]))
+
 
 ;; -- API
 
@@ -35,6 +38,7 @@
 
 (defn add-action!
   [t act-fn!]
+  (log-debug "add action at" t ":" (limit-str 80 act-fn!))
   (let [tx (long t)
         al (aget pending-actions-map tx)]
     (if al
@@ -54,6 +58,7 @@
   ([aid t1 t2 animate-fn!]
      (add-animation! aid t1 t2 animate-fn! nil))
   ([aid t1 t2 animate-fn! finish-fn!]
+     (log-debug "add animation" t1 "-" t2 (limit-str 80 animate-fn!))
      (when (>= t2 last-animation-time)
        (let [aid (name aid)
              av (array aid t1 t2 animate-fn! finish-fn!)]
