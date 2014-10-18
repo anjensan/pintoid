@@ -125,5 +125,4 @@
 
 (defmethod handle-client-message :user-input [pid m]
   (log-debug "user input player" m)
-  ;; TODO: move player
-  )
+  (game-process-user-input pid (:data m)))

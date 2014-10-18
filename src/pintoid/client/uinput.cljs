@@ -44,5 +44,5 @@
     (when (key-pressed? arrow-right)
       (set! angle (+ angle rotate-step)))
     {:angle angle
-     :engine-one?: (key-pressed? space)}
+     :engine-on? (key-pressed? space)}
     ))

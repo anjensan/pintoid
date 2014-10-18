@@ -75,8 +75,8 @@
 
 (defn init-world-state []
   (world->!
-   (assoc :at (current-time)))
-  (add-clojure-entity-test! 5))
+   (assoc :at (current-time))))
+;  (add-clojure-entity-test! 5))
 
 
 (declare update-entities-physics)
@@ -97,12 +97,11 @@
     (let [xy (:xy entity)
           pxy (:pxy entity xy)
           m (:mass entity 1)
-          fc (reduce v+ [0 0]
+          fc (reduce v+ (:fxy entity [0 0])
                      (map #(calc-gravity-force m (:mass %) xy (:xy %)) phobjs))
           dt (- t2 t1)
           dxy (hardlimit-force-2d (vs* fc (/ 1 m)))
           xy' (integrate-verle-2d pxy xy dxy dt)]
-      (println ">>" dxy)
       (assoc entity :pxy xy :xy xy'))))
 
 
@@ -140,7 +139,7 @@
             :eid eid
             :pid pid
             :xy xy
-            :dxy [0 0]
+            :fxy [0 0]
             :color color
             :texture :clojure
             :phys-move true
@@ -184,3 +183,17 @@
            y' (+ y (or dy 0))]
        (assoc-in g [:entities eid :xy] [x' y']))
      g)))
+
+
+(defn game-process-user-input [pid m]
+  (update-world!
+   [w]
+   (let [a (:angle m 0)
+         ego? (:engine-on? m)
+         ef (if ego? engine-force 0)
+         fxy (vs* [(Math/cos a) (Math/sin a)] ef)
+         eid (get-in w [:pid-eid pid])]
+     (if-not (zero? ef)
+       (assoc-in w [:entities eid :fxy] fxy)
+       w))))
+

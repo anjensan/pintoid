@@ -2,6 +2,7 @@
 
 (def gravity-g 300000)
 (def force-limit-value 1e-3)
+(def engine-force 4e-4)
 
 
 (defn hardlimit-force [f]
