@@ -1,0 +1,114 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+	<title>pixi.js example 3 using a movieclip</title>
+	<style>
+		body {
+			margin: 0;
+			padding: 0;
+			background-color: #000000;
+		}
+	</style>
+	<script src="pixi.js"></script>
+</head>
+<body>
+	<script>
+	// create an array of assets to load
+	
+
+	// holder to store aliens
+	var explosions = [];
+
+	var count = 0;
+
+	// create an new instance of a pixi stage
+	var stage = new PIXI.Stage(0xFFFFFF);
+
+	// create a renderer instance.
+	renderer = PIXI.autoDetectRenderer(800, 600);
+
+	// add the renderer view element to the DOM
+	document.body.appendChild(renderer.view);
+
+
+	var animation = (function() {
+		var animations = {};
+		return {
+			load: function(jsonFileName, callback) {
+				var assetsToLoader = [ jsonFileName],
+					// create a new loader
+					loader = new PIXI.AssetLoader(assetsToLoader);
+
+				// use callback
+				loader.onComplete = callback;
+
+				//begin load
+				loader.load();
+
+				
+				
+			},
+			add: function(animationName, frameNames) {
+				animations[animationName] = frameNames;
+			},
+			create: function(name, stage, conf) {
+				var frameNames = animations[name],
+					textures = [], i;
+				for (i=0; i < frameNames.length; i++)
+				{
+				 	var texture = PIXI.Texture.fromFrame(frameNames[i]);
+				 	textures.push(texture);
+				};
+
+				var movieClip = new PIXI.MovieClip(textures);
+				for (var prop in conf) {
+					if (conf.hasOwnProperty(prop)) {
+						movieClip[prop] = conf[prop];
+					}
+				}
+				stage.addChild(movieClip);
+				return movieClip;
+			}		
+		};		
+	})();
+
+	function range(a, b) {
+		var res = [];
+		for (var i = a; i < b; i++) {
+			res.push(i);
+		}
+		return res;
+	}
+	animation.load('my.json', function() {
+		// var lst = range(1, 26).map(function(v) {return v.toString()});
+		var lst = ['m1', 'm2', '']
+		animation.add('boom!', lst);
+
+		var explosion = animation.create('boom!', stage, {
+			position: {x: 100, y: 100},
+			loop: true,
+			anchor: {
+				x: 0.5,
+				y: 0.5
+			}
+		});
+		explosion.play();
+
+		animate();
+	});
+
+	window.addEventListener('click', function(event) {
+		animation.create('boom!', stage, {
+			position: {x: event.x, y: event.y}
+		}).play();
+	});
+
+
+	function animate() {
+	    renderer.render(stage);
+	    requestAnimFrame(animate);
+	}
+	</script>
+
+	</body>
+</html>
