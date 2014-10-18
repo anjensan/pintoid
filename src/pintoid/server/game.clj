@@ -134,6 +134,10 @@
    })
 
 
+(defn entitiy-upd-obj [entity]
+  {:eid (:eid entity) :xy (:xy entity)})
+
+
 (defn take-entities-snapshot [g pid eids-on-client]
   (let [;; TODO: send only coords of entities, compare with prev packet
         ;; entities (for [[eid es] (:entities g)] {:xy (:xy es)})
@@ -141,8 +145,9 @@
         eids (keys entities)
         new-eids (remove eids-on-client eids)
         upd-eids (filter eids-on-client eids)]
-    {:upd (map entities upd-eids)
+    {:upd (map (comp entitiy-upd-obj entities) upd-eids)
      :add (map entities new-eids)
+     :rem (remove (set eids) eids-on-client)
      }))
 
 

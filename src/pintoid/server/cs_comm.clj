@@ -7,8 +7,6 @@
    [clojure.set :refer [union]]
    ))
 
-(def clients-notify-delay 500)           ; 2x per second
-
 (def client-chans (atom {}))
 (def clients-counter (atom 0))
 (def client-notifier-agents (atom {}))

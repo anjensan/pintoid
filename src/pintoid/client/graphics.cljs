@@ -2,7 +2,10 @@
   (:use [pintoid.client.animation :only
          [linear-move!
           last-animation-time
-          ]]))
+          ]])
+  (:require-macros
+   [pintoid.client.utils :refer [log]]
+   ))
 
 ;; ---
 
@@ -116,7 +119,9 @@
 ;; ---
 
 (defn delete-entity-pixi-object [pixi-object]
-  (.removeChild pixi-gamefield pixi-object))
+  (when pixi-object
+    (log :debug "delte pixi obj" pixi-object)
+    (.removeChild pixi-gamefield pixi-object)))
 
 
 (defn render-graphics! []

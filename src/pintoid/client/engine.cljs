@@ -44,7 +44,7 @@
 
 (declare update-entity!)
 (declare add-entity!)
-(declare drop-entity!)
+(declare remove-entity!)
 
 ;; ss - SnapShot -- JSON OBJECT!
 
@@ -109,9 +109,15 @@
 
 
 (defn- handle-rem-entities [w es at]
-  :todo
-  w)
-
+  (log :debug "rem" (count es) "entities")
+  (let [rem-ent-fn
+        (fn [w eid]
+          (log :trace "add entity" eid)
+          (-> w
+              (update-in [:entities] dissoc eid)
+              (add-action remove-entity! eid at
+                          (get-in w [:entities eid]))))]
+    (reduce rem-ent-fn w es)))
 
 (defn merge-entity-upd [old-state patch]
   (merge old-state (keywordize-keys (js->clj patch))))
@@ -129,7 +135,7 @@
             (log :trace "upd entity" eid patch)
             (-> w
                 (update-in [:entities] assoc eid new-state)
-                (add-action update-entity! eid old-state t1 new-state t2 ))))]
+                (add-action update-entity! eid old-state t1 new-state t2))))]
     (reduce add-ent-fn w es)))
 
 
@@ -138,11 +144,11 @@
   (get @eid-pixiobj eid))
 
 
-(defn drop-entity! [eid when]
+(defn remove-entity! [eid t2 estate]
   ;; delete animation?
   (let [obj (resolve-entity-object eid)]
     (add-action!
-     when
+     t2
      (fn []
        (delete-entity-pixi-object obj)
        (swap! eid-pixiobj dissoc eid)
@@ -158,5 +164,5 @@
   (let [old-xy (:xy estate1)
         new-xy (:xy estate2)]
     (when (not= old-xy new-xy)
-      (let [obj (resolve-entity-object eid)]
+      (when-let [obj (resolve-entity-object eid)]
         (linear-move! nil obj t1 t2 old-xy new-xy)))))

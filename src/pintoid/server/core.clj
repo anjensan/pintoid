@@ -45,5 +45,5 @@
 
 ;; FIXME
 (init-world-state)
-(schedule-at-fixed-rate 250 send-snapshots-to-all-clients)
+(schedule-at-fixed-rate 500 send-snapshots-to-all-clients)
 (schedule-at-fixed-rate 50 run-world-simulation-tick)

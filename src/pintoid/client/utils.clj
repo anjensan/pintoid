@@ -1,7 +1,7 @@
 (ns pintoid.client.utils)
 
 (def enable-trace false)
-(def enable-debug false)
+(def enable-debug true)
 
 
 (defmacro log [level & ms]
