@@ -1,5 +1,5 @@
 (ns pintoid.server.game
-  (:use [pintoid.server utils physics])
+  (:use [pintoid.server utils physics game-maps])
   (:require
    [clojure.core.async :refer
     [<! >! put! close! go-loop go timeout]]))
@@ -53,22 +53,14 @@
 
 ;; --
 
-(defn add-clojure-entity-test! [n]
-  (dotimes [_ n]
-    (let [eid (next-eid)]
-      (world->!
-       (assoc :at (current-time))
-       (add-new-entity
-        {:eid eid
-         :xy [(rand-int 500) (rand-int 500)]
-         :mass 100
-         :phys true
-         })))))
 
 (defn init-world-state []
-  (world->!
-   (assoc :at (current-time))))
-;  (add-clojure-entity-test! 5))
+  (let [gm (rand-nth game-maps)]
+    (update-world! [w]
+     (reduce
+      add-new-entity
+      (assoc w :at (current-time))
+      (map (partial merge default-entity) gm)))))
 
 
 (declare update-entities-physics)
@@ -99,7 +91,7 @@
 
 (defn update-entities-physics [w t1 t2]
   (let [es (:entities w)
-        phobjs (filter :phys (vals es))
+        phobjs (filter :phys-act (vals es))
         upd-ent (fn [[eid e]]
                   [eid (update-entity-physics-position e phobjs t1 t2)])]
     (assoc w :entities (into {} (map upd-ent es)))))
@@ -123,15 +115,7 @@
 (defn game-add-new-player
   [eid]
   (let [xy (search-new-player-pos)
-        color (random-player-color)
-        ps {:type :player
-            :eid eid
-            :xy xy
-            :fxy [0 0]
-            :color color
-            :phys-move true
-            :mass 10
-            }]
+        ps (assoc player-proto :eid eid :xy xy)]
     (world->!
      (add-new-entity ps))
     ps))

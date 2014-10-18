@@ -122,10 +122,6 @@
    (create-sprite :clojure (:xy entity))))
 
 
-(defmethod create-entity-pixi-object :rocket [entity]
-  :...)
-
-
 ;; ---
 
 (defn delete-entity-pixi-object [pixi-object]
