@@ -49,8 +49,8 @@
 
 
 (defmacro update-world!
-  [[s] & body]
-  `(send world (fn [~s] ~@body)))
+  [s & body]
+  `(send world (fn ~s ~@body)))
 
 
 (defmacro world->!
@@ -59,12 +59,29 @@
 
 ;; --
 
-
-(defn init-world-state []
+(defn add-clojure-entity-test! []
   (let [cid (next-eid)]
+    (go-loop []
+      (<! (timeout 10))
+      (doseq [[dx dy] [[0 1] [1 0] [0 -1] [-1 0]]]
+        (dotimes [_ 100]
+          (update-world!
+           [{:keys [entities] :as w}]
+           (if-let [ce (entities cid)]
+             (do
+               (let [[x y] (:xy ce)]
+                 (assoc-in w [:entities cid :xy] [(+ x dx) (+ y dy)])))
+             w))))
+      (recur))
     (world->!
      (assoc :at (current-time))
-     (add-new-entity {:xy [100 100] :type :clojure}))))
+     (add-new-entity {:eid cid :xy [100 100] :type :clojure}))))
+
+
+(defn init-world-state []
+  (world->!
+   (assoc :at (current-time)))
+  (add-clojure-entity-test!))
 
 
 (defn run-world-simulation-tick []
@@ -72,12 +89,13 @@
     (let [t1 (:at w)
           t2 (current-time)]
       (-> w
-          (assoc :at t2)))))
+          (assoc :at t2)
+          ))))
 
 
 (defn add-new-entity
   [w estate]
-  (let [eid (next-eid)
+  (let [eid (or (:eid estate) (next-eid))
         es (assoc estate :eid eid)]
     (assoc-in w [:entities eid] es)))
 
@@ -115,11 +133,16 @@
    })
 
 
-(defn take-entities-snapshot [g pid]
+(defn take-entities-snapshot [g pid eids-on-client]
   (let [;; TODO: send only coords of entities, compare with prev packet
         ;; entities (for [[eid es] (:entities g)] {:xy (:xy es)})
-        entities (vals (:entities g))]
-    {:upd entities}))
+        entities (:entities g)
+        eids (keys entities)
+        new-eids (remove eids-on-client eids)
+        upd-eids (filter eids-on-client eids)]
+    {:upd (map entities upd-eids)
+     :add (map entities new-eids)
+     }))
 
 
 (defn move-entity
