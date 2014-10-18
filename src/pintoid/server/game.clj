@@ -64,20 +64,6 @@
 (defn add-clojure-entity-test! [n]
   (dotimes [_ n]
     (let [cid (next-eid)]
-      (go
-        (<! (timeout (rand-int 5000)))
-        (loop []
-          (doseq [[dx dy] [[0 1] [1 0] [0 -1] [-1 0]]]
-            (dotimes [_ 80]
-              (<! (timeout 10))
-              (update-world!
-               [{:keys [entities] :as w}]
-               (if-let [ce (entities cid)]
-                 (do
-                   (let [[x y] (:xy ce)]
-                     (assoc-in w [:entities cid :xy] [(+ x (* dx 10)) (+ y (* dy 10))])))
-                 w))))
-          (recur)))
       (world->!
        (assoc :at (current-time))
        (add-new-entity
@@ -86,7 +72,6 @@
          :mass 100
          :phys true
          })))))
-
 
 (defn init-world-state []
   (world->!
@@ -111,9 +96,13 @@
     entity
     (let [xy (:xy entity)
           pxy (:pxy entity xy)
+          m (:mass entity 1)
+          fc (reduce v+ [0 0]
+                     (map #(calc-gravity-force m (:mass %) xy (:xy %)) phobjs))
           dt (- t2 t1)
-          dxy [0.1 0]
-          xy' (verle-2d pxy xy dxy dt)]
+          dxy (hardlimit-force-2d (vs* fc (/ 1 m)))
+          xy' (integrate-verle-2d pxy xy dxy dt)]
+      (println ">>" dxy)
       (assoc entity :pxy xy :xy xy'))))
 
 
@@ -155,6 +144,7 @@
             :color color
             :texture :clojure
             :phys-move true
+            :mass 10
             }]
     (world->!
      (assoc-in [:pid-eid pid] eid)
