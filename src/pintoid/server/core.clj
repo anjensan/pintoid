@@ -1,5 +1,5 @@
 (ns pintoid.server.core
-  (:use [pintoid.server.cs-comm])
+  (:use [pintoid.server cs-comm game])
   (:require
    [pintoid.server.handler]
    [ring.middleware.params]
@@ -7,12 +7,26 @@
    [org.httpkit.server :refer [run-server]]))
 
 
+(declare schedule-at-fixed-rate)
+
+
 (defonce server (atom nil))
+
+(defonce sched-executor
+  (java.util.concurrent.ScheduledThreadPoolExecutor. 5))
+
 
 (def app
   (-> #'pintoid.server.handler/app-routes
       (ring.middleware.params/wrap-params)
       (ring.middleware.session/wrap-session)))
+
+
+(defn schedule-at-fixed-rate [period f]
+  (.scheduleAtFixedRate
+   sched-executor
+   f 0 (long period)
+   java.util.concurrent.TimeUnit/MILLISECONDS))
 
 
 (defn stop-pintoid []
@@ -29,5 +43,7 @@
   (start-pintoid))
 
 
-;;; FIXME: noooo
-(spawn-players-notifier-loop)
+;; FIXME
+(init-world-state)
+(schedule-at-fixed-rate 50 send-snapshots-to-all-clients)
+(schedule-at-fixed-rate 50 run-world-simulation-tick)

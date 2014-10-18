@@ -7,6 +7,7 @@
 
 (declare fix-world-state)
 (declare create-entities-snapshot)
+(declare schedule-world-simulation)
 
 ;; -- consts
 
@@ -46,14 +47,28 @@
     (str "#" (rcp) (rcp) (rcp))))
 
 
-(defmacro world-let!
+(defmacro update-world!
   [[s] & body]
   `(send world (fn [~s] ~@body)))
 
 
 (defmacro world->!
   [& body]
-  `(world-let! [w#] (-> w# ~@body)))
+  `(update-world! [w#] (-> w# ~@body)))
+
+;; --
+
+
+(defn init-world-state []
+  (world->! (assoc :at (current-time))))
+
+
+(defn run-world-simulation-tick []
+  (update-world! [w]
+    (let [t1 (:at w)
+          t2 (current-time)]
+    (-> w
+        (assoc :at t2)))))
 
 
 (defn add-new-player
@@ -74,7 +89,7 @@
 
 
 (defn remove-player [pid]
-  (world-let! [w]
+  (update-world! [w]
    (let [entities (:entities w)
          players (:players w)
          eid (players pid)]
@@ -97,7 +112,7 @@
 
 (defn move-entity
   [eid dx dy]
-  (world-let!
+  (update-world!
    [g]
    (if-let [es (-> g :entities (get eid))]
      (let [[x y] (:xy es)

@@ -2,7 +2,7 @@
   (:use [pintoid.server game utils])
   (:require
    [clojure.core.async :refer
-    [<! >! <!! >!! put! close! thread go chan timeout go-loop]]
+    [<! >! <!! >!! put! close! thread go chan go-loop]]
    [cheshire.core :as json]
    ))
 
@@ -85,14 +85,6 @@
     (log-debug "send snapshot, time" (:at w))
     (doseq [pid (keys @client-chans)]
       (send-world-snapshot-to-client w pid))))
-
-
-(defn spawn-players-notifier-loop []
-  (thread
-    (loop []
-      (<!! (timeout clients-notify-delay))
-      (send-snapshots-to-all-clients)
-      (recur))))
 
 
 ;; --- handlers here!
