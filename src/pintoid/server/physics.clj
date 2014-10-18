@@ -5,6 +5,11 @@
 (def engine-forward-force 5e-3)
 (def engine-reverse-force 2e-3)
 
+(def bullet-start-velocity 2)
+(def bullet-ahead-time 0)
+(def bullet-lifetime 5000)
+(def bullet-cooldown 400)
+
 
 (defn hardlimit-force [f]
   (cond
@@ -58,7 +63,18 @@
      (+ y1 y2)]))
 
 
+(defn v- [p1 p2] 
+  (let [[x1 y1] p1
+        [x2 y2] p2]
+    [(- x1 x2)
+     (- y1 y2)]))
+
+
 (defn vs* [p c]
   (let [[x1 y1] p]
     [(* x1 c)
      (* y1 c)]))
+
+
+(defn vas [a s]
+ (vs* [(Math/cos a) (Math/sin a)] s))
