@@ -30,7 +30,7 @@
 
 
 (defmethod handle-server-message :default [msg]
-  (println "unknown server message" msg))
+  (log :info "unknown server message" msg))
 
 
 (defn receive-server-messages [ws-chan]

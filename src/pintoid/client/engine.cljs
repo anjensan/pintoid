@@ -146,7 +146,7 @@
 
 (defn remove-entity! [eid t2 estate]
   ;; delete animation?
-  (let [obj (resolve-entity-object eid)]
+  (when-let [obj (resolve-entity-object eid)]
     (add-action!
      t2
      (fn []
@@ -156,7 +156,7 @@
 
 
 (defn add-entity! [eid when entity]
-  (let [obj (create-entity-pixi-object entity)]
+  (when-let [obj (create-entity-pixi-object entity)]
     (swap! eid-pixiobj assoc eid obj)))
 
 

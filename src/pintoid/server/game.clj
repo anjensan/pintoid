@@ -1,5 +1,5 @@
 (ns pintoid.server.game
-  (:use [pintoid.server.physics])
+  (:use [pintoid.server utils physics])
   (:require
    [clojure.core.async :refer
     [<! >! put! close! go-loop go timeout]]))
@@ -12,19 +12,15 @@
 
 ;; -- consts
 
-(def eid-counter (atom 0))
-
 (def world
   (agent
    {
     :at 0
-    :pid-eid {}                         ; pid -> eid
     :entities {}                        ; map of active entities
     }))
 
 
 (declare move-entity)
-(declare next-eid)
 (declare add-new-entity)
 
 
@@ -34,10 +30,6 @@
 
 (defn current-time []
   (System/currentTimeMillis))
-
-
-(defn next-eid []
-  (swap! eid-counter inc))
 
 
 (defn search-new-player-pos []
@@ -63,11 +55,11 @@
 
 (defn add-clojure-entity-test! [n]
   (dotimes [_ n]
-    (let [cid (next-eid)]
+    (let [eid (next-eid)]
       (world->!
        (assoc :at (current-time))
        (add-new-entity
-        {:eid cid
+        {:eid eid
          :xy [(rand-int 500) (rand-int 500)]
          :mass 100
          :phys true
@@ -120,24 +112,20 @@
     (assoc-in w [:entities eid] es)))
 
 
-(defn game-remove-player [pid]
+(defn game-remove-player [eid]
   (update-world!
-   [{:keys [entities pid-eid] :as w}]
-   (let [eid (pid-eid pid)]
-     (-> w
-         ;; ADD transition state for entitie - BLOW IT!
-         (assoc :entities (dissoc entities eid))
-         (assoc :pid-eid (dissoc pid-eid pid))))))
+   [w]
+   (-> w
+       ;; ADD transition state for entitie - BLOW IT!
+       (update-in [:entities] dissoc eid))))
 
 
 (defn game-add-new-player
-  [pid]
-  (let [eid (next-eid)
-        xy (search-new-player-pos)
+  [eid]
+  (let [xy (search-new-player-pos)
         color (random-player-color)
         ps {:type :player
             :eid eid
-            :pid pid
             :xy xy
             :fxy [0 0]
             :color color
@@ -146,18 +134,18 @@
             :mass 10
             }]
     (world->!
-     (assoc-in [:pid-eid pid] eid)
-     (assoc-in [:entities eid] ps))
+     (add-new-entity ps))
     ps))
 
 
-(defn take-game-snapshot [g pid]
-  {:player (get-in g [:pid-eid :pid])
-   })
+(defn take-game-snapshot [g eid]
+  {:player-eid eid})
 
 
 (defn entitiy-upd-obj [entity]
-  {:eid (:eid entity) :xy (:xy entity)})
+  {:eid (:eid entity)
+   :xy (:xy entity)
+   :angle (:angle entity)})
 
 
 (defn take-entities-snapshot [g pid eids-on-client]
@@ -191,9 +179,6 @@
    (let [a (:angle m 0)
          ego? (:engine-on? m)
          ef (if ego? engine-force 0)
-         fxy (vs* [(Math/cos a) (Math/sin a)] ef)
-         eid (get-in w [:pid-eid pid])]
-     (if-not (zero? ef)
-       (assoc-in w [:entities eid :fxy] fxy)
-       w))))
+         fxy (if (zero? ef) [0 0] (vs* [(Math/cos a) (Math/sin a)] ef))]
+     (assoc-in w [:entities pid :fxy] fxy))))
 

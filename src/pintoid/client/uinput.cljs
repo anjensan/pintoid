@@ -15,7 +15,7 @@
     char-code (or (.-keyCode evt) (.-which evt))]
     (when (< (.indexOf active-keys char-code) 0) 
       (.push active-keys char-code))
-      (println active-keys)))
+      (log :debug "active keys" active-keys)))
       
 (defn handle-keyup [e]
   (let [
