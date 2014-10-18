@@ -1,12 +1,13 @@
 (ns pintoid.client.cs-comm
   (:use
+   [pintoid.client.engine :only [update-world-snapshot!]]
    [pintoid.client.utils :only [panic! limit-str]])
   (:require
    [chord.client :refer [ws-ch]]
    [cljs.core.async :refer [<! >! close! timeout]])
   (:require-macros
    [cljs.core.async.macros :refer [go go-loop]]
-   [pintoid.client.utils :refer [log-info log-debug]]))
+   [pintoid.client.utils :refer [log log-info log-debug]]))
 
 
 ;; client <> server websocket
@@ -16,7 +17,8 @@
     (str "ws://" (.-host wl) "/ws")))
 
 
-(defmulti handle-server-message :cmd)
+(defmulti handle-server-message
+  (fn [m] (keyword (:cmd m))))
 
 
 (defmethod handle-server-message :default [msg]
@@ -56,3 +58,9 @@
 
 (defmethod handle-server-message :ping [m]
   :...)
+
+(defmethod handle-server-message :snapshot [m]
+  (let [{:keys [at game entts-json]} m
+        entts (js/JSON.parse entts-json)]
+    (log :trace ">>>>>" at game entts)
+    (update-world-snapshot! at game entts)))

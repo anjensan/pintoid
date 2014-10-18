@@ -137,8 +137,9 @@
 
 
 (defn linear-move! [aid obj t1 t2 xy1 xy2]
+  (log :trace "linear-move" obj t1 t2 xy1 xy2)
   (add-animation!
-   (if aid (str "lm-" (obj-uid obj)))
+   (if aid aid (str "lm-" (obj-uid obj)))
    t1
    t2
    (when xy1 (anim-linear-updater obj t1 t2 xy1 xy2))
