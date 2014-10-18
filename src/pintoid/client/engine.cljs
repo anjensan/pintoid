@@ -5,6 +5,7 @@
           linear-move!]]
         [pintoid.client.graphics :only
          [create-entity-pixi-object
+          delete-entity-pixi-object
           move-player-camera!
           ]]
         [clojure.walk :only [keywordize-keys]]))
@@ -70,7 +71,7 @@
   (let [as (:actions w)]
     (doseq [a as] (a))
     (assoc w :actions ())))
-                
+
 
 (defn update-time [w ss]
   (assoc w :at (long (aget ss "at"))))
@@ -104,11 +105,14 @@
 
 
 (defn drop-entity! [eid when]
-  (add-action!
-   when
-   (fn []
-     ;; TODO: remove/hide pixi object
-     )))
+  ;; delete animation?
+  (let [obj (resolve-entity-object eid)]
+    (add-action!
+     when
+     (fn []
+       (delete-entity-pixi-object obj)
+       (swap! eid-pixiobj dissoc eid)
+       ))))
 
 
 (defn add-entity! [eid when entity]

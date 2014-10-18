@@ -13,6 +13,7 @@
    [pintoid.client.graphics :only
     [init-pixi-renderer
      render-graphics!
+     load-textures
      ]]
    [pintoid.client.uinput :only
     [init-user-input]])
@@ -55,6 +56,7 @@
 (defn start-app []
   (init-cs-communication)
   (init-user-input)
+  (load-textures)
   (d/append! (sel1 :body) (init-pixi-renderer))
   (drawing-loop 0))
 
