@@ -1,4 +1,5 @@
 (ns pintoid.server.game
+  (:use [pintoid.server.physics])
   (:require
    [clojure.core.async :refer
     [<! >! put! close! go-loop go timeout]]))
@@ -57,6 +58,7 @@
   [& body]
   `(update-world! [w#] (-> w# ~@body)))
 
+
 ;; --
 
 (defn add-clojure-entity-test! [n]
@@ -81,21 +83,18 @@
        (add-new-entity
         {:eid cid
          :xy [(rand-int 500) (rand-int 500)]
+         :mass 100
+         :phys true
          })))))
 
 
 (defn init-world-state []
   (world->!
-   (assoc :at (current-time))
-   (add-new-entity
-    {:type :asteroid
-     :xy [400 600]
-     :dxy [0 0]
-     :mass 100
-     :texture 
-   )
-  (add-clojure-entity-test! 50))
+   (assoc :at (current-time)))
+  (add-clojure-entity-test! 5))
 
+
+(declare update-entities-physics)
 
 (defn run-world-simulation-tick []
   (update-world! [w]
@@ -103,7 +102,27 @@
           t2 (current-time)]
       (-> w
           (assoc :at t2)
+          (update-entities-physics t1 t2)
           ))))
+
+
+(defn update-entity-physics-position [entity phobjs t1 t2]
+  (if-not (:phys-move entity)
+    entity
+    (let [xy (:xy entity)
+          pxy (:pxy entity xy)
+          dt (- t2 t1)
+          dxy [0.1 0]
+          xy' (verle-2d pxy xy dxy dt)]
+      (assoc entity :pxy xy :xy xy'))))
+
+
+(defn update-entities-physics [w t1 t2]
+  (let [es (:entities w)
+        phobjs (filter :phys (vals es))
+        upd-ent (fn [[eid e]]
+                  [eid (update-entity-physics-position e phobjs t1 t2)])]
+    (assoc w :entities (into {} (map upd-ent es)))))
 
 
 (defn add-new-entity
@@ -135,6 +154,7 @@
             :dxy [0 0]
             :color color
             :texture :clojure
+            :phys-move true
             }]
     (world->!
      (assoc-in [:pid-eid pid] eid)
