@@ -1,11 +1,12 @@
 (ns pintoid.client.core
-
   (:use
    [pintoid.client.utils :only [panic!]]
    [pintoid.client.cs-comm :only
     [init-cs-communication
      send-message-to-server
-     handle-server-message]]
+     handle-server-message
+     spawn-user-input-sender
+     ]]
    [pintoid.client.engine :only [world]]
    [pintoid.client.animation :only
     [process-animation!
@@ -16,7 +17,8 @@
      load-textures
      ]]
    [pintoid.client.uinput :only
-    [init-user-input]])
+    [init-user-input
+     get-user-input-state]])
 
   (:require [dommy.core :as d])
   (:require-macros
@@ -33,7 +35,7 @@
 (def network-latency 50)
 
 ;; should be ~ (/ 2000 server-snapshots-per-second)
-(def animation-interpolation-lag 250)
+(def animation-interpolation-lag 200)
 
 ;; --
 
@@ -57,6 +59,7 @@
   (init-cs-communication)
   (init-user-input)
   (load-textures)
+  (spawn-user-input-sender get-user-input-state)
   (d/append! (sel1 :body) (init-pixi-renderer))
   (drawing-loop 0))
 

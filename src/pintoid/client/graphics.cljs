@@ -62,20 +62,18 @@
 ;; ---
 
 (defn texture-url [texture]
-  (if (keyword? texture)
-    (str "/img/" (name texture) ".png")
-    (str "/img/" texture)))
-
+  (str "/img/" (name texture) ".png"))
 
 (defn load-texture [n]
   (.fromImage js/PIXI.Texture (texture-url n)))
 
 (defn add-texture [n]
-  (swap! pixi-textures assoc (load-texture n)))
+  (let [t (load-texture n)]
+    (swap! pixi-textures assoc t)
+    t))
 
 (defn get-texture [n]
-  (get @pixi-textures n (add-texture n)))
-
+  (or (get @pixi-textures n) (add-texture n)))
 
 (defn create-sprite [texture-name [x y]]
   (let [t (get-texture texture-name)

@@ -1,6 +1,9 @@
 (ns pintoid.client.cs-comm
   (:use
-   [pintoid.client.engine :only [update-world-snapshot!]]
+   [pintoid.client.engine :only
+    [update-world-snapshot!
+     update-player-state!
+     ]]
    [pintoid.client.utils :only [panic! limit-str]])
   (:require
    [chord.client :refer [ws-ch]]
@@ -9,6 +12,8 @@
    [cljs.core.async.macros :refer [go go-loop]]
    [pintoid.client.utils :refer [log log-info log-debug]]))
 
+
+(def user-input-update-delay 50)
 
 ;; client <> server websocket
 (def server-ws-channel nil)
@@ -43,6 +48,14 @@
     (go (>! c msg))))
 
 
+(defn spawn-user-input-sender [ui-fn]
+  (go-loop []
+    (let [ui (ui-fn)]
+      (send-message-to-server {:cmd :user-input :data ui}))
+    (<! (timeout user-input-update-delay))
+    (recur)))
+
+
 (defn init-cs-communication []
   (go
     (log-info "init cs communication")
@@ -62,5 +75,8 @@
 (defmethod handle-server-message :snapshot [m]
   (let [{:keys [at game entts-json]} m
         entts (js/JSON.parse entts-json)]
-    (log :trace ">>>>>" at game entts)
     (update-world-snapshot! at game entts)))
+
+
+(defmethod handle-server-message :init-player [m]
+  (update-player-state! (:player m)))

@@ -17,6 +17,7 @@
 (def empty-world
   {
    :at 0
+   :self-eid nil
    :player {:xy [0 0]}
    :entities {}                         ; {entity-id -> entity}
    ;; eid - entity id, number
@@ -58,6 +59,17 @@
        (update-game game-upd)
        (assoc :at (long at))
        (run-actions!))))
+
+
+(defn update-player-state! [ps]
+  (log :debug "update player" ps)
+  (swap! world
+         (fn [w]
+           (let [xy (:xy ps)
+                 eid (:eid ps)]
+             (-> w
+                 (assoc-in [:player :xy] xy)
+                 (assoc :self-eid eid))))))
 
 
 (defn add-action
