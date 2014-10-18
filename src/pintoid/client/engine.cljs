@@ -56,7 +56,7 @@
        (handle-rem-entities (aget entts "rem") at)
        (handle-add-entities (aget entts "add") at)
        (handle-upd-entities (aget entts "upd") at)
-       (update-game game-upd)
+       (update-game game-upd at)
        (assoc :at (long at))
        (run-actions!))))
 
@@ -87,12 +87,13 @@
     (assoc w :actions ())))
 
 
-(defn update-game [w gup]
-  w)
-  ;; (let [xy (js->clj (aget ss "player-xy"))]
-  ;;   (-> w
-  ;;       (update-in [:player :xy] xy)
-  ;;       (add-action move-player-camera! xy))))
+(defn update-game [w gup t2]
+  (let [t1 (:at w)
+        cur-pxy (get-in w [:player :xy])
+        pxy (:player-xy gup)]
+    (-> w
+     (assoc-in [:player :xy] pxy)
+     (add-action move-player-camera! t1 t2 cur-pxy pxy))))
 
 
 (defn- handle-add-entities [w es at]

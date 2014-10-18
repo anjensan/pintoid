@@ -14,8 +14,8 @@
 
 (def camera-movement-duration 800)
 
-(def map-width 10000)
-(def map-height 10000)
+(def map-width 5000)
+(def map-height 5000)
 (def cnvs-width (- (.-innerWidth js/window) 100))
 (def cnvs-height (- (.-innerHeight js/window) 100))
 
@@ -41,8 +41,11 @@
 (defn init-pixi-renderer []
   (let [texture (get-texture bg-texture)
         ;; FIXME: don't use 100500 :)
-        bg-sprite (new js/PIXI.TilingSprite texture map-width map-height)]
+        bg-sprite (new js/PIXI.TilingSprite texture map-width map-height)
+        bg-sprite-pos (.-position bg-sprite)]
     (.addChild pixi-stage pixi-gamefield)
+    (set! (.-x bg-sprite-pos) (- (/ map-width 2)))
+    (set! (.-y bg-sprite-pos) (- (/ map-height 2)))
     (.addChild pixi-gamefield bg-sprite))
    (.-view pixi-renderer))
 
@@ -52,15 +55,17 @@
     [(.-x p) (.-y p)]))
 
 
-(defn move-player-camera! [xy]
-  (linear-move!
-   :move-camera
-   pixi-gamefield
-   last-animation-time
-   (+ last-animation-time camera-movement-duration)
-   (current-camera-position)
-   xy
-   ))
+(defn move-player-camera! [t1 t2 xy1 xy2]
+  (let [neg (fn [[x y]] [(- (/ cnvs-width 2) x)
+                         (- (/ cnvs-height 2) y)])]
+    (linear-move!
+     nil
+     pixi-gamefield
+     t1
+     t2
+     (neg xy1)
+     (neg xy2)
+     )))
 
 ;; ---
 

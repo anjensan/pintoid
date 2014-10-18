@@ -122,7 +122,9 @@
 
 
 (defn take-game-snapshot [g eid]
-  {:player-eid eid})
+  {:player-eid eid
+   :player-xy (get-in g [:entities eid :xy])
+   })
 
 
 (defn entitiy-upd-obj [entity]
