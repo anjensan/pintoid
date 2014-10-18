@@ -1,8 +1,8 @@
 (ns pintoid.server.utils)
 
 (defmacro log-info [& ms]
-  `(println "PINTOID:" ~@ms))
+  `(println ~@ms))
 
 
 (defmacro log-debug [& ms]
-  `(println ">>" ~@ms))
+  `(println ~@ms))

@@ -6,17 +6,23 @@
    [cheshire.core :as json]
    ))
 
-(def clients-notify-delay 100)           ; 10x per second
+(def clients-notify-delay 500)           ; 2x per second
 
 (def client-chans (atom {}))
 (def clients-counter (atom 0))
 
 
-(defn send-message-to-clients [pids m]
+(defn send-message-to-clients [pids message]
   (let [cc @client-chans
         pl (or pids (keys cc))]
-    (doseq [ch (map cc pl)]
-      (go (<! ch m)))))
+    (doseq [pid (or pids (keys cc))]
+      (when-let [ch (cc pid)]
+        (log-debug "pid" pid ">>" message)
+        (go (>! ch message))))))
+
+
+(defn send-command-to-clients [pids command message]
+  (send-message-to-clients pids (assoc message :cmd command)))
 
 
 (defmulti handle-client-message
@@ -43,6 +49,7 @@
       (do
         (if message
           (do
+            (log-debug "pid" pid "<<" message)
             (handle-client-message pid message)
             (recur))
           (handle-client-error pid :failure error)))
@@ -75,7 +82,7 @@
 
 (defn send-snapshots-to-all-clients []
   (let [w (fix-world-state)]
-    (log-debug "send snapshot, time " (:at w))
+    (log-debug "send snapshot, time" (:at w))
     (doseq [pid (keys @client-chans)]
       (send-world-snapshot-to-client w pid))))
 
@@ -95,18 +102,18 @@
 
 
 (defmethod handle-client-message :connected [pid m]
-  (println "new player" pid)
+  (log-info "new player" pid)
   ;; TODO: add player to game
   )
 
 
 (defmethod handle-client-message :disconnect [pid _]
-  (println "player" pid "disconnected")
+  (log-info "player" pid "disconnected")
   ;; TODO: remove player from game
   (drop-client-connection pid))
 
 
 (defmethod handle-client-message :move-player [pid m]
-  (println "move player" pid "by", (:dx m 0) (:dy m 0))
+  (log-debug "move player" pid "by", (:dx m 0) (:dy m 0))
   ;; TODO: move player
   )

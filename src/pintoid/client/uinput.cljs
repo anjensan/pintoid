@@ -4,11 +4,15 @@
         [pintoid.client.animation :only
          [add-action!
           defer-action!
-          ]]))
+          ]])
+  (:require-macros
+   [pintoid.client.utils :refer [log]]
+   ))
 
 
 (defn handle-keydown [e]
-  (case (-.keyCode e)
+  (log :debug "key event" e)
+  (case (.-keyCode e)
     37 (println "pressed left")
     38 (println "pressed up")
     39 (println "pressed right")

@@ -45,7 +45,7 @@
   (go
     (log-info "init cs communication")
     (let [{:keys [ws-channel error]}
-          (<! (ws-ch websocket-url {:format :json}))]
+          (<! (ws-ch websocket-url {:format :json-kw}))]
       (if error
         (panic! error)
         (do

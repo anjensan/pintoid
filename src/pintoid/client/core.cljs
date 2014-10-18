@@ -20,7 +20,7 @@
   (:require [dommy.core :as d])
   (:require-macros
    [dommy.core :refer [sel1]]
-   [pintoid.client.utils :refer [log-info log-debug]]
+   [pintoid.client.utils :refer [log]]
    ))
 
 
@@ -45,7 +45,7 @@
         ct (client-time)
         cgt (+ ct client-server-time-diff)
         at (- cgt animation-interpolation-lag network-latency)]
-    (log-debug "draw-loop:" at)
+    (log :trace "draw-loop" at)
     (process-animation! at)
     (render-graphics!)
     (process-deffered-actions!))

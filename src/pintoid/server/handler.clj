@@ -28,13 +28,13 @@
 
 (defn ws-handler [req]
   (println "connection from" (:remote-addr req))
-  (add-new-client-connection (:ws-channel req)))
+  (add-new-client-connection req))
 
 
 (defroutes app-routes
   (GET "/" [] (index-page))
   (GET "/ws" [] (-> ws-handler
-                    (wrap-websocket-handler {:format :json})))
+                    (wrap-websocket-handler {:format :json-kw})))
   (GET "/game" {p :params} (game-page))
   (resources "/js" {:root "js"})
   (resources "/img" {:root "img"})
