@@ -62,9 +62,9 @@
 (defn add-clojure-entity-test! []
   (let [cid (next-eid)]
     (go-loop []
-      (<! (timeout 10))
       (doseq [[dx dy] [[0 1] [1 0] [0 -1] [-1 0]]]
-        (dotimes [_ 100]
+        (dotimes [_ 50]
+          (<! (timeout 50))
           (update-world!
            [{:keys [entities] :as w}]
            (if-let [ce (entities cid)]
