@@ -17,7 +17,7 @@
   (agent
    {
     :at 0
-    :players {}                         ; pid -> eid
+    :pid-eid {}                         ; pid -> eid
     :entities {}                        ; map of active entities
     }))
 
@@ -100,7 +100,17 @@
     (assoc-in w [:entities eid] es)))
 
 
-(defn add-new-player
+(defn game-remove-player [pid]
+  (update-world!
+   [{:keys [entities pid-eid] :as w}]
+   (let [eid (pid-eid pid)]
+     (-> w
+         ;; ADD transition state for entitie - BLOW IT!
+         (assoc :entities (dissoc entities eid))
+         (assoc :pid-eid (dissoc pid-eid pid))))))
+
+
+(defn game-add-new-player
   [pid]
   (let [eid (next-eid)
         xy (search-new-player-pos)
@@ -110,27 +120,22 @@
             :pid pid
             :xy xy
             :dxy [0 0]
-            :color color}]
+            :color color
+            :texture :clojure
+            }]
     (world->!
-     (assoc-in [:players pid] eid)
+     (assoc-in [:pid-eid pid] eid)
      (assoc-in [:entities eid] ps))
     ps))
 
 
-
-(defn remove-player [pid]
-  (update-world! [w]
-   (let [entities (:entities w)
-         players (:players w)
-         eid (players pid)]
-     (-> w
-         (assoc :entities (dissoc entities eid))
-         (assoc :players (dissoc players pid))))))
-
-
 (defn take-game-snapshot [g pid]
-  {:player (get-in g [:players :pid])
+  {:player (get-in g [:pid-eid :pid])
    })
+
+
+(defn entitiy-upd-obj [entity]
+  {:eid (:eid entity) :xy (:xy entity)})
 
 
 (defn take-entities-snapshot [g pid eids-on-client]
@@ -140,8 +145,9 @@
         eids (keys entities)
         new-eids (remove eids-on-client eids)
         upd-eids (filter eids-on-client eids)]
-    {:upd (map entities upd-eids)
+    {:upd (map (comp entitiy-upd-obj entities) upd-eids)
      :add (map entities new-eids)
+     :rem (remove (set eids) eids-on-client)
      }))
 
 

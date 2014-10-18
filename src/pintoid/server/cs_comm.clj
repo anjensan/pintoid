@@ -7,8 +7,6 @@
    [clojure.set :refer [union]]
    ))
 
-(def clients-notify-delay 500)           ; 2x per second
-
 (def client-chans (atom {}))
 (def clients-counter (atom 0))
 (def client-notifier-agents (atom {}))
@@ -114,17 +112,18 @@
 
 (defmethod handle-client-message :connected [pid m]
   (log-info "new player" pid)
-  ;; TODO: add player to game
-  )
+  (let [ps (game-add-new-player pid)]
+    (send-message-to-clients [pid] {:cmd :init-player :player ps})))
 
 
 (defmethod handle-client-message :disconnect [pid _]
   (log-info "player" pid "disconnected")
   ;; TODO: remove player from game
-  (drop-client-connection pid))
+  (drop-client-connection pid)
+  (game-remove-player pid))
 
 
-(defmethod handle-client-message :move-player [pid m]
-  (log-debug "move player" pid "by", (:dx m 0) (:dy m 0))
+(defmethod handle-client-message :user-input [pid m]
+  (log-debug "user input player" m)
   ;; TODO: move player
   )

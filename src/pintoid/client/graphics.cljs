@@ -2,11 +2,14 @@
   (:use [pintoid.client.animation :only
          [linear-move!
           last-animation-time
-          ]]))
+          ]])
+  (:require-macros
+   [pintoid.client.utils :refer [log]]
+   ))
 
 ;; ---
 
-(def bg-texture :white)
+(def bg-texture :back)
 (def textures [:white :clojure])
 
 (def camera-movement-duration 800)
@@ -62,20 +65,18 @@
 ;; ---
 
 (defn texture-url [texture]
-  (if (keyword? texture)
-    (str "/img/" (name texture) ".png")
-    (str "/img/" texture)))
-
+  (str "/img/" (name texture) ".png"))
 
 (defn load-texture [n]
   (.fromImage js/PIXI.Texture (texture-url n)))
 
 (defn add-texture [n]
-  (swap! pixi-textures assoc (load-texture n)))
+  (let [t (load-texture n)]
+    (swap! pixi-textures assoc t)
+    t))
 
 (defn get-texture [n]
-  (get @pixi-textures n (add-texture n)))
-
+  (or (get @pixi-textures n) (add-texture n)))
 
 (defn create-sprite [texture-name [x y]]
   (let [t (get-texture texture-name)
@@ -118,7 +119,9 @@
 ;; ---
 
 (defn delete-entity-pixi-object [pixi-object]
-  (.removeChild pixi-gamefield pixi-object))
+  (when pixi-object
+    (log :debug "delte pixi obj" pixi-object)
+    (.removeChild pixi-gamefield pixi-object)))
 
 
 (defn render-graphics! []
