@@ -16,6 +16,7 @@
    :player {:xy [0 0]}
    :entities {}                         ; {entity-id -> entity}
    ;; eid - entity id, number
+   :actions ()
    })
 
 ;; map: entity-id -> pixi-obj (root)

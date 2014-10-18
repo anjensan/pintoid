@@ -51,3 +51,8 @@
         (do
           (set! server-ws-channel ws-channel)
           (receive-server-messages ws-channel))))))
+
+;; ---
+
+(defmethod handle-server-message :ping [m]
+  :...)
