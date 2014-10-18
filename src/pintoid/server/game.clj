@@ -3,6 +3,11 @@
    [clojure.core.async :refer
     [<! >! put! close! go-loop go timeout]]))
 
+;; API
+
+(declare fix-world-state)
+(declare create-entities-snapshot)
+
 ;; -- consts
 
 (def eid-counter (atom 0))
@@ -10,6 +15,7 @@
 (def world
   (agent
    {
+    :at 0
     :players {}                         ; pid -> eid
     :entities {}                        ; map of active entities
     }))
@@ -18,7 +24,9 @@
 (declare move-entity)
 (declare next-eid)
 
-(declare create-game-snapshot)
+
+(defn fix-world-state []
+  @world)
 
 
 (defn current-time []
@@ -75,18 +83,16 @@
          (assoc :players (dissoc players pid))))))
 
 
-(defn create-game-snapshot [pid]
-  (let [t (current-time)
-        g @world
-        eid (-> g :players (get pid))
-        ps (-> g :entities (get eid))
-        xy (:xy ps)
-        ;; TODO: send only coords of entities, compare with prev packet
+(defn take-game-snapshot [g pid]
+  {:player (get-in g [:players :pid])
+   })
+
+
+(defn take-entities-snapshot [g pid]
+  (let [;; TODO: send only coords of entities, compare with prev packet
         ;; entities (for [[eid es] (:entities g)] {:xy (:xy es)})
         entities (:entities g)]
-    {:at t
-     :xy xy
-     :entities entities}))
+    {:upd entities}))
 
 
 (defn move-entity

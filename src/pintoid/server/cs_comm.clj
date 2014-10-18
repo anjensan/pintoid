@@ -1,11 +1,12 @@
 (ns pintoid.server.cs-comm
-  (:use [pintoid.server.game])
+  (:use [pintoid.server game utils])
   (:require
    [clojure.core.async :refer
-    [<! >! put! close! go-loop go chan timeout]]
+    [<! >! <!! >!! put! close! thread go chan timeout go-loop]]
    [cheshire.core :as json]
    ))
 
+(def clients-notify-delay 100)           ; 10x per second
 
 (def client-chans (atom {}))
 (def clients-counter (atom 0))
@@ -59,16 +60,31 @@
 
 ;; ---
 
-(defn spawn-player-notifier-loop [pid]
-  (go-loop []
-    ;; 20x per second
-    (<! (timeout 50))
-    (let [ss (create-game-snapshot pid)]
-      (send-message-to-clients
-       [pid]
-       {:cmd :snapshot
-        :data (json/encode ss)}))
-    (when (@client-chans pid)
+(defn send-world-snapshot-to-client [w pid]
+  (let [at (:at w)
+        gs (take-game-snapshot w pid)
+        es (take-entities-snapshot w pid)]
+    (send-message-to-clients
+     [pid]
+     {:cmd :snapshot
+      :at at
+      :game gs
+      :entities (json/encode es)
+      })))
+
+
+(defn send-snapshots-to-all-clients []
+  (let [w (fix-world-state)]
+    (log-debug "send snapshot, time " (:at w))
+    (doseq [pid (keys @client-chans)]
+      (send-world-snapshot-to-client w pid))))
+
+
+(defn spawn-players-notifier-loop []
+  (thread
+    (loop []
+      (<!! (timeout clients-notify-delay))
+      (send-snapshots-to-all-clients)
       (recur))))
 
 

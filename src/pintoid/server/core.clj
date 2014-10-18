@@ -1,4 +1,5 @@
 (ns pintoid.server.core
+  (:use [pintoid.server.cs-comm])
   (:require
    [pintoid.server.handler]
    [ring.middleware.params]
@@ -14,11 +15,19 @@
       (ring.middleware.session/wrap-session)))
 
 
-(defn stop-server []
+(defn stop-pintoid []
   (when-not (nil? @server)
     (@server :timeout 100)
     (reset! server nil)))
 
 
-(defn -main [& args]
+(defn start-pintoid []
   (reset! server (run-server #'app {:port 8080})))
+
+
+(defn -main [& args]
+  (start-pintoid))
+
+
+;;; FIXME: noooo
+(spawn-players-notifier-loop)
