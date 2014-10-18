@@ -35,7 +35,7 @@
 (def network-latency 50)
 
 ;; should be ~ (/ 2000 server-snapshots-per-second)
-(def animation-interpolation-lag 200)
+(def animation-interpolation-lag 100)
 
 ;; --
 

@@ -1,8 +1,9 @@
 (ns pintoid.server.physics)
 
-(def gravity-g 300000)
-(def force-limit-value 1e-3)
-(def engine-force 4e-4)
+(def gravity-g 200000)
+(def force-limit-value 5e-3)
+(def engine-forward-force 5e-3)
+(def engine-reverse-force 2e-3)
 
 
 (defn hardlimit-force [f]

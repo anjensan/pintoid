@@ -51,7 +51,7 @@
     (when (key-pressed? arrow-right)
       (set! angle (+ angle rotate-step)))
 
-    { :angle angle
-      :engine-dir: engine-dir
-      :fire? (key-pressed? space)}
+    {:angle angle
+     :engine-dir engine-dir
+     :fire? (key-pressed? space)}
     ))

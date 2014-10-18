@@ -160,8 +160,9 @@
   (update-world!
    [w]
    (let [a (:angle m 0)
-         ego? (:engine-on? m)
-         ef (if ego? engine-force 0)
+         ed (:engine-dir m)
+         ef (case ed -1 (- engine-reverse-force) 1 engine-forward-force 0)
+         f (:fire? m)  ;; TODO
          fxy (if (zero? ef) [0 0] (vs* [(Math/cos a) (Math/sin a)] ef))]
      (assoc-in w [:entities pid :fxy] fxy))))
 
