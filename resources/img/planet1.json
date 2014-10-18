@@ -1,0 +1,39 @@
+{"frames": {
+
+"green_planet1.png":
+{
+	"frame": {"x":2,"y":2,"w":123,"h":137},
+	"rotated": false,
+	"trimmed": true,
+	"spriteSourceSize": {"x":15,"y":3,"w":123,"h":137},
+	"sourceSize": {"w":145,"h":140},
+	"pivot": {"x":0.5,"y":0.5}
+},
+"green_planet2.png":
+{
+	"frame": {"x":2,"y":141,"w":123,"h":137},
+	"rotated": false,
+	"trimmed": true,
+	"spriteSourceSize": {"x":15,"y":3,"w":123,"h":137},
+	"sourceSize": {"w":145,"h":140},
+	"pivot": {"x":0.5,"y":0.5}
+},
+"green_planet3.png":
+{
+	"frame": {"x":2,"y":280,"w":123,"h":137},
+	"rotated": false,
+	"trimmed": true,
+	"spriteSourceSize": {"x":15,"y":3,"w":123,"h":137},
+	"sourceSize": {"w":145,"h":140},
+	"pivot": {"x":0.5,"y":0.5}
+}},
+"meta": {
+	"app": "http://www.codeandweb.com/texturepacker",
+	"version": "1.0",
+	"image": "planet1.png",
+	"format": "RGBA8888",
+	"size": {"w":127,"h":419},
+	"scale": "1",
+	"smartupdate": "$TexturePacker:SmartUpdate:8f84457f000cbba05defc463d9a04143:d3ecd34a546b0e54cd629bdaa536ecc6:b52272ba960e5bcd0ba4b58a4c63d6f4$"
+}
+}
