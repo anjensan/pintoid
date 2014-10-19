@@ -38,6 +38,27 @@
    :angle 0
    :radius 30
    :killable? true
+   :bullet-lifetime 3000
+   :bullet-cooldown 300
+   :bullet-velocity 0.5
+   ;:phys-act true
+   })
+
+
+(def bullet-alt-proto
+  {:type :bullet
+   :texture :ast2
+   :fxy [0 0]
+   :pxy [0 0]
+   :xy [0 0]
+   :phys-move true
+   :mass 58000
+   :angle 0
+   :radius 10
+   :killable? true
+   :bullet-lifetime 5000
+   :bullet-cooldown 2000
+   :bullet-velocity 0.2
    ;:phys-act true
    })
 

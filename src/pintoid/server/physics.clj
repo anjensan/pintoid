@@ -9,10 +9,7 @@
 (def engine-forward-force 3e-2)
 (def engine-reverse-force 1e-2)
 
-(def bullet-start-velocity 0.5)
-(def bullet-ahead-time 700)
-(def bullet-lifetime 4200)
-(def bullet-cooldown 300)
+(def bullet-ahead-time 200)
 
 (def max-user-view-distance 1500)
 

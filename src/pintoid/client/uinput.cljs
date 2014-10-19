@@ -40,6 +40,7 @@
         arrow-right 39
         arrow-up 38
         arrow-down 40
+        enter 13
         rotate-step (/ (.-PI js/Math) 10)
         engine-dir (cond
                       (key-pressed? arrow-up) 1
@@ -53,5 +54,6 @@
 
     {:angle angle
      :engine-dir engine-dir
-     :fire? (key-pressed? space)}
+     :fire? (key-pressed? space)
+     :alt-fire? (key-pressed? enter)}
     ))

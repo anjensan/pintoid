@@ -203,7 +203,8 @@
         ;; entities (for [[eid es] (:entities g)] {:xy (:xy es)})
         ps (get-in g [:entities pid])
         all-entitites (:entities g)
-        entities (into {} (filter (fn [[_ e]] (user-can-view-entity ps e)) all-entitites))
+        ;; entities (into {} (filter (fn [[_ e]] (user-can-view-entity ps e)) all-entitites))
+        entities all-entitites
         eids (keys entities)
         new-eids (remove eids-on-client eids)
         upd-eids (filter eids-on-client eids)]
@@ -226,26 +227,29 @@
 
 
 (defn maybe-player-spawn-bullet [w pid user-input]
-  (if-not (:fire? user-input)
+  (if-not (or (:fire? user-input) (:alt-fire? user-input))
     w
-    (let [ps (get-in w [:entities pid])
+    (let [bt-proto (if (:alt-fire? user-input)
+                bullet-alt-proto
+                bullet-proto)
+          ps (get-in w [:entities pid])
           t1 (:at w)
           lbt (:last-bullet-at ps)]
-      (if (and lbt (> lbt (- t1 bullet-cooldown)))
+      (if (and lbt (> lbt (- t1 (:bullet-cooldown bt-proto))))
         w
         (let [{:keys [xy vxy angle]} ps
-              b-vxy (v+ vxy (vas angle bullet-start-velocity))]
+              b-vxy (v+ vxy (vas angle (:bullet-velocity bt-proto)))]
           (-> w
               (assoc-in [:entities pid :last-bullet-at] t1)
               (add-new-entity
-               (assoc bullet-proto
+               (assoc bt-proto
                  :type :bullet
                  :pxy nil
                  :vxy b-vxy
                  :xy xy
                  :angle angle
                  :bullet-owner pid
-                 :drop-at (+ (:at w) bullet-lifetime)
+                 :drop-at (+ (:at w) (:bullet-lifetime bt-proto))
                  ))))))))
 
 
@@ -322,6 +326,7 @@
 
 (defn is-colliding? [e1 e2]
   (cond
+   (or (= (:type e1) (:type e2) :bullet)) false
    (or (player-and-ist-bullet e1 e2) (player-and-ist-bullet e2 e1)) false
    :else
    (when (not= (:eid e1) (:eid e2))
