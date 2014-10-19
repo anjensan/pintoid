@@ -18,7 +18,10 @@
 
   ;; config
   :frodo/config-resource "conf/development.edn"
-
+  ;; :frodo/config-resource "conf/production.edn"
+  ;; :jvm-opts ^:replace ["-XX:+UseCompressedOops"]
+  ;; :aot :all
+  
   ;; commands
   :aliases {"dev" ["do"
                    ["shell" "mkdir" "-p" "target/resources"]

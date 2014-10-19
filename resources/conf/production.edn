@@ -1,0 +1,5 @@
+{
+ :frodo/config
+ {:web
+  {:port 8080 :handler pintoid.server.core/app}}
+ }
