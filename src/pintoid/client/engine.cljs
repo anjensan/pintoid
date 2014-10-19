@@ -4,6 +4,7 @@
           defer-action!
           linear-move!
           linear-rotate!
+          infinite-linear-rotate!
           ]]
         [pintoid.client.graphics :only
          [create-entity-pixi-object
@@ -162,8 +163,14 @@
        ))))
 
 
-(defn add-entity! [eid when entity]
+(defn add-entity! [eid _ entity]
   (when-let [obj (create-entity-pixi-object entity)]
+    ; (println ".-type"  (:type entity))
+    (when (#{"star" "ast"} (:type entity) ) 
+      (infinite-linear-rotate! nil obj 1e-3))
+
+    (when (#{"black"} (:type entity) ) 
+      (infinite-linear-rotate! nil obj 1))
     (swap! eid-pixiobj assoc eid obj)))
 
 

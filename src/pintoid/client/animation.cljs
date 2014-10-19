@@ -149,11 +149,17 @@
 
 
 (defn- anim-linear-rotate-updater [obj t1 t2 angle1 angle2]
-
     (fn [time]
-        (println time)
         (set! (.-rotation obj) ((linear-inter t1 t2 angle1 angle2) time))
         ))
+
+(defn- anim-infinite-linear-rotate-updater [obj c]
+    (fn [time]
+        (println "ANGLES" angle1 angle2 time)
+
+        (set! (.-rotation obj) (* time c))
+        ))
+
 
 
 (defn- anim-linear-rotate-finisher [obj angle]
@@ -174,12 +180,22 @@
    ))
 
 (defn linear-rotate! [aid obj t1 t2 angle1 angle2]
-  ; (println angle1 angle2)
+  (println "ROTATION" angle1 angle2)
   (add-animation!
    (if aid aid (str "rot-" (obj-uid obj)))
    t1
    t2
    (when angle1 (anim-linear-rotate-updater obj t1 t2 angle1 angle2))
    (anim-linear-rotate-finisher obj angle2)
+   ))
+
+(defn infinite-linear-rotate! [aid obj c]
+
+  (add-animation!
+   (if aid aid (str "rot-" (obj-uid obj)))
+   1
+   (.-MAX_VALUE js/Number)
+   (anim-infinite-linear-rotate-updater obj c)
+   (anim-linear-rotate-finisher obj 0)
    ))
 

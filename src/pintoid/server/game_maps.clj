@@ -71,16 +71,17 @@
     :texture texture
     :radius radius
     :dangle dangle
+    :vxy [1 1]
   })
 
 (defn black-hole [xy dangle] {
     :type :black
     :xy xy
-    :mass 250
+    :mass 500
     :phys-move false
     :phys-act true
     :texture :black1
-    :radius 10
+    :radius 1
     :dangle dangle
   })
 
@@ -104,13 +105,13 @@
     (planet [-900 -2240] 20 11 :pink_planet1 0.1)
     (planet [1020 -2100] 15 8 :pink_planet1 0.1)
     (planet [-100 1100] 12 10 :pink_planet1 0.1)
-    (asteroid [-100 -189] 5 3 :ast1 0.1)
-    (asteroid [-100 89] 5 3 :ast2 0.1)
-    (asteroid [-600 234] 4 3 :ast3 0.1)
-    (asteroid [-1343 1223] 7 3 :ast4 0.1)
-    (asteroid [-457 456] 8 3 :ast5 0.1)
-    (asteroid [-2341 123] 9 3 :ast2 0.1)
-    (asteroid [345 -2319] 7 3 :ast3 0.1)
-    (asteroid [-324 980] 8 3 :ast1 0.1)
-    (asteroid [-32 80] 8 3 :ast1 0.1)
+    (asteroid [-220 -232] 5 3 :ast1 0.1)
+    (asteroid [-222 -233] 5 3 :ast2 0.1)
+    (asteroid [-221 -234] 4 3 :ast3 0.1)
+    (asteroid [-224 -236] 7 3 :ast4 0.1)
+    (asteroid [-2100 -2130] 8 3 :ast5 0.1)
+    (asteroid [1200 510] 9 3 :ast2 0.1)
+    (asteroid [-900 -700] 7 3 :ast3 0.1)
+    (asteroid [1100 -1700] 8 3 :ast1 0.1)
+    (asteroid [1100 -1710] 8 3 :ast1 0.1)
    ]])
