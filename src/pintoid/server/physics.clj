@@ -9,7 +9,7 @@
 (def engine-reverse-force 2e-3)
 
 (def bullet-start-velocity 2)
-(def bullet-ahead-time 50)
+(def bullet-ahead-time 40)
 (def bullet-lifetime 4000)
 (def bullet-cooldown 300)
 
@@ -63,7 +63,7 @@
 
 (defn distance [[x1 y1] [x2 y2]] 
   (let [dx (- x1 x2)
-        dy (- x2 y2)]
+        dy (- y1 y2)]
     (Math/sqrt (+ (* dx dx) (* dy dy)))))
 
 

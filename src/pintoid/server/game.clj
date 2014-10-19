@@ -29,6 +29,7 @@
 (declare search-new-player-pos)
 (declare kill-player)
 (declare entity-out-of-gamefield?)
+(declare maybe-collide-entity-with-something)
 
 
 (defn fix-world-state []
@@ -63,7 +64,9 @@
 
 (declare update-entities-physics)
 (declare remove-outdated-entities)
-(declare kill-some-objects)
+(declare kill-out-of-gamefield-of-entities)
+(declare kill-colliding-entities)
+
 
 (defn run-world-simulation-tick []
   (update-world! [w]
@@ -72,7 +75,8 @@
       (-> w
           (remove-outdated-entities t2)
           (update-entities-physics t1 t2)
-          (kill-some-objects t2)
+          (kill-out-of-gamefield-of-entities t2)
+          (kill-colliding-entities t2)
           (assoc :at t2)
           ))))
 
@@ -87,7 +91,7 @@
     (assoc w :entities ess')))
 
 
-(defn kill-some-objects [w t2]
+(defn kill-out-of-gamefield-of-entities [w t2]
   (let [kes (filter
              (partial entity-out-of-gamefield? w)
              (vals (:entities w)))
@@ -97,6 +101,10 @@
                    (kill-player w eid)
                    (assoc w :entities (dissoc (:entities w) eid)))))]
   (reduce kill w kes)))
+
+
+(defn kill-colliding-entities [w t2]
+  (reduce maybe-collide-entity-with-something w (vals (:entities w))))
 
 
 (defn update-entity-physics-position [entity phobjs t1 t2]
@@ -111,7 +119,7 @@
           dt (- t2 t1)
           dxy (hardlimit-force-2d (vs* fc (/ 1 m)))
           xy' (integrate-verle-2d pxy xy dxy dt)
-          vxy' (vs* (v- xy' xy) (/ 1 (- t2 t1)))]
+          vxy' (when (not= t1 t2) (vs* (v- xy' xy) (/ 1 (- t2 t1))))]
       (assoc
           entity
         :pxy xy
@@ -220,7 +228,8 @@
       (if (and lbt (> lbt (- t1 bullet-cooldown)))
         w
         (let [{:keys [xy vxy angle]} ps
-              b-vxy (v+ vxy (vas angle bullet-start-velocity))]
+              b-vxy (v+ vxy (vas angle bullet-start-velocity))
+              b-xy (v+ xy (vs* b-vxy bullet-ahead-time))]
           (-> w
               (assoc-in [:entities pid :last-bullet-at] t1)
               (add-new-entity
@@ -228,7 +237,7 @@
                  :type :bullet
                  :pxy nil
                  :vxy b-vxy
-                 :xy xy
+                 :xy b-xy
                  :angle angle
                  :drop-at (+ (:at w) bullet-lifetime)
                  ))))))))
@@ -254,7 +263,28 @@
 ;; --
 
 (defn search-new-player-pos [w pid]
-  [0 0])
+  [(rand-int 2000) (rand-int 2000)])
+
+
+(defn entity-collide-with-something? [w es]
+  (some (partial is-colliding? es) (vals (:entities w))))
+
+
+(defn remove-entity [w eid]
+  (update-in w [:entities] dissoc eid))
+
+
+(defn handle-entity-collision [w es]
+  (cond
+   (= (:type es) :player) (-> w (kill-player (:eid es)))
+   (:killable? es) (-> w (remove-entity (:eid es)))
+   :else w))
+
+
+(defn maybe-collide-entity-with-something [w es]
+  (if (entity-collide-with-something? w es)
+      (handle-entity-collision w es)
+      w))
 
 
 (defn kill-player [w pid]
@@ -274,9 +304,10 @@
 
 
 (defn is-colliding? [e1 e2]
-  (let [r1 (:radius e1)
-        r2 (:radius e2)
-        xy1 (:xy e1)
-        xy2 (:xy e2)]
-    (and xy1 xy2 r1 r2 (< (distance xy1 xy2) (+ r1 r2)))))
+  (when (not= (:eid e1) (:eid e2))
+    (let [r1 (:radius e1)
+          r2 (:radius e2)
+          xy1 (:xy e1)
+          xy2 (:xy e2)]
+      (and xy1 xy2 r1 r2 (< (distance xy1 xy2) (+ r1 r2))))))
 
