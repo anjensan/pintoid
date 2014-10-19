@@ -40,8 +40,7 @@
           [:div {:class "col-md-4"}]
             ;; [:img {:src "/img/map.svg" :width "600px" :height "600px"}]]
           [:div {:class "col-md-4"}
-            [:a {:class "btn btn-default btn-lg join-button" :href "/game"} "Join the game"]]
-          
+           [:a {:class "btn btn-default btn-lg join-button" :href "/game"} "Join the game"]]
           [:div {:class "col-md-4"}]
         ]]
      ]]))

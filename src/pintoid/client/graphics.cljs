@@ -43,7 +43,7 @@
 (defn init-pixi-labels []
   (let [score-pos (.-position pixi-score-value)
         death-pos (.-position pixi-death-value)
-        style (js-obj "fill" "white" "font" "normal 22px Raleway")]
+        style (js-obj "fill" "white" "font" "normal 22px Arial")]
     (set! (.-x score-pos) 3)
     (set! (.-y score-pos) 3)
     (set! (.-x death-pos) 3)
