@@ -40,16 +40,54 @@
    :killable? true
    })
 
+(defn star [xy mass radius texture dangle] {
+    :type :star
+    :xy xy
+    :mass mass
+    :phys-move false 
+    :phys-act true
+    :texture texture
+    :radius radius
+    :dangle dangle
+  })
+
+(defn planet [xy mass radius texture dangle] {
+    :type :planet
+    :xy xy
+    :mass mass
+    :phys-move false 
+    :phys-act true
+    :texture texture
+    :radius radius
+    :dangle dangle
+  })
+
+(defn asteroid [xy mass radius texture dangle] {
+    :type :ast
+    :xy xy
+    :mass mass
+    :phys-move true 
+    :phys-act false
+    :texture texture
+    :radius radius
+    :dangle dangle
+  })
+
+(defn black-hole [xy dangle] {
+    :type :black
+    :xy xy
+    :mass 500
+    :phys-move false 
+    :phys-act true
+    :texture :black
+    :radius 1
+    :dangle dangle
+  })
 
 (def game-maps
   [[
-   {:type :star
-    :xy [300 400]
-    :mass 100
-    :phys-move false ; false
-    :phys-act true
-    :texture :star1
-    :radius 33
-    :dangle 0.1
-    }
+    (star [600 800] 100 33 :star1 0.1)
+    (planet [400 600] 50 30 :green_planet1 0.1)
+    (asteroid [100 159] 25 5 :ast1 0.1)
+    (black-hole [250 250] 0.2)
    ]])
