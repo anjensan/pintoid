@@ -4,12 +4,13 @@
 (def world-width 2500)
 
 (def gravity-g 10000)
+(def infinite-force 100)
 (def force-limit-value 2e-3)
 (def engine-forward-force 5e-3)
 (def engine-reverse-force 2e-3)
 
-(def bullet-start-velocity 2)
-(def bullet-ahead-time 40)
+(def bullet-start-velocity 0.5)
+(def bullet-ahead-time 100)
 (def bullet-lifetime 4000)
 (def bullet-cooldown 300)
 
@@ -55,10 +56,13 @@
   (let [g gravity-g
         [rx ry r2] (dist-decomposition p1 p2)
         r (Math/sqrt r2)
-        f (* g m1 m2 (/ 1 r2))
-        r3' (/ 1 (* r2 r))]
-    [(* rx f r3')
-     (* ry f r3')]))
+        fr3 (if (zero? r)
+              infinite-force
+              (let [f (* g m1 m2 (/ 1 r2))
+                    r3' (/ 1 (* r2 r))]
+                (* f r3')))]
+    [(* rx fr3)
+     (* ry fr3)]))
 
 
 (defn distance [[x1 y1] [x2 y2]] 

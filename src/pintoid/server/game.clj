@@ -110,12 +110,16 @@
 (defn update-entity-physics-position [entity phobjs t1 t2]
   (if-not (:phys-move entity)
     entity
-    (let [vxy (:vxy entity [0 0])
+    (let [eid (:eid entity)
+          vxy (:vxy entity [0 0])
           xy (:xy entity)
           pxy (or (:pxy entity) (v+ xy (vs* vxy (- t1 t2))))
           m (or (:mass entity) 1)
           fc (reduce v+ (:fxy entity [0 0])
-                     (map #(calc-gravity-force m (:mass %) xy (:xy %)) phobjs))
+                     (map #(if (= (:eid %) eid)
+                             [0 0]
+                             (calc-gravity-force m (:mass %) xy (:xy %)))
+                          phobjs))
           dt (- t2 t1)
           dxy (hardlimit-force-2d (vs* fc (/ 1 m)))
           xy' (integrate-verle-2d pxy xy dxy dt)

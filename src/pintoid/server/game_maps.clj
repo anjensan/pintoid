@@ -34,10 +34,11 @@
    :pxy [0 0]
    :xy [0 0]
    :phys-move true
-   :mass 3
+   :mass 300
    :angle 0
-   :radius 100
+   :radius 20
    :killable? true
+   ;:phys-act true
    })
 
 (defn star [xy mass radius texture dangle] {
