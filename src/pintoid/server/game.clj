@@ -22,6 +22,13 @@
 
 (declare move-entity)
 (declare add-new-entity)
+(declare search-new-player-pos)
+(declare kill-player)
+(declare is-colliding?)
+
+(declare search-new-player-pos)
+(declare kill-player)
+(declare entity-out-of-gamefield?)
 
 
 (defn fix-world-state []
@@ -30,15 +37,6 @@
 
 (defn current-time []
   (System/currentTimeMillis))
-
-
-(defn search-new-player-pos []
-  [(rand-int 1000) (rand-int 1000)])
-
-
-(defn random-player-color []
-  (let [rcp #(format "%02X" (+ 10 (rand-int 150)))]
-    (str "#" (rcp) (rcp) (rcp))))
 
 
 (defmacro update-world!
@@ -64,20 +62,22 @@
 
 
 (declare update-entities-physics)
-(declare kill-outdated-entities)
+(declare remove-outdated-entities)
+(declare kill-some-objects)
 
 (defn run-world-simulation-tick []
   (update-world! [w]
     (let [t1 (:at w)
           t2 (current-time)]
       (-> w
-          (kill-outdated-entities t2)
+          (remove-outdated-entities t2)
           (update-entities-physics t1 t2)
+          (kill-some-objects t2)
           (assoc :at t2)
           ))))
 
 
-(defn kill-outdated-entities [w t2]
+(defn remove-outdated-entities [w t2]
   (let [ess (:entities w)
         ess' (into
               {}
@@ -87,13 +87,25 @@
     (assoc w :entities ess')))
 
 
+(defn kill-some-objects [w t2]
+  (let [kes (filter
+             (partial entity-out-of-gamefield? w)
+             (vals (:entities w)))
+        kill (fn [w es]
+               (let [eid (:eid es)]
+                 (if (= (:type es) :player)
+                   (kill-player w eid)
+                   (assoc w :entities (dissoc (:entities w) eid)))))]
+  (reduce kill w kes)))
+
+
 (defn update-entity-physics-position [entity phobjs t1 t2]
   (if-not (:phys-move entity)
     entity
     (let [vxy (:vxy entity [0 0])
           xy (:xy entity)
           pxy (or (:pxy entity) (v+ xy (vs* vxy (- t1 t2))))
-          m (:mass entity 1)
+          m (or (:mass entity) 1)
           fc (reduce v+ (:fxy entity [0 0])
                      (map #(calc-gravity-force m (:mass %) xy (:xy %)) phobjs))
           dt (- t2 t1)
@@ -133,11 +145,15 @@
 
 (defn game-add-new-player
   [eid]
-  (let [xy (search-new-player-pos)
-        ps (assoc player-proto :eid eid :xy xy)]
-    (world->!
-     (add-new-entity ps))
-    ps))
+  (let [pa (atom 0)]
+    (update-world!
+     [w]
+     (let [xy (search-new-player-pos w eid)
+           ps (assoc player-proto :eid eid :xy xy)]
+       (reset! pa ps)
+       (add-new-entity w ps)))
+    (await world)
+    @pa))
 
 
 (defn take-game-snapshot [g eid]
@@ -233,4 +249,34 @@
   (world->!
    (change-user-engine-force pid user-input)
    (maybe-player-spawn-bullet pid user-input)))
+
+
+;; --
+
+(defn search-new-player-pos [w pid]
+  [0 0])
+
+
+(defn kill-player [w pid]
+  (let [xy' (search-new-player-pos w pid)]
+    (-> w
+        (update-in [:entities pid :deaths] (fnil inc 0))
+        (update-in [:entities pid] merge {:xy xy' :pxy nil :vxy [0 0]}))))
+
+
+(defn entity-out-of-gamefield? [w es]
+  (let [[x y] (:xy es)]
+    (or
+     (< x (- world-width))
+     (> x world-width)
+     (< y (- world-height))
+     (> y world-height))))
+
+
+(defn is-colliding? [e1 e2]
+  (let [r1 (:radius e1)
+        r2 (:radius e2)
+        xy1 (:xy e1)
+        xy2 (:xy e2)]
+    (and xy1 xy2 r1 r2 (< (distance xy1 xy2) (+ r1 r2)))))
 

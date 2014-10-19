@@ -1,5 +1,8 @@
 (ns pintoid.server.physics)
 
+(def world-height 2500)
+(def world-width 2500)
+
 (def gravity-g 10000)
 (def force-limit-value 2e-3)
 (def engine-forward-force 5e-3)
@@ -56,6 +59,12 @@
         r3' (/ 1 (* r2 r))]
     [(* rx f r3')
      (* ry f r3')]))
+
+
+(defn distance [[x1 y1] [x2 y2]] 
+  (let [dx (- x1 x2)
+        dy (- x2 y2)]
+    (Math/sqrt (+ (* dx dx) (* dy dy)))))
 
 
 (defn v+ [p1 p2] 
