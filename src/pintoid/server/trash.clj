@@ -92,3 +92,23 @@
   (update-accelerations)
   (update-positions)
 )
+
+(detect-collision [-1 0] [1 0] [0 0] 1)
+(defn detect-collision [ p1 p2 c r]
+  (let [
+      [x1 y1] p1
+      [x2 y2] p2
+      [x3 y3] c
+      x2-x1 (- x2 x1)
+      y2-y1 (- y2 y1)
+      x1-x3 (- x1 x3)
+      y1-y3 (- y1 y3)
+      a (+  (* x2-x1 x2-x1) (* y2-y1))
+      b (+ (* 2 x2-x1 x1-x3) (* y2-y1 y1-y3))
+      c (+ (* x3 x3) (* y3 y3) (* x1 x1) (* y1 y1) (* (- 2) (+  (* x3 x1))) (- (* r r)))]
+      (println "a b c" a b c)
+      (cond (< (- b) 0) (< c 0)
+            (< (- b) (* 2 a)) (< (- (* 4 a c) (* b b)) 0)
+            :else (< (+ a b c) 0)
+            ) 
+      ))
