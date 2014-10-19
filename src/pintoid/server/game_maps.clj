@@ -76,18 +76,41 @@
 (defn black-hole [xy dangle] {
     :type :black
     :xy xy
-    :mass 500
+    :mass 250
     :phys-move false
     :phys-act true
     :texture :black1
-    :radius 1
+    :radius 10
     :dangle dangle
   })
 
 (def game-maps
   [[
-    (star [600 800] 100 33 :star1 0.1)
-    (planet [400 600] 50 30 :green_planet1 0.1)
-    (asteroid [100 159] 25 5 :ast1 0.1)
-    (black-hole [250 250] 0.2)
+    (black-hole [-220 -230] 0.2)
+    (star [-2100 -2100] 50 33 :star1 0.1)
+    (star [1200 500] 200 20 :star2 0.1)
+    (star [-900 -700] 100 66 :star3 0.1)
+    (star [400 300] 175 70 :star4 0.1)
+    (star [-2400 -655] 200 25 :star2 0.1)
+    (star [1100 -1700] 100 66 :star3 0.1)
+    (star [-1600 1000] 175 70 :star4 0.1)
+    (planet [-2440 -900] 15 10 :green_planet1 0.1)
+    (planet [100 -100] 10 9 :green_planet1 0.1)
+    (planet [900 -2440] 20 11 :pink_planet1 0.1)
+    (planet [100 2100] 15 8 :pink_planet1 0.1)
+    (planet [-1100 1100] 12 10 :pink_planet1 0.1)
+    (planet [-440 -200] 15 10 :green_planet1 0.1)
+    (planet [2300 -100] 10 9 :green_planet1 0.1)
+    (planet [-900 -2240] 20 11 :pink_planet1 0.1)
+    (planet [1020 -2100] 15 8 :pink_planet1 0.1)
+    (planet [-100 1100] 12 10 :pink_planet1 0.1)
+    (asteroid [-100 -189] 5 3 :ast1 0.1)
+    (asteroid [-100 89] 5 3 :ast2 0.1)
+    (asteroid [-600 234] 4 3 :ast3 0.1)
+    (asteroid [-1343 1223] 7 3 :ast4 0.1)
+    (asteroid [-457 456] 8 3 :ast5 0.1)
+    (asteroid [-2341 123] 9 3 :ast2 0.1)
+    (asteroid [345 -2319] 7 3 :ast3 0.1)
+    (asteroid [-324 980] 8 3 :ast1 0.1)
+    (asteroid [-32 80] 8 3 :ast1 0.1)
    ]])
