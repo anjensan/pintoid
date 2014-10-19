@@ -174,7 +174,6 @@
         ps (get-in g [:entities pid])
         all-entitites (:entities g)
         entities (into {} (filter (fn [[_ e]] (user-can-view-entity ps e)) all-entitites))
-        entities all-entitites
         eids (keys entities)
         new-eids (remove eids-on-client eids)
         upd-eids (filter eids-on-client eids)]

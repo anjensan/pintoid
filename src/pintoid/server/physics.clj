@@ -1,16 +1,16 @@
 (ns pintoid.server.physics)
 
-(def gravity-g 200000)
-(def force-limit-value 5e-3)
-(def engine-forward-force 5e-3)
-(def engine-reverse-force 2e-3)
+(def gravity-g 50000)
+(def force-limit-value 2e-3)
+(def engine-forward-force 2e-3)
+(def engine-reverse-force 1e-3)
 
 (def bullet-start-velocity 2)
-(def bullet-ahead-time 0)
-(def bullet-lifetime 5000)
-(def bullet-cooldown 400)
+(def bullet-ahead-time 50)
+(def bullet-lifetime 4000)
+(def bullet-cooldown 300)
 
-(def max-user-view-distance 1000)
+(def max-user-view-distance 1500)
 
 
 (defn hardlimit-force [f]
