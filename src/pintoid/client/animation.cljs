@@ -155,8 +155,6 @@
 
 (defn- anim-infinite-linear-rotate-updater [obj c]
     (fn [time]
-        (println "ANGLES" angle1 angle2 time)
-
         (set! (.-rotation obj) (* time c))
         ))
 
@@ -180,7 +178,6 @@
    ))
 
 (defn linear-rotate! [aid obj t1 t2 angle1 angle2]
-  (println "ROTATION" angle1 angle2)
   (add-animation!
    (if aid aid (str "rot-" (obj-uid obj)))
    t1

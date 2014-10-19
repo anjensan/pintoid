@@ -10,6 +10,8 @@
          [create-entity-pixi-object
           delete-entity-pixi-object
           move-player-camera!
+          update-pixi-score!
+          update-pixi-death!
           ]]
         [clojure.walk :only [keywordize-keys]])
   (:require-macros
@@ -48,6 +50,7 @@
 (declare update-entity!)
 (declare add-entity!)
 (declare remove-entity!)
+(declare update-player-score!)
 
 ;; ss - SnapShot -- JSON OBJECT!
 
@@ -93,9 +96,12 @@
 (defn update-game [w gup t2]
   (let [t1 (:at w)
         cur-pxy (get-in w [:player :xy])
-        pxy (:player-xy gup)]
+        pxy (:player-xy gup)
+        deaths (:deaths gup 0)
+        score (:score gup 0)]
     (-> w
      (assoc-in [:player :xy] pxy)
+     (add-action update-player-score! t2 deaths score)
      (add-action move-player-camera! t1 t2 cur-pxy pxy))))
 
 
@@ -177,7 +183,6 @@
 (defn update-entity! [eid estate1 t1 estate2 t2]
   (let [old-xy (:xy estate1)
         new-xy (:xy estate2)
-        _ (println estate2)
         angle1 (:angle estate1)
         angle2 (:angle estate2)
         
@@ -189,3 +194,10 @@
     (when (not= angle1 angle2)
       (when-let [obj (resolve-entity-object eid)]
         (linear-rotate! nil obj t1 t2 angle1 angle2)))))
+
+(defn update-player-score! [t1 deaths score]
+  (add-action!
+   t1
+   (fn []
+     (update-pixi-score! score)
+     (update-pixi-death! deaths))))

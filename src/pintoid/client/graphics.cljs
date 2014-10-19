@@ -53,11 +53,11 @@
     (.addChild pixi-stage pixi-score-value)
     (.addChild pixi-stage pixi-death-value)))
 
-(defn update-pixi-score [value]
+(defn update-pixi-score! [value]
   (let [text (str "Score: " value)]
     (.setText pixi-score-value text)))
 
-(defn update-pixi-death [value]
+(defn update-pixi-death! [value]
   (let [text (str "Death: " value)]
     (.setText pixi-death-value text)))
 
@@ -73,8 +73,8 @@
     (set! (.-y bg-sprite-pos) (- (/ map-height 2)))
     (.addChild pixi-gamefield bg-sprite))
    (init-pixi-labels)
-   (update-pixi-score 1)
-   (update-pixi-death 2)
+   (update-pixi-score! 0)
+   (update-pixi-death! 0)
    (.-view pixi-renderer))
 
 

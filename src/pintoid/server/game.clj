@@ -170,6 +170,8 @@
 
 (defn take-game-snapshot [g eid]
   {:player-eid eid
+   :deaths (or (get-in g [:entities eid :deaths]) 0)
+   :score (or (get-in g [:entities eid :score]) 0)
    :player-xy (get-in g [:entities eid :xy])
    })
 
@@ -243,6 +245,8 @@
                  :vxy b-vxy
                  :xy b-xy
                  :angle angle
+                 :bullet-owner pid
+                 :radius 10
                  :drop-at (+ (:at w) bullet-lifetime)
                  ))))))))
 
@@ -270,25 +274,33 @@
   [(rand-int 2000) (rand-int 2000)])
 
 
-(defn entity-collide-with-something? [w es]
-  (some (partial is-colliding? es) (vals (:entities w))))
+(defn some-entity-collide-with [w es]
+  (some #(when (is-colliding? es %) %) (vals (:entities w))))
 
 
 (defn remove-entity [w eid]
   (update-in w [:entities] dissoc eid))
 
 
-(defn handle-entity-collision [w es]
+(defn inc-player-score [w pid]
+  (update-in w [:entities pid :score] (fnil inc 0)))
+
+
+(defn handle-entity-collision [w es es2]
   (cond
-   (= (:type es) :player) (-> w (kill-player (:eid es)))
+   (= (:type es) :player) (let [w1 (if (= (:type es2) :bullet)
+                                     (inc-player-score w (:bullet-owner es2))
+                                     w)
+                                w2 (kill-player w1 (:eid es))]
+                            w2)
    (:killable? es) (-> w (remove-entity (:eid es)))
    :else w))
 
 
 (defn maybe-collide-entity-with-something [w es]
-  (if (entity-collide-with-something? w es)
-      (handle-entity-collision w es)
-      w))
+  (if-let [e2 (some-entity-collide-with w es)]
+    (handle-entity-collision w es e2)
+    w))
 
 
 (defn kill-player [w pid]
