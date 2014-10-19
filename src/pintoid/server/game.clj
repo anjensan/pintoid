@@ -154,10 +154,27 @@
    })
 
 
+(defn- abs [x]
+  (if (< x 0) (- x) x))
+
+
+(defn user-can-view-entity [ps es]
+  (let [xy1 (:xy ps)
+        xy2 (:xy es)]
+    (when (and xy1 xy2)
+      (let [[x1 y1] xy1
+            [x2 y2] xy2
+            d (+ (abs (- x1 x2)) (abs (- y1 y2)))]
+        (<= d max-user-view-distance)))))
+
+
 (defn take-entities-snapshot [g pid eids-on-client]
   (let [;; TODO: send only coords of entities, compare with prev packet
         ;; entities (for [[eid es] (:entities g)] {:xy (:xy es)})
-        entities (:entities g)
+        ps (get-in g [:entities pid])
+        all-entitites (:entities g)
+        entities (into {} (filter (fn [[_ e]] (user-can-view-entity ps e)) all-entitites))
+        entities all-entitites
         eids (keys entities)
         new-eids (remove eids-on-client eids)
         upd-eids (filter eids-on-client eids)]

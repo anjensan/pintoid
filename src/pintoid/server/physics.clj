@@ -10,6 +10,8 @@
 (def bullet-lifetime 5000)
 (def bullet-cooldown 400)
 
+(def max-user-view-distance 1000)
+
 
 (defn hardlimit-force [f]
   (cond
