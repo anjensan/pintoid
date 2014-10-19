@@ -120,15 +120,15 @@
 
 
 (defmethod create-entity-pixi-object :black [entity]
-  (let [pixi-filter (js/PIXI.TwistFilter.)
-        filter-offcet (.-offset pixi-filter)]
-    (set! (.-angle pixi-filter) 10)
-    (set! (.-radius pixi-filter) 0.2)
-    (set! (.-x filter-offcet) 0.15)
-    (set! (.-y filter-offcet) 0.27)
+  ;;(let [pixi-filter (js/PIXI.TwistFilter.)
+  ;;      filter-offcet (.-offset pixi-filter)]
+  ;;  (set! (.-angle pixi-filter) 10)
+  ;;  (set! (.-radius pixi-filter) 0.2)
+  ;;  (set! (.-x filter-offcet) 0.15)
+  ;;  (set! (.-y filter-offcet) 0.27))
   (add-to-gamefield!
    (create-sprite (:texture entity :black1) (:xy entity))
-   pixi-filter)))
+   nil))
 
 
 (defmethod create-entity-pixi-object :self-player [entity]
