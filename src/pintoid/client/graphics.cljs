@@ -25,7 +25,8 @@
 (def pixi-gamefield (new js/PIXI.DisplayObjectContainer))
 
 (def pixi-textures (atom {}))
-
+(def pixi-score-value (js/PIXI.Text. "Score: 0"))
+(def pixi-death-value (js/PIXI.Text. "Death: 0"))
 
 (declare texture-url)
 (declare get-texture)
@@ -39,6 +40,29 @@
    (into {}
     (map (fn [x] [x (load-texture x)]) textures))))
 
+(defn init-pixi-labels []
+  (let [score-pos (.-position pixi-score-value)
+        death-pos (.-position pixi-death-value)
+        style (js-obj "fill" "white" "font" "normal 22px Raleway")]
+    (set! (.-x score-pos) 3)
+    (set! (.-y score-pos) 3)
+    (set! (.-x death-pos) 3)
+    (set! (.-y death-pos) 27)
+    (.setStyle pixi-score-value style)
+    (.setStyle pixi-death-value style)
+    (.addChild pixi-stage pixi-score-value)
+    (.addChild pixi-stage pixi-death-value)))
+
+(defn update-pixi-score [value]
+  (let [text (str "Score: " value)]
+    (.setText pixi-score-value text)))
+
+(defn update-pixi-death [value]
+  (let [text (str "Death: " value)]
+    (.setText pixi-death-value text)))
+
+(defn set-text-label-text [text])
+
 (defn init-pixi-renderer []
   (let [texture (get-texture bg-texture)
         ;; FIXME: don't use 100500 :)
@@ -48,6 +72,9 @@
     (set! (.-x bg-sprite-pos) (- (/ map-width 2)))
     (set! (.-y bg-sprite-pos) (- (/ map-height 2)))
     (.addChild pixi-gamefield bg-sprite))
+   (init-pixi-labels)
+   (update-pixi-score 1)
+   (update-pixi-death 2)
    (.-view pixi-renderer))
 
 
