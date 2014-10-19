@@ -6,12 +6,12 @@
 (def gravity-g 10000)
 (def infinite-force 100)
 (def force-limit-value 2e-3)
-(def engine-forward-force 5e-3)
-(def engine-reverse-force 2e-3)
+(def engine-forward-force 3e-2)
+(def engine-reverse-force 1e-2)
 
 (def bullet-start-velocity 0.5)
-(def bullet-ahead-time 100)
-(def bullet-lifetime 4000)
+(def bullet-ahead-time 700)
+(def bullet-lifetime 4200)
 (def bullet-cooldown 300)
 
 (def max-user-view-distance 1500)

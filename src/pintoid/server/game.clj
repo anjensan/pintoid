@@ -234,8 +234,7 @@
       (if (and lbt (> lbt (- t1 bullet-cooldown)))
         w
         (let [{:keys [xy vxy angle]} ps
-              b-vxy (v+ vxy (vas angle bullet-start-velocity))
-              b-xy (v+ xy (vs* b-vxy bullet-ahead-time))]
+              b-vxy (v+ vxy (vas angle bullet-start-velocity))]
           (-> w
               (assoc-in [:entities pid :last-bullet-at] t1)
               (add-new-entity
@@ -243,10 +242,9 @@
                  :type :bullet
                  :pxy nil
                  :vxy b-vxy
-                 :xy b-xy
+                 :xy xy
                  :angle angle
                  :bullet-owner pid
-                 :radius 10
                  :drop-at (+ (:at w) bullet-lifetime)
                  ))))))))
 
@@ -319,11 +317,17 @@
      (> y world-height))))
 
 
+(defn player-and-ist-bullet [e1 e2]
+  (and (= (:eid e1) (:bullet-owner e2))))
+
 (defn is-colliding? [e1 e2]
-  (when (not= (:eid e1) (:eid e2))
-    (let [r1 (:radius e1)
-          r2 (:radius e2)
-          xy1 (:xy e1)
-          xy2 (:xy e2)]
-      (and xy1 xy2 r1 r2 (< (distance xy1 xy2) (+ r1 r2))))))
+  (cond
+   (or (player-and-ist-bullet e1 e2) (player-and-ist-bullet e2 e1)) false
+   :else
+   (when (not= (:eid e1) (:eid e2))
+     (let [r1 (:radius e1)
+           r2 (:radius e2)
+           xy1 (:xy e1)
+           xy2 (:xy e2)]
+       (and xy1 xy2 r1 r2 (< (distance xy1 xy2) (+ r1 r2)))))))
 

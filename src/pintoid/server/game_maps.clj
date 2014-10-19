@@ -20,7 +20,7 @@
   {:type :player
    :fxy [0 0]
    :phys-move true
-   :mass 10
+   :mass 30
    :angle 0
    :radius 30
    :killable? true
@@ -34,9 +34,9 @@
    :pxy [0 0]
    :xy [0 0]
    :phys-move true
-   :mass 300
+   :mass 800
    :angle 0
-   :radius 20
+   :radius 30
    :killable? true
    ;:phys-act true
    })
