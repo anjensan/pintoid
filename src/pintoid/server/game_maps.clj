@@ -44,7 +44,7 @@
     :type :star
     :xy xy
     :mass mass
-    :phys-move false 
+    :phys-move false
     :phys-act true
     :texture texture
     :radius radius
@@ -55,7 +55,7 @@
     :type :planet
     :xy xy
     :mass mass
-    :phys-move false 
+    :phys-move false
     :phys-act true
     :texture texture
     :radius radius
@@ -66,7 +66,7 @@
     :type :ast
     :xy xy
     :mass mass
-    :phys-move true 
+    :phys-move true
     :phys-act false
     :texture texture
     :radius radius
@@ -77,9 +77,9 @@
     :type :black
     :xy xy
     :mass 500
-    :phys-move false 
+    :phys-move false
     :phys-act true
-    :texture :black
+    :texture :black1
     :radius 1
     :dangle dangle
   })

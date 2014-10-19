@@ -2,7 +2,9 @@
   (:use [pintoid.client.animation :only
          [add-action!
           defer-action!
-          linear-move!]]
+          linear-move!
+          linear-rotate!
+          ]]
         [pintoid.client.graphics :only
          [create-entity-pixi-object
           delete-entity-pixi-object
@@ -167,7 +169,16 @@
 
 (defn update-entity! [eid estate1 t1 estate2 t2]
   (let [old-xy (:xy estate1)
-        new-xy (:xy estate2)]
+        new-xy (:xy estate2)
+        _ (println estate2)
+        angle1 (:angle estate1)
+        angle2 (:angle estate2)
+        
+        ]
     (when (not= old-xy new-xy)
       (when-let [obj (resolve-entity-object eid)]
-        (linear-move! nil obj t1 t2 old-xy new-xy)))))
+        (linear-move! nil obj t1 t2 old-xy new-xy)))
+
+    (when (not= angle1 angle2)
+      (when-let [obj (resolve-entity-object eid)]
+        (linear-rotate! nil obj t1 t2 angle1 angle2)))))

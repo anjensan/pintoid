@@ -16,6 +16,8 @@
 ;; completely skip outdated animations
 (def max-allowed-actions-lag 1000)
 
+; (def initial-player-angle ((/ (.PI js/Math) 2))
+
 ;; current (last) *animation* time
 (def last-animation-time 0)
 
@@ -109,6 +111,17 @@
 
 
 ;; linear moving
+(defn linear-inter [t1 t2 v1 v2]
+  (let [
+    t2-t1 (- t2 t1)
+    ddc (/ 1 t2-t1)
+    ]
+    (fn [time]
+      (let [;; dd (/ (- t2 time) t2-t1)
+            dd (* (- t2 time) ddc)
+            sd (- 1 dd)
+            x' (+ (* v1 dd) (* v2 sd))]
+            x'))))
 
 (defn- anim-linear-updater
   [obj t1 t2 xy1 xy2]
@@ -119,10 +132,9 @@
         ddc (/ 1 t2-t1)]
     (fn [time]
       (let [;; dd (/ (- t2 time) t2-t1)
-            dd (* (- t2 time) ddc)
-            sd (- 1 dd)
-            x' (+ (* sx dd) (* dx sd))
-            y' (+ (* sy dd) (* dy sd))]
+           
+            x' ((linear-inter t1 t2 sx dx) time)
+            y' ((linear-inter t1 t2 sy dy) time)]
         (set! (.-x p) x')
         (set! (.-y p) y')))))
 
@@ -132,8 +144,23 @@
   (fn []
     (let [p (.-position obj)
           [dx dy] xy2]
-      (set! (.-x p) dx)
+    rot(set! (.-x p) dx)
       (set! (.-y p) dy))))
+
+
+(defn- anim-linear-rotate-updater [obj t1 t2 angle1 angle2]
+
+    (fn [time]
+        (println time)
+        (set! (.-rotation obj) ((linear-inter t1 t2 angle1 angle2) time))
+        ))
+
+
+(defn- anim-linear-rotate-finisher [obj angle]
+  (fn []
+    (set! (.-rotation obj) angle)
+    ))
+
 
 
 (defn linear-move! [aid obj t1 t2 xy1 xy2]
@@ -144,5 +171,15 @@
    t2
    (when xy1 (anim-linear-updater obj t1 t2 xy1 xy2))
    (anim-linear-finisher obj xy2)
+   ))
+
+(defn linear-rotate! [aid obj t1 t2 angle1 angle2]
+  ; (println angle1 angle2)
+  (add-animation!
+   (if aid aid (str "rot-" (obj-uid obj)))
+   t1
+   t2
+   (when angle1 (anim-linear-rotate-updater obj t1 t2 angle1 angle2))
+   (anim-linear-rotate-finisher obj angle2)
    ))
 
