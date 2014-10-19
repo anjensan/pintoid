@@ -64,29 +64,48 @@
 
 
 (declare update-entities-physics)
+(declare kill-outdated-entities)
 
 (defn run-world-simulation-tick []
   (update-world! [w]
     (let [t1 (:at w)
           t2 (current-time)]
       (-> w
-          (assoc :at t2)
+          (kill-outdated-entities t2)
           (update-entities-physics t1 t2)
+          (assoc :at t2)
           ))))
+
+
+(defn kill-outdated-entities [w t2]
+  (let [ess (:entities w)
+        ess' (into
+              {}
+              (remove
+               (fn [[eid es]] (when-let [t (:drop-at es)] (<= t t2)))
+               ess))]
+    (assoc w :entities ess')))
 
 
 (defn update-entity-physics-position [entity phobjs t1 t2]
   (if-not (:phys-move entity)
     entity
-    (let [xy (:xy entity)
-          pxy (:pxy entity xy)
+    (let [vxy (:vxy entity [0 0])
+          xy (:xy entity)
+          pxy (or (:pxy entity) (v+ xy (vs* vxy (- t1 t2))))
           m (:mass entity 1)
           fc (reduce v+ (:fxy entity [0 0])
                      (map #(calc-gravity-force m (:mass %) xy (:xy %)) phobjs))
           dt (- t2 t1)
           dxy (hardlimit-force-2d (vs* fc (/ 1 m)))
-          xy' (integrate-verle-2d pxy xy dxy dt)]
-      (assoc entity :pxy xy :xy xy'))))
+          xy' (integrate-verle-2d pxy xy dxy dt)
+          vxy' (vs* (v- xy' xy) (/ 1 (- t2 t1)))]
+      (assoc
+          entity
+        :pxy xy
+        :xy xy'
+        :vxy vxy'                        ; used by spawn-bullet
+        ))))
 
 
 (defn update-entities-physics [w t1 t2]
@@ -122,13 +141,17 @@
 
 
 (defn take-game-snapshot [g eid]
-  {:player-eid eid})
+  {:player-eid eid
+   :player-xy (get-in g [:entities eid :xy])
+   })
 
 
 (defn entitiy-upd-obj [entity]
   {:eid (:eid entity)
    :xy (:xy entity)
-   :angle (:angle entity)})
+   :angle (:angle entity)
+   ;; TODO: add 
+   })
 
 
 (defn take-entities-snapshot [g pid eids-on-client]
@@ -156,13 +179,43 @@
      g)))
 
 
-(defn game-process-user-input [pid m]
-  (update-world!
-   [w]
-   (let [a (:angle m 0)
-         ed (:engine-dir m)
-         ef (case ed -1 (- engine-reverse-force) 1 engine-forward-force 0)
-         f (:fire? m)  ;; TODO
-         fxy (if (zero? ef) [0 0] (vs* [(Math/cos a) (Math/sin a)] ef))]
-     (assoc-in w [:entities pid :fxy] fxy))))
+(defn maybe-player-spawn-bullet [w pid user-input]
+  (if-not (:fire? user-input)
+    w
+    (let [ps (get-in w [:entities pid])
+          t1 (:at w)
+          lbt (:last-bullet-at ps)]
+      (if (and lbt (> lbt (- t1 bullet-cooldown)))
+        w
+        (let [{:keys [xy vxy angle]} ps
+              b-vxy (v+ vxy (vas angle bullet-start-velocity))
+              b-xy (v+ xy (vs* b-vxy bullet-ahead-time))]
+          (-> w
+              (assoc-in [:entities pid :last-bullet-at] t1)
+              (add-new-entity
+               (assoc bullet-proto
+                 :type :bullet
+                 :pxy nil
+                 :vxy b-vxy
+                 :xy b-xy
+                 :angle angle
+                 :drop-at (+ (:at w) bullet-lifetime)
+                 ))))))))
+
+
+(defn change-user-engine-force [w pid user-input]
+  [w]
+  (let [a (:angle user-input 0)
+        ed (:engine-dir user-input)
+        ef (case ed -1 (- engine-reverse-force) 1 engine-forward-force 0)
+        fxy (if (zero? ef) [0 0] (vas ef a))]
+    (-> w
+        (assoc-in [:entities pid :fxy] fxy)
+        (assoc-in [:entities pid :angle] a))))
+
+
+(defn game-process-user-input [pid user-input]
+  (world->!
+   (change-user-engine-force pid user-input)
+   (maybe-player-spawn-bullet pid user-input)))
 
