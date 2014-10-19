@@ -10,7 +10,8 @@
 ;; ---
 
 (def bg-texture :back)
-(def textures [:white :clojure])
+(def textures [:white :clojure :black :racket_blue :racket_red
+               :star1])
 
 (def camera-movement-duration 800)
 
@@ -98,7 +99,8 @@
      (create-sprite texture-name xy [0.5 0.5])))
 
 
-(defn add-to-gamefield! [pobj]
+(defn add-to-gamefield! [pobj pixi-filter]
+  (when pixi-filter (set! (.-filters pobj) (array pixi-filter)))
   (.addChild pixi-gamefield pobj)
   pobj)
 
@@ -109,22 +111,34 @@
   (let [texture (:texture entity :clojure)
         xy (:xy entity [0 0])
         sprite (create-sprite texture xy)]
-    (add-to-gamefield! sprite)))
+    (add-to-gamefield! sprite nil)))
 
 
 (defmethod create-entity-pixi-object :player [entity]
   (add-to-gamefield!
-   (create-sprite :racket_blue (:xy entity))))
+   (create-sprite :racket_blue (:xy entity)) nil))
+
+
+(defmethod create-entity-pixi-object :black [entity]
+  (let [pixi-filter (js/PIXI.TwistFilter.)
+        filter-offcet (.-offset pixi-filter)]
+    (set! (.-angle pixi-filter) 10)
+    (set! (.-radius pixi-filter) 0.2)
+    (set! (.-x filter-offcet) 0.15)
+    (set! (.-y filter-offcet) 0.27)
+  (add-to-gamefield!
+   (create-sprite (:texture entity :black1) (:xy entity))
+   pixi-filter)))
 
 
 (defmethod create-entity-pixi-object :self-player [entity]
   (add-to-gamefield!
-   (create-sprite :racket_red (:xy entity))))
+   (create-sprite :racket_red (:xy entity)) nil))
 
 
 (defmethod create-entity-pixi-object :clojure [entity]
   (add-to-gamefield!
-   (create-sprite :clojure (:xy entity))))
+   (create-sprite :clojure (:xy entity)) nil))
 
 
 ;; ---
