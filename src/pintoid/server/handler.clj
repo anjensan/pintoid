@@ -49,14 +49,27 @@
 
 (defn ws-handler [req]
   (println "connection from" (:remote-addr req))
-  (add-new-client-connection req))
+  (if (:ws-channel req)
+    (add-new-client-connection req)
+    (do
+      (println "UUPS no WS" req)
+      {:status 404 :body "uups, no WS"})))
+
+
+(defn wrap-ws-check [h]
+  (fn [req]
+    (when-not (:websocket? req)
+      (println "NO WS CHAN" req))
+    (h req)))
 
 
 (defroutes app-routes
   (GET "/" [] (response (index-page)))
   (GET "/ws" [] (-> ws-handler
-                    (wrap-websocket-handler {:format :json-kw})))
-  (GET "/game" {p :params} (game-page))
+                    (wrap-websocket-handler {:format :json-kw})
+                    (wrap-ws-check)
+                    ))
+  (GET "/game" {p :params} (response (game-page)))
   (resources "/js" {:root "js"})
   (resources "/img" {:root "img"})
   (resources "/css" {:root "css"}))
