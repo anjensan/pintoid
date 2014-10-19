@@ -2,7 +2,9 @@
   (:use [pintoid.client.animation :only
          [add-action!
           defer-action!
-          linear-move!]]
+          linear-move!
+          linear-rotate!
+          ]]
         [pintoid.client.graphics :only
          [create-entity-pixi-object
           delete-entity-pixi-object
