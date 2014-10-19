@@ -31,3 +31,4 @@
             )]
       (fn [time] 
         (+ (* a time time) (* b time) c))))
+
