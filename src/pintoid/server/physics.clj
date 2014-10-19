@@ -1,9 +1,9 @@
 (ns pintoid.server.physics)
 
-(def gravity-g 50000)
+(def gravity-g 10000)
 (def force-limit-value 2e-3)
-(def engine-forward-force 2e-3)
-(def engine-reverse-force 1e-3)
+(def engine-forward-force 5e-3)
+(def engine-reverse-force 2e-3)
 
 (def bullet-start-velocity 2)
 (def bullet-ahead-time 50)
@@ -79,4 +79,4 @@
 
 
 (defn vas [a s]
- (vs* [(Math/cos a) (Math/sin a)] s))
+  [(* (Math/cos a) s) (* (Math/sin a) s)])

@@ -204,8 +204,7 @@
       (if (and lbt (> lbt (- t1 bullet-cooldown)))
         w
         (let [{:keys [xy vxy angle]} ps
-              b-vxy (v+ vxy (vas angle bullet-start-velocity))
-              b-xy (v+ xy (vs* b-vxy bullet-ahead-time))]
+              b-vxy (v+ vxy (vas angle bullet-start-velocity))]
           (-> w
               (assoc-in [:entities pid :last-bullet-at] t1)
               (add-new-entity
@@ -213,7 +212,7 @@
                  :type :bullet
                  :pxy nil
                  :vxy b-vxy
-                 :xy b-xy
+                 :xy xy
                  :angle angle
                  :drop-at (+ (:at w) bullet-lifetime)
                  ))))))))
@@ -224,7 +223,7 @@
   (let [a (:angle user-input 0)
         ed (:engine-dir user-input)
         ef (case ed -1 (- engine-reverse-force) 1 engine-forward-force 0)
-        fxy (if (zero? ef) [0 0] (vas ef a))]
+        fxy (if (zero? ef) [0 0] (vas a ef))]
     (-> w
         (assoc-in [:entities pid :fxy] fxy)
         (assoc-in [:entities pid :angle] a))))
