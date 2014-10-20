@@ -203,14 +203,14 @@
         ;; entities (for [[eid es] (:entities g)] {:xy (:xy es)})
         ps (get-in g [:entities pid])
         all-entitites (:entities g)
-        ;; entities (into {} (filter (fn [[_ e]] (user-can-view-entity ps e)) all-entitites))
-        entities all-entitites
+        entities (into {} (filter (fn [[_ e]] (user-can-view-entity ps e)) all-entitites))
         eids (keys entities)
         new-eids (remove eids-on-client eids)
-        upd-eids (filter eids-on-client eids)]
+        upd-eids (filter eids-on-client eids)
+        ]
     {:upd (map (comp entitiy-upd-obj entities) upd-eids)
      :add (map entities new-eids)
-     :rem (remove (set eids) eids-on-client)
+     :rem (remove (set (keys all-entitites)) eids-on-client)
      }))
 
 
