@@ -218,10 +218,11 @@
 
   (add-entity [this entity-id cid-comp-map]
     (PersistentECSImpl.
-     (reduce (fn [cid [k v]] (assoc cid k v)) cid-eid-comp cid-comp-map)
-     (reduce #(assoc %1 (conj (or (%1 %2) (eid-set)) entity-id)) cid-eids (map first cid-comp-map))
-     (assoc eid-cids (into (or (eid-cids entity-id) (sorted-set)) (map first cid-comp-map)))
+     (reduce (fn [cec [k v]] (assoc cec k (assoc (cec k) entity-id v))) cid-eid-comp cid-comp-map)
+     (reduce #(assoc %1 %2 (conj (or (%1 %2) (eid-set)) entity-id)) cid-eids (map first cid-comp-map))
+     (assoc eid-cids entity-id (into (or (eid-cids entity-id) (sorted-set)) (map first cid-comp-map)))
      the-meta))
+
   (put-component [this entity-id component-id comp]
     (let [eid-comp (cid-eid-comp component-id)
           old-is-nil (nil? (when eid-comp (eid-comp entity-id)))
