@@ -16,3 +16,6 @@
   (when enable-debug
     `(println ~@ms)))
 
+
+(defn current-os-time []
+  (System/currentTimeMillis))

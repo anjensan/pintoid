@@ -1,10 +1,12 @@
 (ns pintoid.server.ecs
-  (:require [clojure.data.int-map :as im]))
+  (:require [clojure.data.int-map :as im])
+  (:use [clojure.walk :only [postwalk]]))
 
 ;; -- API
 
 (declare create-ecs)
 (declare next-entity-id)
+(declare add-new-entity)
 (declare entity)
 
 (declare system-timed)
@@ -15,6 +17,7 @@
 (declare eids+)
 (declare eids*)
 (declare eids-)
+(declare eids$)
 (declare eids)
 
 (defprotocol ImmutableECS
@@ -58,8 +61,10 @@
 
 ;; -- systems
 
-(defn current-os-time []
-  (System/currentTimeMillis))
+(defn system-each-into [sys-fn eids-query]
+  (fn [ecs & rs]
+    (into ecs (mapcat (fn [eid] (apply sys-fn ecs eid rs))
+                      (eids$ ecs eids-query)))))
 
 (defn system-timed
   ([sys-fn]
@@ -138,13 +143,6 @@
            (-> ecs'
                (add-entity sid {::system {:system-fn sys-fn :state state'}})))))))
 
-
-
-
-(defn my-timed-statefull-system [w state dt]
-  [w state])
-
-
 ;; -- misc
 
 (defn create-ecs
@@ -168,6 +166,9 @@
   (when-let [cids (component-ids ecs entity-id)]
     (into {} (map (fn [ck] [ck (ecs ck entity-id)]) cids))))
 
+(defn add-new-entity [w cid-comp-map]
+  (add-entity w (next-entity-id) cid-comp-map))
+
 (defn eids+ [& es]
   (reduce im/union es))
 
@@ -181,6 +182,18 @@
   ([] (im/dense-int-set))
   ([xs] (im/dense-int-set xs)))
 
+(defn eids$ [ces eids-query]
+  (cond
+   (keyword? eids-query) (entity-ids ces eids-query)
+   (empty? eids-query) (eids)
+   (vector? eids-query)
+   (let [[f & r :as fr] eids-query]
+     (condp #(%1 %2) f
+       #{* :- '*} (apply eids* (map #(eids$ ces %) r))
+       #{+ :+ '+} (apply eids+ (map #(eids$ ces %) r))
+       #{- :- '-} (apply eids- (map #(eids$ ces %) r))
+       (eids fr)))
+   :else (eids eids-query)))
 
 ;; -- implementation
 
