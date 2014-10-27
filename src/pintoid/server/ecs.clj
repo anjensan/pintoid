@@ -63,19 +63,19 @@
 
 (defn system-each-into [sys-fn eids-query]
   (fn [ecs & rs]
-    (into ecs (mapcat (fn [eid] (apply sys-fn ecs eid rs))
-                      (eids$ ecs eids-query)))))
+    (persistent!
+     (reduce
+      #(reduce conj! %1 (apply sys-fn ecs %2 rs))
+      (transient ecs)
+      (eids$ ecs eids-query)))))
 
 (defn system-timed
   ([sys-fn]
      (system-timed sys-fn (fn [dt] [dt])))
   ([sys-fn dt-quant-fn]
-     (system-timed sys-fn dt-quant-fn current-os-time))
-  ([sys-fn dt-quant-fn current-time-fn!]
      (let [sid (next-entity-id)]
-       (fn [ecs & rs]
-         (let [cur-time (current-time-fn!)
-               prev-time (or (:last-time (ecs sid ::system)) cur-time)
+       (fn [ecs cur-time & rs]
+         (let [prev-time (or (:last-time (ecs sid ::system)) cur-time)
                dt (if prev-time (- cur-time prev-time) 0)
                dt-s (dt-quant-fn dt)
                target-time (reduce + prev-time dt-s)]
@@ -164,23 +164,27 @@
 
 (defn entity [ecs entity-id]
   (when-let [cids (component-ids ecs entity-id)]
-    (into {} (map (fn [ck] [ck (ecs ck entity-id)]) cids))))
+    (into {} (map (fn [ck] [ck (ecs entity-id ck)]) cids))))
 
 (defn add-new-entity [w cid-comp-map]
   (add-entity w (next-entity-id) cid-comp-map))
 
 (defn eids+ [& es]
-  (reduce im/union es))
+  (reduce im/union (map eids es)))
 
 (defn eids* [& es]
-  (reduce im/intersection es))
+  (reduce im/intersection (map eids es)))
 
 (defn eids- [x & es]
-  (reduce im/difference x es))
+  (reduce im/difference (eids x) (map eids es)))
 
 (defn eids
-  ([] (im/dense-int-set))
-  ([xs] (im/dense-int-set xs)))
+  ([]
+     (im/dense-int-set))
+  ([xs]
+     (if (instance? clojure.data.int_map.PersistentIntSet xs)
+       xs
+       (im/dense-int-set (seq xs)))))
 
 (defn eids$ [ces eids-query]
   (cond
@@ -189,9 +193,9 @@
    (vector? eids-query)
    (let [[f & r :as fr] eids-query]
      (condp #(%1 %2) f
-       #{* :- '*} (apply eids* (map #(eids$ ces %) r))
-       #{+ :+ '+} (apply eids+ (map #(eids$ ces %) r))
-       #{- :- '-} (apply eids- (map #(eids$ ces %) r))
+       #{:* '*} (apply eids* (map #(eids$ ces %) r))
+       #{:+ '+} (apply eids+ (map #(eids$ ces %) r))
+       #{:- '-} (apply eids- (map #(eids$ ces %) r))
        (eids fr)))
    :else (eids eids-query)))
 

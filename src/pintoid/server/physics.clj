@@ -62,10 +62,18 @@
      (* ry fr3)]))
 
 
-(defn distance [[x1 y1] [x2 y2]] 
+(defn distance2 [[x1 y1] [x2 y2]] 
   (let [dx (- x1 x2)
         dy (- y1 y2)]
-    (Math/sqrt (+ (* dx dx) (* dy dy)))))
+    (+ (* dx dx) (* dy dy))))
+
+
+(defn distance [xy1 xy2] 
+  (Math/sqrt (distance2 xy1 xy2)))
+
+
+(definline sqr [x]
+  `(let [x# ~x] (* x# x#)))
 
 
 (defn v+ [p1 p2] 

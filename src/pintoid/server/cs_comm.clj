@@ -1,5 +1,5 @@
 (ns pintoid.server.cs-comm
-  (:use [pintoid.server game utils])
+  (:use [pintoid.server game utils ecs])
   (:require
    [clojure.core.async :refer
     [<! >! <!! >!! put! close! thread go chan go-loop]]
@@ -57,7 +57,7 @@
 
 
 (defn add-new-client-connection [req]
-  (let [eid (next-eid)
+  (let [eid (next-entity-id)
         ws-channel (:ws-channel req)]
     (swap! client-notifier-agents assoc eid (agent {:pid eid}))
     (swap! client-chans assoc eid ws-channel)
@@ -69,7 +69,7 @@
 ;; ---
 
 (defn create-and-send-world-snapshot-agent-upd [pss w eid]
-  (let [at (:at w)
+  (let [at (get-world-time w)
         gs (take-game-snapshot w eid)
         client-eids (:client-eids pss #{})
         snapshot (take-entities-snapshot w eid client-eids)
@@ -98,7 +98,7 @@
 
 (defn send-snapshots-to-all-clients []
   (let [w (fix-world-state)]
-    (log-debug "send snapshot, time" (:at w))
+    (log-debug "send snapshot" w)
     (doseq [eid (keys @client-chans)]
       (send-world-snapshot-to-client w eid))))
 

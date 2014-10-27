@@ -1,16 +1,20 @@
 (ns pintoid.server.utils)
 
 (def enable-debug false)
-(def eid-counter (atom 0))
 
+(defn current-os-time []
+  (System/currentTimeMillis))
 
-(defn next-eid []
-  (swap! eid-counter inc))
-
+(defmacro when-some* [bindings & body]
+  (if (empty? bindings)
+    (list* 'do body)
+    (let [cb (subvec bindings 0 2)
+          rb (subvec bindings 2)]
+      `(when-some ~cb
+         (when-some* ~rb ~@body)))))
 
 (defmacro log-info [& ms]
   `(println ~@ms))
-
 
 (defmacro log-debug [& ms]
   (when enable-debug

@@ -1,23 +1,9 @@
 (ns pintoid.server.game-maps)
 
-(def default-entity
-  {:type :clojure
-   :xy [0 0]
-   :pxy [0 0]
-   :fxy [0 0]
-   :vxy [0 0]
-   :phys-move false
-   :phys-act false
-   :mass 0
-   :texture :clojure
-   :dangle 0
-   :angle 0
-   :killable? false
-   })
-
 
 (def player-proto
-  {:type :player
+  {:player true
+   :type :player
    :fxy [0 0]
    :phys-move true
    :mass 30
@@ -28,7 +14,8 @@
 
 
 (def bullet-proto
-  {:type :bullet
+  {:bullet true
+   :type :bullet
    :texture :ast1
    :fxy [0 0]
    :pxy [0 0]
@@ -41,12 +28,12 @@
    :bullet-lifetime 3000
    :bullet-cooldown 300
    :bullet-velocity 0.5
-   ;:phys-act true
    })
 
 
 (def bullet-alt-proto
-  {:type :bullet
+  {:bullet true
+   :type :bullet
    :texture :ast2
    :fxy [0 0]
    :pxy [0 0]
@@ -62,50 +49,50 @@
    :bullet-velocity 1.2
    })
 
-(defn star [xy mass radius texture dangle] {
-    :type :star
-    :xy xy
-    :mass mass
-    :phys-move false
-    :phys-act true
-    :texture texture
-    :radius radius
-    :dangle dangle
-  })
+(defn star [xy mass radius texture dangle]
+  {
+   :type :star
+   :xy xy
+   :mass mass
+   :phys-act true
+   :texture texture
+   :radius radius
+   :dangle dangle
+   })
 
-(defn planet [xy mass radius texture dangle] {
-    :type :planet
-    :xy xy
-    :mass mass
-    :phys-move false
-    :phys-act true
-    :texture texture
-    :radius radius
-    :dangle dangle
-  })
+(defn planet [xy mass radius texture dangle]
+  {
+   :type :planet
+   :xy xy
+   :mass mass
+   :phys-act true
+   :texture texture
+   :radius radius
+   :dangle dangle
+   })
 
-(defn asteroid [xy mass radius texture dangle] {
-    :type :ast
-    :xy xy
-    :mass mass
-    :phys-move true
-    :phys-act false
-    :texture texture
-    :radius radius
-    :dangle dangle
-    :vxy [1 1]
-  })
+(defn asteroid [xy mass radius texture dangle]
+  {
+   :type :ast
+   :xy xy
+   :mass mass
+   :phys-move true
+   :texture texture
+   :radius radius
+   :dangle dangle
+   :vxy [1 1]
+   })
 
-(defn black-hole [xy dangle] {
-    :type :black
-    :xy xy
-    :mass 500
-    :phys-move false
-    :phys-act true
-    :texture :black1
-    :radius 1
-    :dangle dangle
-  })
+(defn black-hole [xy dangle]
+  {
+   :type :black
+   :xy xy
+   :mass 500
+   :phys-act true
+   :texture :black1
+   :radius 1
+   :dangle dangle
+   })
 
 (def game-maps
   [[
