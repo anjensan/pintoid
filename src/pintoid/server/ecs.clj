@@ -347,7 +347,7 @@
     (eid-cids entity-id))
 
   (entity-ids [_ component-id]
-    (eid-cids component-id))
+    (cid-eids component-id))
 
   TransientECS
 
@@ -357,17 +357,17 @@
           new-is-nil (nil? comp)]
       (if-not new-is-nil
 
-        (do
+        (when (or (not old-is-nil) (eid-cids entity-id))
           ;; insert or update
           (when old-is-nil
             (set! eid-cids
                   (assoc!
                    (maybe-transient eid-cids) entity-id
-                   (conj (eid-cids entity-id) component-id)))
+                   (conj (or (eid-cids entity-id) (sorted-set)) component-id)))
             (set! cid-eids
                   (assoc!
                    (maybe-transient cid-eids) component-id
-                   (conj (or (cid-eids component-id) (eids)) entity-id)))
+                   (conj (or (cid-eids component-id) (eids)) entity-id))))
 
           (let [new-eid-comp (assoc! (maybe-transient (or eid-comp {})) entity-id comp)]
             (when-not (identical? eid-comp new-eid-comp)
@@ -387,7 +387,7 @@
                 (assoc!
                  (maybe-transient eid-cids) entity-id
                  (disj (eid-cids entity-id) component-id)))
-          ))))
+          )))
     this)
 
   clojure.lang.ITransientCollection
@@ -405,10 +405,10 @@
   clojure.lang.IFn
 
   (invoke [this [entity-id component-id]]
-    (.component this component-id entity-id))
+    (.component this entity-id component-id))
 
   (invoke [this entity-id component-id]
-    (.component this component-id entity-id))
+    (.component this entity-id component-id))
 
   (invoke [this entity-id component-id default]
     (let [r (.component this entity-id component-id)]
