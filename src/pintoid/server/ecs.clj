@@ -12,10 +12,10 @@
 (declare quantize-time)
 
 ;; sets of entity-ids
-(declare eid-set+)
-(declare eid-set*)
-(declare eid-set-)
-(declare eid-set)
+(declare eids+)
+(declare eids*)
+(declare eids-)
+(declare eids)
 
 (defprotocol ImmutableECS
   ;; (ecs 1 :x) ~ (component ecs 1 :x)
@@ -58,8 +58,6 @@
 
 ;; -- systems
 
-(def ^:private systems-counter (atom 0))
-
 (defn current-os-time []
   (System/currentTimeMillis))
 
@@ -70,18 +68,16 @@
      (system-timed sys-fn dt-quant-fn current-os-time))
   ([sys-fn dt-quant-fn current-time-fn!]
      (let [sid (next-entity-id)]
-       (fn [ecs]
+       (fn [ecs & rs]
          (let [cur-time (current-time-fn!)
-               prev-time (or (:last-time (ecs sid ::system-timed)) cur-time)
+               prev-time (or (:last-time (ecs sid ::system)) cur-time)
                dt (if prev-time (- cur-time prev-time) 0)
                dt-s (dt-quant-fn dt)
                target-time (reduce + prev-time dt-s)]
            (-> (if (== cur-time prev-time)
                  ecs
-                 (reduce #(sys-fn %1 %2) ecs dt-s))
-               (add-entity sid)
-               (put-component sid ::system-timed
-                              {:last-time target-time :system-fn sys-fn})))))))
+                 (reduce #(apply sys-fn %1 %2 rs) ecs dt-s))
+               (add-entity sid {::system {:last-time target-time :system-fn sys-fn}})))))))
 
 (defn- convert-to-integrals
   [xs]
@@ -124,14 +120,11 @@
        [(fn [ecs & rs]
           (let [d (future (apply system-fn-fn ecs rs))]
             (-> ecs
-                (add-entity ecs sid)
-                (put-component sid ::system-async
-                               {:system-fn-fn system-fn-fn :update-fn d}))))
+                (add-entity sid {::system {:system-fn-fn system-fn-fn :update-fn d}}))))
         (fn [ecs & rs]
-          (if-let [p (:update-fn (ecs sid ::system-async))]
+          (if-let [p (:update-fn (ecs sid ::system))]
             (-> ecs
-                (put-component sid ::system-async
-                               {:system-fn-fn system-fn-fn :update-fn nil})
+                (drop-entity sid)
                 (apply @p ecs rs))))])))
 
 (defn system-stateful
@@ -140,24 +133,30 @@
   ([sys-fn initial-state]
      (let [sid (next-entity-id)]
        (fn [ecs & rs]
-         (let [state (:state (ecs sid ::system-stateful) initial-state)
-               [ecs' state'] (apply sys-fn ecs state rs)]
+         (let [state (:state (ecs sid ::system) initial-state)
+               [ecs' state'] (apply sys-fn ecs state)]
            (-> ecs'
-               (add-entity sid)
-               (put-component sid ::system-stateful
-                              {:system-fn sys-fn :state state'})))))))
+               (add-entity sid {::system {:system-fn sys-fn :state state'}})))))))
+
+
+
+
+(defn my-timed-statefull-system [w state dt]
+  [w state])
+
 
 ;; -- misc
 
 (defn create-ecs
   ([]
      (->PersistentECSImpl {} {} {} nil))
-  ([cid-eid-comp-list]
+  ([eid-cid-comp-list]
      (into
-      (reduce #(add-entity %1 %2)
-              (create-ecs)
-              (map second cid-eid-comp-list))
-      cid-eid-comp-list)))
+      (reduce
+       #(add-entity %1 %2)
+       (create-ecs)
+       (map first eid-cid-comp-list))
+      eid-cid-comp-list)))
 
 (defn drop-component [ecs entity-id component-id]
   (put-component ecs entity-id component-id nil))
@@ -169,20 +168,18 @@
   (when-let [cids (component-ids ecs entity-id)]
     (into {} (map (fn [ck] [ck (ecs ck entity-id)]) cids))))
 
-(defn eid-set+ [& es]
+(defn eids+ [& es]
   (reduce im/union es))
 
-(defn eid-set* [& es]
+(defn eids* [& es]
   (reduce im/intersection es))
 
-(defn eid-set- [x & es]
+(defn eids- [x & es]
   (reduce im/difference x es))
 
-(defn eid-set
-  ([]
-     (im/dense-int-set))
-  ([xs]
-     (im/dense-int-set xs)))
+(defn eids
+  ([] (im/dense-int-set))
+  ([xs] (im/dense-int-set xs)))
 
 
 ;; -- implementation
@@ -207,6 +204,23 @@
 
   PersistentECS
 
+  (drop-entity [this entity-id]
+    (if-let [cids (eid-cids entity-id)]
+      (PersistentECSImpl.
+       (persistent!
+        (reduce
+         #(assoc! %1 %2 (dissoc (%1 %2) entity-id))
+         (transient cid-eid-comp)
+         cids))
+       (persistent!
+        (reduce
+         #(assoc! %1 %2 (disj (%1 %2) entity-id))
+         (transient cid-eids)
+         cids))
+       (dissoc eid-cids entity-id)
+       the-meta)
+      this))
+
   (add-entity [this entity-id]
     (if (eid-cids entity-id)
       this
@@ -218,9 +232,18 @@
 
   (add-entity [this entity-id cid-comp-map]
     (PersistentECSImpl.
-     (reduce (fn [cec [k v]] (assoc cec k (assoc (cec k) entity-id v))) cid-eid-comp cid-comp-map)
-     (reduce #(assoc %1 %2 (conj (or (%1 %2) (eid-set)) entity-id)) cid-eids (map first cid-comp-map))
-     (assoc eid-cids entity-id (into (or (eid-cids entity-id) (sorted-set)) (map first cid-comp-map)))
+     (persistent!
+      (reduce
+       (fn [cec [k v]] (assoc! cec k (assoc (cec k) entity-id v)))
+       (transient cid-eid-comp)
+       cid-comp-map))
+     (persistent!
+      (reduce
+       #(assoc! %1 %2 (conj (or (%1 %2) (eids)) entity-id))
+       (transient cid-eids)
+       (map first cid-comp-map)))
+     (assoc eid-cids entity-id
+            (into (or (eid-cids entity-id) (sorted-set)) (map first cid-comp-map)))
      the-meta))
 
   (put-component [this entity-id component-id comp]
@@ -249,16 +272,17 @@
        (and old-is-nil (not new-is-nil) (eid-cids entity-id))
        (PersistentECSImpl.
         (assoc cid-eid-comp component-id (assoc (or eid-comp {}) entity-id comp))
-        (assoc cid-eids component-id (conj (or (cid-eids component-id) (eid-set)) entity-id))
+        (assoc cid-eids component-id (conj (or (cid-eids component-id) (eids)) entity-id))
         (assoc eid-cids entity-id (conj (eid-cids entity-id) component-id))
         the-meta)
 
        :else this)))
 
-  clojure.lang.IPersistentCollection
-
+  clojure.lang.Counted
   (count [_]
     (reduce + (map (comp count second) cid-eid-comp)))
+
+  clojure.lang.IPersistentCollection
 
   (cons [this [entity-id component-id comp]]
     (.put-component this entity-id component-id comp))
@@ -267,9 +291,10 @@
     (PersistentECSImpl. {} {} {} the-meta))
 
   (seq [this]
-    (for [eid (keys eid-cids)
-          cid (eid-cids eid)]
-      [eid cid (this eid cid)]))
+    (seq
+     (for [eid (keys eid-cids)
+           cid (eid-cids eid)]
+       [eid cid (this eid cid)])))
 
   (equiv [this other]
     (and
@@ -285,7 +310,8 @@
     (.component this entity-id component-id))
 
   (invoke [this entity-id component-id default]
-    (or (.component this entity-id component-id) default))
+    (let [r (.component this entity-id component-id)]
+      (if (nil? r) default r)))
 
   clojure.lang.IObj
 
@@ -301,8 +327,8 @@
     (->TransientECSImpl
      (transient cid-eid-comp)
      cid-eids
-     eid-cids
-     ))
+     eid-cids))
+
   )
 
 
@@ -330,14 +356,19 @@
           old-is-nil (nil? (when eid-comp (eid-comp entity-id)))
           new-is-nil (nil? comp)]
       (if-not new-is-nil
+
         (do
+          ;; insert or update
           (when old-is-nil
-            ;; insert
-            (set! eid-cids (assoc! (maybe-transient eid-cids)
-                                   entity-id (conj (eid-cids entity-id) component-id)))
-            (set! cid-eids (assoc! (maybe-transient cid-eids)
-                                   component-id (conj (or (cid-eids component-id) (eid-set) entity-id))))
-          ;; insert/update
+            (set! eid-cids
+                  (assoc!
+                   (maybe-transient eid-cids) entity-id
+                   (conj (eid-cids entity-id) component-id)))
+            (set! cid-eids
+                  (assoc!
+                   (maybe-transient cid-eids) component-id
+                   (conj (or (cid-eids component-id) (eids)) entity-id)))
+
           (let [new-eid-comp (assoc! (maybe-transient (or eid-comp {})) entity-id comp)]
             (when-not (identical? eid-comp new-eid-comp)
               (set! cid-eid-comp (assoc! cid-eid-comp component-id new-eid-comp)))))
@@ -380,7 +411,8 @@
     (.component this component-id entity-id))
 
   (invoke [this entity-id component-id default]
-    (or (.component this entity-id component-id) default))
+    (let [r (.component this entity-id component-id)]
+      (if (nil? r) default r)))
 
   )
 
