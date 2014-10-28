@@ -2,48 +2,34 @@
   (:use [pintoid.server cs-comm game])
   (:require
    [pintoid.server.handler]
+   [frodo.web :refer [App]]
    [ring.middleware.params]
-   [ring.middleware.session]
-   [org.httpkit.server :refer [run-server]]))
+   [ring.middleware.session]))
 
 
-(declare schedule-at-fixed-rate)
-
-
-(defonce server (atom nil))
-
-(defonce sched-executor
-  (java.util.concurrent.ScheduledThreadPoolExecutor. 5))
-
-
-(def app
-  (-> #'pintoid.server.handler/app-routes
-      (ring.middleware.params/wrap-params)
-      (ring.middleware.session/wrap-session)))
-
-
-(defn schedule-at-fixed-rate [period f]
+(defn schedule-at-fixed-rate [scheduler period f]
   (.scheduleAtFixedRate
-   sched-executor
+   scheduler
    f 0 (long period)
    java.util.concurrent.TimeUnit/MILLISECONDS))
 
+(defn start-scheduler! []
+  (let [s (java.util.concurrent.ScheduledThreadPoolExecutor. 5)]
+    (init-world-state)
+    (schedule-at-fixed-rate s 80 send-snapshots-to-all-clients)
+    (schedule-at-fixed-rate s 30 run-world-simulation-tick)
+    s))
 
-(defn stop-pintoid []
-  (when-not (nil? @server)
-    (@server :timeout 100)
-    (reset! server nil)))
+(defn stop-scheduler! [s]
+  (.shutdown s))
 
-
-(defn start-pintoid []
-  (reset! server (run-server #'app {:port 8080})))
-
-
-(defn -main [& args]
-  (start-pintoid))
-
-
-;; FIXME
-(init-world-state)
-(schedule-at-fixed-rate 80 send-snapshots-to-all-clients)
-(schedule-at-fixed-rate 30 run-world-simulation-tick)
+(def app
+  (reify
+    App
+    (start! [_]
+      {:scheduler (start-scheduler!)
+       :frodo/handler (-> #'pintoid.server.handler/app-routes
+                          (ring.middleware.params/wrap-params)
+                          (ring.middleware.session/wrap-session))})
+    (stop! [_ s]
+      (stop-scheduler! (:scheduler s)))))
