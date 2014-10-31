@@ -2,7 +2,6 @@
   (:use [pintoid.server utils physics game-maps ecs]))
 
 ;; -- api
-
 (declare fix-world-state)
 (declare init-world-state)
 (declare game-remove-player)
@@ -10,20 +9,18 @@
 (declare take-game-snapshot)
 (declare run-world-simulation-tick)
 
-
 ;; -- various systems
+(declare sys-attach-world-time)
 (declare sys-init-world-state)
-(declare sys-kill-outdated-entities now)
-(declare sys-simulate-physics now)
-(declare sys-collide-entities now)
+(declare sys-collide-entities)
+(declare sys-kill-outdated-entities)
 (declare sys-kill-collided-entities)
 (declare sys-kill-entities-out-of-gamefield)
-(declare sys-fix-stable-world-state)
-(declare sys-maybe-spawn-bullet-by-some-users)
-(declare sys-change-engine-by-user-input)
+(declare sys-simulate-physics)
+(declare sys-fixate-world-state)
+(declare sys-spawn-bullets)
 (declare sys-capture-users-input)
-(declare sys-attach-world-time)
-
+(declare sys-change-engine-based-on-ui)
 
 (declare kill-entity)
 (declare kill-player)
@@ -31,15 +28,15 @@
 (declare entity-out-of-gamefield?)
 (declare search-new-player-pos)
 
-
 ;; -- state
 
 (def last-stable-world (atom nil))
 (def users-input (atom {}))
-(def world (agent (create-ecs)))
 (def time-eid (next-entity-id))
+(def world (agent (create-ecs)))
 
-; -- impl
+
+;; -- impl
 
 (defn fix-world-state []
   (or @last-stable-world @world))
@@ -47,10 +44,8 @@
 (defn get-world-time [w]
   (w time-eid :time))
 
-
 (defn game-remove-player [eid]
   (send world drop-entity eid))
-
 
 (defn game-add-new-player [eid]
   (send
@@ -63,16 +58,15 @@
   (await world)
   (entity @world eid))
 
-
 (defn game-process-user-input [eid user-input]
   (swap! users-input assoc eid user-input))
-
 
 (defn init-world-state []
   (send world sys-init-world-state (rand-nth game-maps)))
 
+;; --
 
-(def sys-fix-stable-world-state
+(def sys-fixate-world-state
   (fn [w]
     (reset! last-stable-world w)))
 
@@ -85,14 +79,14 @@
     (let [now (current-os-time)]
       (-> w
           (sys-capture-users-input)
-          (sys-change-engine-by-user-input)
-          (sys-maybe-spawn-bullet-by-some-users)
+          (sys-change-engine-based-on-ui)
+          (sys-spawn-bullets)
           (sys-kill-outdated-entities now)
           (sys-simulate-physics now)
           (sys-collide-entities)
-          (sys-kill-collided-entities)
-          (sys-kill-entities-out-of-gamefield)
-          (sys-fix-stable-world-state)
+          ;;(sys-kill-collided-entities)
+          ;;(sys-kill-entities-out-of-gamefield)
+          (sys-fixate-world-state)
           (sys-attach-world-time now)
           ))))
 
@@ -104,32 +98,25 @@
   (fn [w now]
     (add-entity w time-eid {:time now})))
 
-
 (def sys-kill-outdated-entities
   (fn [w now]
     (reduce
-     kill-entity
+     (fn [w eid]
+       (if (<= (w eid :sched-kill-at) now)
+         (kill-entity w eid)
+         w))
      w
-     ;; FIXME: use some kind of priority-queue here?
-     (filter #(>= (w % :sched-kill-at) now) (entity-ids w :sched-kill-at)))))
-
-
-(defn kill-entity [w eid]
-  (if (w eid :player)
-    ;; FIXME: use multimethods or protocols here
-    (kill-player w eid)
-    (drop-entity w eid)))
-
+     (eids$ w :sched-kill-at))))
 
 (def sys-kill-entities-out-of-gamefield
   (fn [w]
     (reduce
-     kill-entity
+     (fn [w eid]
+       (if (entity-out-of-gamefield? w eid)
+         (kill-entity w eid)
+         w))
      w
-     (filterv
-      #(entity-out-of-gamefield? w %)
-      (eids$ w :xy)))))
-
+     (eids$ w :xy))))
 
 (def sys-collide-entities
   (fn [w]
@@ -145,39 +132,37 @@
        coll-eids))))
 
 
-(def sys-kill-collided-entities identity)
-
+(def sys-kill-collided-entities
+  (fn [w]
+    w))
 
 (def phys-move-entity-seq
   (fn [w eid dt]
     (let [xy (w eid :xy)
-          vxy (w eid :vxy)
-          xy' (v+ xy (vs* vxy dt))]
-      [[eid :xy xy']])))
-
-
-(def phys-update-enity-vxy-seq
-  (fn [w eid dt]
-    ;; TODO: rewrite, don't use 'verle'?
-    (let [vxy (w eid :vxy [0 0])
-          xy (w eid :xy [0 0])
-          pxy (or (w eid :pxy) (v- xy (vs* vxy dt)))
+          fxy (w eid :fxy [0 0])
           m (w eid :mass 1)
-          fc (reduce
-              #(v+ %1 (calc-gravity-force m (w %2 :mass 1) xy (w %2 :xy))) 
-              (w eid :fxy [0 0])
-              (eids$ w [:- [:* :phys-act :xy :mass] [eid]]))
-          dxy (hardlimit-force-2d (vs* fc (/ 1 m)))
-          xy' (integrate-verle-2d pxy xy dxy dt)
-          vxy' (vs* (v- xy' xy) (/ 1 dt))]
-      [[eid :vxy vxy']])))
+          axy (vs* fxy (/ m))
+          vxy (w eid :vxy [0 0])
+          vxy' (v+ vxy (vs* axy dt))
+          dt2 (/ dt 2)
+          xy' (v+ xy (v+ (vs* vxy dt2) (vs* vxy' dt2)))]
+      [[eid :vxy vxy'] [eid :xy xy']])))
 
+(def phys-update-enity-fxy-seq
+  (fn [w eid dt]
+    (let [xy (w eid :xy [0 0])
+          m (w eid :mass 1)
+          fxy (reduce
+              #(v+ %1 (calc-gravity-force m (w %2 :mass) xy (w %2 :xy)))
+              (w eid :self-fxy [0 0])
+              (eids$ w [:- [:* :phys-act :xy :mass] [eid]]))]
+      [[eid :fxy fxy]])))
 
 (def sys-physics-move
-  (system-each-into phys-move-entity-seq [:* :xy :vxy :phys-move]))
+  (system-each-into phys-move-entity-seq [:* :xy :phys-move [:+ :vxy :fxy]]))
 
 (def sys-physics-update-vxy
-  (system-each-into phys-update-enity-vxy-seq [:* :xy :mass :phys-move]))
+  (system-each-into phys-update-enity-fxy-seq [:* :xy :mass :phys-move]))
 
 (def sys-simulate-physics
   (system-timed
@@ -194,13 +179,11 @@
    :player-xy (w eid :xy)
    })
 
-
 (defn entitiy-upd-obj [w eid]
   {:eid eid
    :xy (w eid :xy)
    :angle (w eid :angle)
    })
-
 
 (defn take-entities-snapshot [w eid client-eids]
   (let [;; TODO: send only coords of entities, compare with prev packet
@@ -216,9 +199,9 @@
      :rem rem-eids}))
 
 
-(def sys-maybe-spawn-bullet-by-some-users
-  (fn [w] w))
-
+(def sys-spawn-bullets
+  (fn [w]
+    w))
 
 (def sys-capture-users-input
   (fn [w]
@@ -229,7 +212,7 @@
          [eid :user-input (get ui eid)])))))
             
 
-(def sys-change-engine-by-user-input
+(def sys-change-engine-based-on-ui
   (system-each-into
    (fn [w eid]
      (let [ui (w eid :user-input)
@@ -237,7 +220,7 @@
            ed (:engine-dir ui)
            ef (case ed -1 (- engine-reverse-force) 1 engine-forward-force 0)
            fxy (if (zero? ef) [0 0] (vas a ef))]
-       [[eid :fxy fxy]
+       [[eid :self-fxy fxy]
         [eid :angle a]]))
    [:* :player :user-input]))
 
@@ -279,3 +262,9 @@
                  xy1 (w e1 :xy)
                  xy2 (w e2 :xy)]
       (< (distance2 xy1 xy2) (sqr (+ r1 r2))))))
+
+(defn kill-entity [w eid]
+  (if (w eid :player)
+    ;; FIXME: use multimethods or protocols here
+    (kill-player w eid)
+    (drop-entity w eid)))
