@@ -32,11 +32,9 @@
 ;; sorted list of keys from #'pending-actions-map
 (def pending-actions-times (array))
 
-
 (defn defer-action!
   [act-fn!]
   (.push deffered-actions act-fn!))
-
 
 (defn add-action!
   [t act-fn!]
@@ -55,7 +53,6 @@
 (defn- add-pending-animation! [aid t1 t2 avec]
   (log :trace "add penging animation" aid t1 t2)
   (add-action! t1 (fn [] (aset active-animations aid avec))))
-
 
 (defn add-animation!
   ([aid t1 t2 animate-fn!]
@@ -79,7 +76,6 @@
         (.shift pending-actions-times)
         (recur)))))
 
-
 (defn- run-active-animations [time]
   (doseq [aid (js/Object.keys active-animations)]
     (let [animation (aget active-animations aid)
@@ -97,75 +93,57 @@
           (when an-fn!
             (an-fn! time)))))))
 
-
 (defn process-deffered-actions! []
   (doseq [x deffered-actions]
     (x))
   (set! (.-length deffered-actions) 0))
-
 
 (defn process-animation! [time]
   (run-scheduled-actions time)
   (run-active-animations time)
   (set! last-animation-time time))
 
-
-;; linear moving
-(defn linear-inter [t1 t2 v1 v2]
-  (let [
-    t2-t1 (- t2 t1)
-    ddc (/ 1 t2-t1)
-    ]
-    (fn [time]
-      (let [;; dd (/ (- t2 time) t2-t1)
-            dd (* (- t2 time) ddc)
-            sd (- 1 dd)
-            x' (+ (* v1 dd) (* v2 sd))]
-            x'))))
+(defn- mk-linear-interpolator [t1 t2 v1 v2]
+  (let [t2-t1 (- t2 t1)
+        ddc (/ 1 t2-t1)]
+    (fn [t]
+      (let [dd (* (- t2 t) ddc)
+            sd (- 1 dd)]
+        (+ (* v1 dd) (* v2 sd))))))
 
 (defn- anim-linear-updater
   [obj t1 t2 xy1 xy2]
-  (let [t2-t1 (- t2 t1)
-        p (.-position obj)
+  (let [p (.-position obj)
         [sx sy] xy1
         [dx dy] xy2
-        ddc (/ 1 t2-t1)]
+        xi (mk-linear-interpolator t1 t2 sx dx)
+        yi (mk-linear-interpolator t1 t2 sy dy)]
     (fn [time]
-      (let [;; dd (/ (- t2 time) t2-t1)
-           
-            x' ((linear-inter t1 t2 sx dx) time)
-            y' ((linear-inter t1 t2 sy dy) time)]
+      (let [x' (xi time)
+            y' (yi time)]
         (set! (.-x p) x')
         (set! (.-y p) y')))))
-
 
 (defn- anim-linear-finisher
   [obj xy2]
   (fn []
     (let [p (.-position obj)
           [dx dy] xy2]
-    rot(set! (.-x p) dx)
+      (set! (.-x p) dx)
       (set! (.-y p) dy))))
 
-
 (defn- anim-linear-rotate-updater [obj t1 t2 angle1 angle2]
-    (fn [time]
-        (set! (.-rotation obj) ((linear-inter t1 t2 angle1 angle2) time))
-        ))
+  (let [ai (mk-linear-interpolator t1 t2 angle1 angle2)]
+    (fn [t]
+      (set! (.-rotation obj) (ai t)))))
 
 (defn- anim-infinite-linear-rotate-updater [obj c]
-    (fn [time]
-        (set! (.-rotation obj) (* time c))
-        ))
-
-
+  (fn [t]
+    (set! (.-rotation obj) (* t c))))
 
 (defn- anim-linear-rotate-finisher [obj angle]
   (fn []
-    (set! (.-rotation obj) angle)
-    ))
-
-
+    (set! (.-rotation obj) angle)))
 
 (defn linear-move! [aid obj t1 t2 xy1 xy2]
   (log :trace "linear-move" obj t1 t2 xy1 xy2)
@@ -187,7 +165,6 @@
    ))
 
 (defn infinite-linear-rotate! [aid obj c]
-
   (add-animation!
    (if aid aid (str "rot-" (obj-uid obj)))
    1
