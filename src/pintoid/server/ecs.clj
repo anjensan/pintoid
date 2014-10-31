@@ -63,11 +63,15 @@
 
 (defn system-each-into [sys-fn eids-query]
   (fn [ecs & rs]
-    (persistent!
-     (reduce
-      #(reduce conj! %1 (apply sys-fn ecs %2 rs))
-      (transient ecs)
-      (eids$ ecs eids-query)))))
+    (let [ss (eids$ ecs eids-query)]
+      ;; workaround http://dev.clojure.org/jira/browse/DIMAP-2
+      (if (seq (seq ss))
+        (persistent!
+         (reduce
+          #(reduce conj! %1 (apply sys-fn ecs %2 rs))
+          (transient ecs)
+          ss))
+        ecs))))
 
 (defn system-timed
   ([sys-fn]
