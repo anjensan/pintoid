@@ -99,30 +99,22 @@
     (add-entity w time-eid {:time now})))
 
 (def sys-kill-outdated-entities
-  (fn [w now]
-    (reduce
-     (fn [w eid]
-       (if (<= (w eid :sched-kill-at) now)
-         (kill-entity w eid)
-         w))
-     w
-     (eids$ w :sched-kill-at))))
+  (system-each :sched-kill-at
+   (fn [w eid now]
+     (when (<= (w eid :sched-kill-at) now)
+       (kill-entity w eid)))))
 
 (def sys-kill-entities-out-of-gamefield
-  (fn [w]
-    (reduce
-     (fn [w eid]
-       (if (entity-out-of-gamefield? w eid)
-         (kill-entity w eid)
-         w))
-     w
-     (eids$ w :xy))))
+  (system-each :xy
+   (fn [w eid]
+     (when (entity-out-of-gamefield? w eid)
+       (kill-entity w eid)))))
 
 (def sys-collide-entities
   (fn [w]
     ;; TODO: optimize collision detect alg, currently it's O(n^2)!
     (let [;; TODO: use marker component :collidable or :collision-shape
-          coll-eids (eids$ w [:* :radius :xy])]
+          coll-eids (select-eids w [:* :radius :xy])]
       (reduce
        (fn [w eid]
          (put-component
@@ -144,10 +136,12 @@
           (and (= et :bullet)) (kill-entity w eid)
           :else w)))
      w
-     (eids$ w :collide-with))))
+     (select-eids w :collide-with))))
 
-(def phys-move-entity-seq
-  (fn [w eid dt]
+(def sys-physics-move
+  (system-each-into
+   [:* :xy :phys-move [:+ :vxy :fxy]]
+   (fn [w eid dt]
     (let [xy (w eid :xy)
           fxy (w eid :fxy null-vector)
           m (w eid :mass 1)
@@ -157,23 +151,19 @@
           dt2 (/ dt 2)
           xy' (pv+ xy (vs* vxy dt2) (vs* vxy' dt2))]
       [[eid :vxy vxy']
-       [eid :xy xy']])))
-
-(def phys-update-enity-fxy-seq
-  (fn [w eid dt]
-    (let [xy (w eid :xy)
-          m (w eid :mass 1)
-          fxy (reduce
-              #(v+ %1 (calc-gravity-force m (w %2 :mass) xy (w %2 :xy)))
-              (w eid :self-fxy null-vector)
-              (eids$ w [:- [:* :phys-act :xy :mass] [eid]]))]
-      [[eid :fxy fxy]])))
-
-(def sys-physics-move
-  (system-each-into phys-move-entity-seq [:* :xy :phys-move [:+ :vxy :fxy]]))
+       [eid :xy xy']]))))
 
 (def sys-physics-update-vxy
-  (system-each-into phys-update-enity-fxy-seq [:* :xy :mass :phys-move]))
+  (system-each-into
+   [:* :xy :mass :phys-move]
+   (fn [w eid dt]
+     (let [xy (w eid :xy)
+           m (w eid :mass 1)
+           fxy (reduce
+                #(v+ %1 (calc-gravity-force m (w %2 :mass) xy (w %2 :xy)))
+                (w eid :self-fxy null-vector)
+                (select-eids w [:- [:* :phys-act :xy :mass] [eid]]))]
+       [[eid :fxy fxy]]))))
 
 (def sys-simulate-physics
   (system-timed
@@ -220,7 +210,7 @@
 (defn take-entities-snapshot [w eid client-eids]
   (let [;; TODO: send only coords of entities, compare with prev packet
         ;; entities (for [[eid es] (:entities g)] {:xy (:xy es)})
-        all-eids (eids$ w :xy)              ; TODO: use special marker here
+        all-eids (select-eids w :xy)              ; TODO: use special marker here
         cl-eids (eids client-eids)
         new-eids (seq (eids- all-eids cl-eids))
         upd-eids (seq (eids* all-eids cl-eids))
@@ -239,12 +229,13 @@
     (let [ui @users-input]
       (into
        w
-       (for [eid (eids$ w :player)]
+       (for [eid (select-eids w :player)]
          [eid :user-input (get ui eid)])))))
             
 
 (def sys-change-engine-based-on-ui
   (system-each-into
+   [:* :player :user-input]
    (fn [w eid]
      (let [ui (w eid :user-input)
            a (:angle ui 0)
@@ -252,8 +243,7 @@
            ef (case ed -1 (- engine-reverse-force) 1 engine-forward-force 0)
            fxy (vas a ef)]
        [[eid :self-fxy fxy]
-        [eid :angle a]]))
-   [:* :player :user-input]))
+        [eid :angle a]]))))
 
 
 ;; --

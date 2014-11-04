@@ -9,16 +9,20 @@
 (declare add-new-entity)
 (declare entity)
 
+(declare system-transient)
+(declare system-each)
+(declare system-each-into)
 (declare system-timed)
 (declare system-async)
+(declare system-stateful)
 (declare quantize-time)
 
 ;; sets of entity-ids
 (declare eids+)
 (declare eids*)
 (declare eids-)
-(declare eids$)
 (declare eids)
+(declare select-eids)
 
 (defprotocol ImmutableECS
   ;; (ecs 1 :x) ~ (component ecs 1 :x)
@@ -61,9 +65,24 @@
 
 ;; -- systems
 
-(defn system-each-into [sys-fn eids-query]
+(defn system-transient [sys-fn]
   (fn [ecs & rs]
-    (let [ss (eids$ ecs eids-query)]
+    (persistent! (apply sys-fn (transient ecs) rs))))
+
+(defn system-each [eids-query sys-fn]
+  (fn [ecs & rs]
+    (let [ss (select-eids ecs eids-query)]
+      ;; workaround http://dev.clojure.org/jira/browse/DIMAP-2
+      (if (seq (seq ss))
+        (reduce
+         #(let [x (apply sys-fn %1 %2 rs)] (if (nil? x) %1 x))
+         ecs
+         ss)
+        ecs))))
+
+(defn system-each-into [eids-query sys-fn]
+  (fn [ecs & rs]
+    (let [ss (select-eids ecs eids-query)]
       ;; workaround http://dev.clojure.org/jira/browse/DIMAP-2
       (if (seq (seq ss))
         (persistent!
@@ -72,21 +91,6 @@
           (transient ecs)
           ss))
         ecs))))
-
-(defn system-timed
-  ([sys-fn]
-     (system-timed sys-fn (fn [dt] [dt])))
-  ([sys-fn dt-quant-fn]
-     (let [sid (next-entity-id)]
-       (fn [ecs cur-time & rs]
-         (let [prev-time (or (:last-time (ecs sid ::system)) cur-time)
-               dt (if prev-time (- cur-time prev-time) 0)
-               dt-s (dt-quant-fn dt)
-               target-time (reduce + prev-time dt-s)]
-           (-> (if (== cur-time prev-time)
-                 ecs
-                 (reduce #(apply sys-fn %1 %2 rs) ecs dt-s))
-               (add-entity sid {::system {:last-time target-time :system-fn sys-fn}})))))))
 
 (defn- convert-to-integrals
   [xs]
@@ -105,12 +109,15 @@
       (concat (butlast nxs) (vector (long (+ r (last nxs))))))))
 
 (defn quantize-time
+  ([]
+     (fn [ecs dt]
+       [dt]))
   ([min-dt]
-     (fn [dt]
+     (fn [ecs dt]
        (when (<= min-dt dt)
          [dt])))
   ([min-dt max-dt]
-     (fn [dt]
+     (fn [ecs dt]
        (cond
         (> min-dt dt) []
         (<= min-dt dt max-dt) [dt]
@@ -122,6 +129,26 @@
           (if (<= min-dt n2dt max-dt)
             (convert-to-integrals (repeat n2 n2dt))
             (repeat n1 max-dt)))))))
+
+(defn system-timed
+  ([sys-fn]
+     (system-timed nil sys-fn))
+  ([dt-quant sys-fn]
+     (let [sid (next-entity-id)
+           tq-fn (cond
+                  (nil? dt-quant) (quantize-time)
+                  (number? dt-quant) (quantize-time dt-quant)
+                  (vector? dt-quant) (apply quantize-time dt-quant)
+                  (fn? dt-quant) dt-quant)]
+       (fn [ecs cur-time & rs]
+         (let [prev-time (or (:last-time (ecs sid ::system)) cur-time)
+               dt (if prev-time (- cur-time prev-time) 0)
+               dt-s (tq-fn ecs dt)
+               target-time (reduce + prev-time dt-s)]
+           (-> (if (== cur-time prev-time)
+                 ecs
+                 (reduce #(apply sys-fn %1 %2 rs) ecs dt-s))
+               (add-entity sid {::system {:last-time target-time :system-fn sys-fn}})))))))
 
 (defn system-async
   ([system-fn-fn]
@@ -139,7 +166,7 @@
 (defn system-stateful
   ([sys-fn]
      (system-stateful sys-fn nil))
-  ([sys-fn initial-state]
+  ([initial-state sys-fn]
      (let [sid (next-entity-id)]
        (fn [ecs & rs]
          (let [state (:state (ecs sid ::system) initial-state)
@@ -167,7 +194,7 @@
   (put-component! ecs entity-id component-id nil))
 
 (defn entity [ecs entity-id]
-  (when-let [cids (component-ids ecs entity-id)]
+  (when-some [cids (component-ids ecs entity-id)]
     (into {} (map (fn [ck] [ck (ecs entity-id ck)]) cids))))
 
 (defn add-new-entity [w cid-comp-map]
@@ -190,16 +217,16 @@
        xs
        (im/dense-int-set (seq xs)))))
 
-(defn eids$ [ces eids-query]
+(defn select-eids [ces eids-query]
   (cond
    (keyword? eids-query) (entity-ids ces eids-query)
    (empty? eids-query) (eids)
    (vector? eids-query)
    (let [[f & r :as fr] eids-query]
      (condp #(%1 %2) f
-       #{:* '*} (apply eids* (map #(eids$ ces %) r))
-       #{:+ '+} (apply eids+ (map #(eids$ ces %) r))
-       #{:- '-} (apply eids- (map #(eids$ ces %) r))
+       #{:* '*} (apply eids* (map #(select-eids ces %) r))
+       #{:+ '+} (apply eids+ (map #(select-eids ces %) r))
+       #{:- '-} (apply eids- (map #(select-eids ces %) r))
        (eids fr)))
    :else (eids eids-query)))
 
@@ -214,7 +241,7 @@
   ImmutableECS
 
   (component [_ entity-id component-id]
-    (when-let [cm (cid-eid-comp component-id)]
+    (when-some [cm (cid-eid-comp component-id)]
       (cm entity-id)))
 
   (component-ids [_ entity-id]
@@ -354,14 +381,14 @@
 
 
 (deftype TransientECSImpl
-    [^:volatile-mutable cid-eid-comp
-     ^:volatile-mutable cid-eids
-     ^:volatile-mutable eid-cids]
+    [^:unsynchronized-mutable cid-eid-comp
+     ^:unsynchronized-mutable cid-eids
+     ^:unsynchronized-mutable eid-cids]
 
   ImmutableECS
 
   (component [_ entity-id component-id]
-    (when-let [cm (cid-eid-comp component-id)]
+    (when-some [cm (cid-eid-comp component-id)]
       (cm entity-id)))
 
   (component-ids [_ entity-id]
