@@ -12,9 +12,12 @@
 (def max-user-view-distance 1500)
 
 (defn calc-gravity-force [^double m1 ^double m2 p1 p2]
-  (let [r' (/ (dist p1 p2))
-        f (* gravity-g m1 r' m2 r')]
-    (vs* (p2v p1 p2) (* f r'))))
+  (let [d (dist p1 p2)]
+    (if (zero? d)
+      (->Vector 0 0)  ; FIXME: remove this?
+      (let [r' (/ d)
+            fx (* gravity-g r' m1 r' m2 r')]
+        (vs* (p2v p1 p2) fx)))))
 
 
 (def player-proto
@@ -22,45 +25,39 @@
    :type :player
    :fxy (->Vector 0 0)
    :phys-move true
-   :mass 300
+   :mass 100
    :angle 0
    :radius 30
-   :killable? true
    })
 
 
 (def bullet-proto
-  {:bullet true
-   :type :bullet
+  {:type :bullet
    :texture :ast1
    :fxy (->Vector 0 0)
    :xy (->Point 0 0)
    :phys-move true
-   :mass 800
+   :mass 50
    :angle 0
-   :radius 30
-   :killable? true
-   :bullet-lifetime 3000
-   :bullet-cooldown 300
-   :bullet-velocity 0.5
+   :radius 20
+   :bullet {:lifetime 5000
+            :cooldown 200
+            :velocity 1.0}
    })
 
-
 (def bullet-alt-proto
-  {:bullet true
-   :type :bullet
+  {:type :bullet
    :texture :ast2
    :fxy (->Vector 0 0)
    :xy (->Point 0 0)
    :phys-move true
    :phys-act true
-   :mass 30
+   :mass 2000
    :angle 0
    :radius 10
-   :killable? true
-   :bullet-lifetime 3000
-   :bullet-cooldown 1000
-   :bullet-velocity 1.2
+   :bullet {:lifetime 10000
+            :cooldown 1200
+            :velocity 2.1}
    })
 
 (defn star [xy mass radius texture dangle]
@@ -100,7 +97,7 @@
   {
    :type :black
    :xy xy
-   :mass 50000
+   :mass 5000
    :phys-act true
    :texture :black1
    :radius 1

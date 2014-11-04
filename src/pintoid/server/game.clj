@@ -27,6 +27,7 @@
 (declare is-colliding?)
 (declare entity-out-of-gamefield?)
 (declare search-new-player-pos)
+(declare inc-player-score)
 
 ;; -- state
 
@@ -79,8 +80,8 @@
     (let [now (current-os-time)]
       (-> w
           (sys-capture-users-input)
+          (sys-spawn-bullets now)
           (sys-change-engine-based-on-ui)
-          (sys-spawn-bullets)
           (sys-kill-outdated-entities now)
           (sys-simulate-physics now)
           (sys-collide-entities)
@@ -124,19 +125,30 @@
        coll-eids))))
 
 (def sys-kill-collided-entities
-  (fn [w]
-    (reduce
-     (fn [w eid]
-       (let [et (w eid :type)
-             cw (w eid :collide-with)
-             cwt (set (map #(w % :type) cw))]
-         ;; TODO: move out, use multimethods/protocols?
-         (cond
-          (and (= et :player)) (kill-player w eid)
-          (and (= et :bullet)) (kill-entity w eid)
-          :else w)))
-     w
-     (select-eids w :collide-with))))
+  (system-each
+   :collide-with
+   (fn [w eid]
+     (let [et (w eid :type)
+           cw (w eid :collide-with)
+           cwt (map #(w % :type) cw)]
+
+       ;; TODO: move out, use multimethods/protocols?
+       (cond
+
+        ;; everything kills player except own bullets
+        (and (= et :player)
+             (some #(not= eid (:owner (w % :bullet))) cw))
+        (let [all-bullets-owners (keep #(:owner (w % :bullet)) cw)
+              bullets-owners (remove #(= eid %) all-bullets-owners)]
+          (as-> w w
+                (reduce inc-player-score w bullets-owners)
+                (kill-player w eid)))
+        
+        ;; everything kills bullet except other bullets & players
+        (and (= et :bullet) (not-any? #{:bullet :player} cwt))
+        (kill-entity w eid))
+
+       ))))
 
 (def sys-physics-move
   (system-each-into
@@ -221,9 +233,32 @@
      :rem rem-eids}))
 
 (def sys-spawn-bullets
-  (fn [w]
-    w))
-
+  (system-each
+   [:* :player :user-input]
+   (fn [w eid now]
+     (let [ui (w eid :user-input)]
+       (when (or (:fire? ui) (:alt-fire? ui))
+         (let [b-proto (if (:fire? ui) bullet-proto bullet-alt-proto)
+               bullet (:bullet b-proto)
+               b-cooldown (:cooldown bullet)
+               last-fire-at (w eid :last-fire-at)]
+           (when (or (nil? last-fire-at) (< (+ last-fire-at b-cooldown) now))
+             (let [xy (w eid :xy)
+                   vxy (w eid :vxy null-vector)
+                   angle (w eid :angle)
+                   b-vxy (v+ vxy (vas angle (:velocity bullet)))
+                   b-xy xy
+                   b-lifetime (:lifetime bullet)]
+               (-> w
+                   (put-component eid :last-fire-at now)
+                   (add-new-entity
+                    (assoc b-proto
+                      :xy b-xy
+                      :vxy b-vxy
+                      :sched-kill-at (+ now b-lifetime)
+                      :bullet (assoc bullet :owner eid)
+                      :angle angle)))))))))))
+     
 (def sys-capture-users-input
   (fn [w]
     (let [ui @users-input]
