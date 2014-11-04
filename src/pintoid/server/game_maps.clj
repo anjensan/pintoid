@@ -1,10 +1,26 @@
-(ns pintoid.server.game-maps)
+(ns pintoid.server.game-maps
+  (:use pintoid.server.math))
+
+(def world-height 2500)
+(def world-width 2500)
+
+(def gravity-g 0.005)
+(def engine-forward-force 0.12)
+(def engine-reverse-force 0.05)
+
+(def bullet-ahead-time 200)
+(def max-user-view-distance 1500)
+
+(defn calc-gravity-force [^double m1 ^double m2 p1 p2]
+  (let [r' (/ (dist p1 p2))
+        f (* gravity-g m1 r' m2 r')]
+    (vs* (p2v p1 p2) (* f r'))))
 
 
 (def player-proto
   {:player true
    :type :player
-   :fxy [0 0]
+   :fxy (->Vector 0 0)
    :phys-move true
    :mass 300
    :angle 0
@@ -17,9 +33,8 @@
   {:bullet true
    :type :bullet
    :texture :ast1
-   :fxy [0 0]
-   :pxy [0 0]
-   :xy [0 0]
+   :fxy (->Vector 0 0)
+   :xy (->Point 0 0)
    :phys-move true
    :mass 800
    :angle 0
@@ -35,9 +50,8 @@
   {:bullet true
    :type :bullet
    :texture :ast2
-   :fxy [0 0]
-   :pxy [0 0]
-   :xy [0 0]
+   :fxy (->Vector 0 0)
+   :xy (->Point 0 0)
    :phys-move true
    :phys-act true
    :mass 30
@@ -80,7 +94,6 @@
    :texture texture
    :radius radius
    :dangle dangle
-   :vxy [1 1]
    })
 
 (defn black-hole [xy dangle]
@@ -96,31 +109,31 @@
 
 (def game-maps
   [[
-    (black-hole [0 0] 0.2)
-    (star [-2100 -2100] 500 33 :star1 0.1)
-    (star [1200 500] 2000 20 :star2 0.1)
-    (star [-900 -700] 1000 66 :star3 0.1)
-    (star [400 300] 175 700 :star4 0.1)
-    (star [-2400 -655] 2000 25 :star2 0.1)
-    (star [1100 -1700] 1000 66 :star3 0.1)
-    (star [-1600 1000] 1750 70 :star4 0.1)
-    (planet [-2440 -900] 150 10 :green_planet1 0.1)
-    (planet [100 -100] 100 9 :green_planet1 0.1)
-    (planet [900 -2440] 200 11 :pink_planet1 0.1)
-    (planet [100 2100] 150 8 :pink_planet1 0.1)
-    (planet [-1100 1100] 120 10 :pink_planet1 0.1)
-    (planet [-440 -200] 150 10 :green_planet1 0.1)
-    (planet [2300 -100] 100 9 :green_planet1 0.1)
-    (planet [-900 -2240] 200 11 :pink_planet1 0.1)
-    (planet [1020 -2100] 150 8 :pink_planet1 0.1)
-    (planet [-100 1100] 120 10 :pink_planet1 0.1)
-    (asteroid [-1220 -1232] 50 3 :ast1 0.1)
-    (asteroid [-200 -300] 50 3 :ast2 0.1)
-    (asteroid [-400 -200] 40 3 :ast3 0.1)
-    (asteroid [-200 -1200] 70 3 :ast4 0.1)
-    (asteroid [-2100 -2100] 80 3 :ast5 0.1)
-    (asteroid [1200 510] 90 3 :ast2 0.1)
-    (asteroid [-920 -700] 70 3 :ast3 0.1)
-    (asteroid [1000 -1500] 80 3 :ast1 0.1)
-    (asteroid [1100 -1810] 80 3 :ast1 0.1)
+    (black-hole (->Point 0 0) 0.2)
+    (star (->Point -2100 -1350) 500 33 :star1 0.1)
+    (star (->Point 1200 500) 2000 20 :star2 0.1)
+    (star (->Point -900 -700) 1000 66 :star3 0.1)
+    (star (->Point 400 300) 175 700 :star4 0.1)
+    (star (->Point -2400 -655) 2000 25 :star2 0.1)
+    (star (->Point 1100 -1700) 1000 66 :star3 0.1)
+    (star (->Point -1600 1000) 1750 70 :star4 0.1)
+    (planet (->Point -2440 -900) 150 10 :green_planet1 0.1)
+    (planet (->Point 100 -100) 100 9 :green_planet1 0.1)
+    (planet (->Point 900 -2440) 200 11 :pink_planet1 0.1)
+    (planet (->Point 100 2100) 150 8 :pink_planet1 0.1)
+    (planet (->Point -1100 1100) 120 10 :pink_planet1 0.1)
+    (planet (->Point -440 -200) 150 10 :green_planet1 0.1)
+    (planet (->Point 2300 -100) 100 9 :green_planet1 0.1)
+    (planet (->Point -900 -2240) 200 11 :pink_planet1 0.1)
+    (planet (->Point 1020 -2100) 150 8 :pink_planet1 0.1)
+    (planet (->Point -100 1100) 120 10 :pink_planet1 0.1)
+    (asteroid (->Point -1220 -1232) 50 3 :ast1 0.1)
+    (asteroid (->Point -200 -300) 50 3 :ast2 0.1)
+    (asteroid (->Point -400 -200) 40 3 :ast3 0.1)
+    (asteroid (->Point -200 -1200) 70 3 :ast4 0.1)
+    (asteroid (->Point -2100 -2100) 80 3 :ast5 0.1)
+    (asteroid (->Point 1200 510) 90 3 :ast2 0.1)
+    (asteroid (->Point -920 -700) 70 3 :ast3 0.1)
+    (asteroid (->Point 1000 -1500) 80 3 :ast1 0.1)
+    (asteroid (->Point 1100 -1810) 80 3 :ast1 0.1)
    ]])

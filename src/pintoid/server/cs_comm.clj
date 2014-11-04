@@ -112,7 +112,8 @@
 (defmethod handle-client-message :connected [eid m]
   (log-info "new player" eid)
   (let [ps (game-add-new-player eid)]
-    (send-message-to-clients [eid] {:cmd :init-player :player ps})))
+    ;; FIX
+    (send-message-to-clients [eid] {:cmd :init-player :player (player-init-obj eid ps)})))
 
 
 (defmethod handle-client-message :disconnect [eid _]

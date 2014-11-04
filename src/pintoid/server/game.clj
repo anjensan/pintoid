@@ -1,5 +1,5 @@
 (ns pintoid.server.game
-  (:use [pintoid.server utils physics game-maps ecs]))
+  (:use [pintoid.server utils math game-maps ecs]))
 
 ;; -- api
 (declare fix-world-state)
@@ -139,22 +139,23 @@
 (def phys-move-entity-seq
   (fn [w eid dt]
     (let [xy (w eid :xy)
-          fxy (w eid :fxy [0 0])
+          fxy (w eid :fxy null-vector)
           m (w eid :mass 1)
           axy (vs* fxy (/ m))
-          vxy (w eid :vxy [0 0])
+          vxy (w eid :vxy null-vector)
           vxy' (v+ vxy (vs* axy dt))
           dt2 (/ dt 2)
-          xy' (v+ xy (v+ (vs* vxy dt2) (vs* vxy' dt2)))]
-      [[eid :vxy vxy'] [eid :xy xy']])))
+          xy' (pv+ xy (vs* vxy dt2) (vs* vxy' dt2))]
+      [[eid :vxy vxy']
+       [eid :xy xy']])))
 
 (def phys-update-enity-fxy-seq
   (fn [w eid dt]
-    (let [xy (w eid :xy [0 0])
+    (let [xy (w eid :xy)
           m (w eid :mass 1)
           fxy (reduce
               #(v+ %1 (calc-gravity-force m (w %2 :mass) xy (w %2 :xy)))
-              (w eid :self-fxy [0 0])
+              (w eid :self-fxy null-vector)
               (eids$ w [:- [:* :phys-act :xy :mass] [eid]]))]
       [[eid :fxy fxy]])))
 
@@ -172,17 +173,37 @@
          (sys-physics-move dt)))))
 
 
+(defn point->vec [p]
+  (when p
+    ((juxt :x :y) p)))
+
 (defn take-game-snapshot [w eid]
   {:player-eid eid
    :deaths (:deaths (w eid :player) 0)
    :score (:deaths (w eid :player) 0)
-   :player-xy (w eid :xy)
+   :player-xy (point->vec (w eid :xy))
    })
 
 (defn entitiy-upd-obj [w eid]
   {:eid eid
-   :xy (w eid :xy)
+   :xy (point->vec (w eid :xy))
    :angle (w eid :angle)
+   })
+
+(defn entitiy-add-obj [w eid]
+  {:eid eid
+   :type (w eid :type)
+   :xy (point->vec (w eid :xy))
+   :angle (w eid :angle)
+   :texture (w eid :texture)
+   :dangle (w eid :dangle)
+   })
+
+(defn player-init-obj [eid ps]
+  {:eid eid
+   :type :player
+   :xy (point->vec (:xy ps))
+   :angle (:angle ps)
    })
 
 (defn take-entities-snapshot [w eid client-eids]
@@ -195,9 +216,8 @@
         rem-eids (seq (eids- cl-eids all-eids))
         ]
     {:upd (map #(entitiy-upd-obj w %) upd-eids)
-     :add (map #(assoc (entity w %) :eid %) new-eids)
+     :add (map #(entitiy-add-obj w %) new-eids)
      :rem rem-eids}))
-
 
 (def sys-spawn-bullets
   (fn [w]
@@ -219,7 +239,7 @@
            a (:angle ui 0)
            ed (:engine-dir ui)
            ef (case ed -1 (- engine-reverse-force) 1 engine-forward-force 0)
-           fxy (if (zero? ef) [0 0] (vas a ef))]
+           fxy (vas a ef)]
        [[eid :self-fxy fxy]
         [eid :angle a]]))
    [:* :player :user-input]))
@@ -228,7 +248,7 @@
 ;; --
 
 (defn search-new-player-pos [w eid]
-  [(rand-int 2000) (rand-int 2000)])
+  (->Point (rand-int 2000) (rand-int 2000)))
 
 
 (defn inc-player-score [w eid]
@@ -246,7 +266,7 @@
 
 (defn entity-out-of-gamefield? [w eid]
   (when-let [xy (w eid :xy)]
-    (let [[x y] xy]
+    (let [[x y] ((juxt :x :y) xy)]
       (or
        (< x (- world-width))
        (> x world-width)
@@ -257,11 +277,11 @@
 (defn is-colliding? [w e1 e2]
   ;; TODO: use multimethod here
    (when (not= e1 e2)
-    (when-some* [r1 (w e1 :radius)
-                 r2 (w e2 :radius)
+    (when-some* [r1 (float (w e1 :radius))
+                 r2 (float (w e2 :radius))
                  xy1 (w e1 :xy)
                  xy2 (w e2 :xy)]
-      (< (distance2 xy1 xy2) (sqr (+ r1 r2))))))
+      (< (dist2 xy1 xy2) (sqr (+ r1 r2))))))
 
 (defn kill-entity [w eid]
   (if (w eid :player)
