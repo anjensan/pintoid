@@ -84,8 +84,8 @@
           (sys-kill-outdated-entities now)
           (sys-simulate-physics now)
           (sys-collide-entities)
-          ;;(sys-kill-collided-entities)
-          ;;(sys-kill-entities-out-of-gamefield)
+          (sys-kill-collided-entities)
+          (sys-kill-entities-out-of-gamefield)
           (sys-fixate-world-state)
           (sys-attach-world-time now)
           ))))
@@ -127,14 +127,24 @@
        (fn [w eid]
          (put-component
           w eid :collide-with 
-          (filterv #(is-colliding? w eid %) coll-eids)))
+          (seq (filter #(is-colliding? w eid %) coll-eids))))
        w
        coll-eids))))
 
-
 (def sys-kill-collided-entities
   (fn [w]
-    w))
+    (reduce
+     (fn [w eid]
+       (let [et (w eid :type)
+             cw (w eid :collide-with)
+             cwt (set (map #(w % :type) cw))]
+         ;; TODO: move out, use multimethods/protocols?
+         (cond
+          (and (= et :player)) (kill-player w eid)
+          (and (= et :bullet)) (kill-entity w eid)
+          :else w)))
+     w
+     (eids$ w :collide-with))))
 
 (def phys-move-entity-seq
   (fn [w eid dt]
@@ -172,6 +182,7 @@
          (sys-physics-update-vxy dt)
          (sys-physics-move dt)))))
 
+;; TODO: move to cs_comm.cljs
 
 (defn point->vec [p]
   (when p
@@ -179,8 +190,8 @@
 
 (defn take-game-snapshot [w eid]
   {:player-eid eid
-   :deaths (:deaths (w eid :player) 0)
-   :score (:deaths (w eid :player) 0)
+   :deaths (w eid :deaths 0)
+   :score (w eid :score 0)
    :player-xy (point->vec (w eid :xy))
    })
 
@@ -267,21 +278,20 @@
 (defn entity-out-of-gamefield? [w eid]
   (when-let [xy (w eid :xy)]
     (let [[x y] ((juxt :x :y) xy)]
-      (or
-       (< x (- world-width))
-       (> x world-width)
-       (< y (- world-height))
-       (> y world-height)))))
+      (not
+       (and
+        (<= (- world-width) x world-width)
+        (<= (- world-height) y world-height))))))
 
 
 (defn is-colliding? [w e1 e2]
   ;; TODO: use multimethod here
-   (when (not= e1 e2)
-    (when-some* [r1 (float (w e1 :radius))
-                 r2 (float (w e2 :radius))
-                 xy1 (w e1 :xy)
-                 xy2 (w e2 :xy)]
-      (< (dist2 xy1 xy2) (sqr (+ r1 r2))))))
+   (when-not (== e1 e2)
+    (when-some* [r1 (w e1 :radius)
+                 r2 (w e2 :radius)
+                 p1 (w e1 :xy)
+                 p2 (w e2 :xy)]
+      (< (dist2 p1 p2) (sqr (+ r1 r2))))))
 
 (defn kill-entity [w eid]
   (if (w eid :player)

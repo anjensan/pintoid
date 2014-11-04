@@ -113,7 +113,7 @@
     (star (->Point -2100 -1350) 500 33 :star1 0.1)
     (star (->Point 1200 500) 2000 20 :star2 0.1)
     (star (->Point -900 -700) 1000 66 :star3 0.1)
-    (star (->Point 400 300) 175 700 :star4 0.1)
+    (star (->Point 400 300) 175 70 :star4 0.1)
     (star (->Point -2400 -655) 2000 25 :star2 0.1)
     (star (->Point 1100 -1700) 1000 66 :star3 0.1)
     (star (->Point -1600 1000) 1750 70 :star4 0.1)
