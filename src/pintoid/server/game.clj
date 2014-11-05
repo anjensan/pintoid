@@ -161,7 +161,7 @@
           vxy (w eid :vxy null-vector)
           vxy' (v+ vxy (vs* axy dt))
           dt2 (/ dt 2)
-          xy' (pv+ xy (vs* vxy dt2) (vs* vxy' dt2))]
+          xy' (v+ xy (vs* vxy dt2) (vs* vxy' dt2))]
       [[eid :vxy vxy']
        [eid :xy xy']]))))
 
@@ -284,7 +284,7 @@
 ;; --
 
 (defn search-new-player-pos [w eid]
-  (->Point (rand-int 2000) (rand-int 2000)))
+  (->Vector (rand-int 2000) (rand-int 2000)))
 
 
 (defn inc-player-score [w eid]
@@ -316,7 +316,7 @@
                  r2 (w e2 :radius)
                  p1 (w e1 :xy)
                  p2 (w e2 :xy)]
-      (< (dist2 p1 p2) (sqr (+ r1 r2))))))
+      (< (dist p1 p2) (+ r1 r2)))))
 
 (defn kill-entity [w eid]
   (if (w eid :player)
