@@ -22,6 +22,7 @@
 (declare sys-capture-users-input)
 (declare sys-change-engine-based-on-ui)
 
+;; -- internal fns
 (declare kill-entity)
 (declare kill-player)
 (declare is-colliding?)
@@ -155,10 +156,10 @@
    [:* :xy :phys-move [:+ :vxy :fxy]]
    (fn [w eid dt]
     (let [xy (w eid :xy)
-          fxy (w eid :fxy null-vector)
+          fxy (w eid :fxy vector-0)
           m (w eid :mass 1)
           axy (vs* fxy (/ m))
-          vxy (w eid :vxy null-vector)
+          vxy (w eid :vxy vector-0)
           vxy' (v+ vxy (vs* axy dt))
           dt2 (/ dt 2)
           xy' (v+ xy (vs* vxy dt2) (vs* vxy' dt2))]
@@ -173,7 +174,7 @@
            m (w eid :mass 1)
            fxy (reduce
                 #(v+ %1 (calc-gravity-force m (w %2 :mass) xy (w %2 :xy)))
-                (w eid :self-fxy null-vector)
+                (w eid :self-fxy vector-0)
                 (select-eids w [:- [:* :phys-act :xy :mass] [eid]]))]
        [[eid :fxy fxy]]))))
 
@@ -244,7 +245,7 @@
                last-fire-at (w eid :last-fire-at)]
            (when (or (nil? last-fire-at) (< (+ last-fire-at b-cooldown) now))
              (let [xy (w eid :xy)
-                   vxy (w eid :vxy null-vector)
+                   vxy (w eid :vxy vector-0)
                    angle (w eid :angle)
                    b-vxy (v+ vxy (vas angle (:velocity bullet)))
                    b-xy xy

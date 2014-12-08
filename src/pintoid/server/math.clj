@@ -3,9 +3,7 @@
 (set! *unchecked-math* true)
 
 (defrecord Vector [^double x ^double y])
-(defrecord Vector [^double x ^double y])
-
-(def ^:const null-vector (Vector. 0 0))
+(def ^:const vector-0 (Vector. 0 0))
 
 (declare abs)
 (declare sqr)

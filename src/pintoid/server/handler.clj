@@ -1,5 +1,5 @@
 (ns pintoid.server.handler
-  (:use [pintoid.server.cs-comm])
+  (:use [pintoid.server cs-comm utils])
   (:require
    [ring.util.response :refer [response redirect]]
    [compojure.core :refer [defroutes GET POST]]
@@ -51,7 +51,7 @@
   (if (:ws-channel req)
     (add-new-client-connection req)
     (do
-      (println "UUPS no WS" req)
+      (log-info "UUPS no WS" req)
       {:status 404 :body "uups, no WS"})))
 
 
@@ -68,7 +68,7 @@
                     (wrap-websocket-handler {:format :json-kw})
                     (wrap-ws-check)
                     ))
-  (GET "/game" {p :params} (response (game-page)))
+  (GET "/game" [] (response (game-page)))
   (resources "/js" {:root "js"})
   (resources "/img" {:root "img"})
   (resources "/css" {:root "css"}))

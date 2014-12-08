@@ -1,6 +1,5 @@
 (ns pintoid.server.ecs
-  (:require [clojure.data.int-map :as im])
-  (:use [clojure.walk :only [postwalk]]))
+  (:require [clojure.data.int-map :as im]))
 
 ;; -- API
 
@@ -222,11 +221,12 @@
    (keyword? eids-query) (entity-ids ces eids-query)
    (empty? eids-query) (eids)
    (vector? eids-query)
-   (let [[f & r :as fr] eids-query]
+   (let [[f & r :as fr] eids-query
+         fm #(select-eids ces %)]
      (condp #(%1 %2) f
-       #{:* '*} (apply eids* (map #(select-eids ces %) r))
-       #{:+ '+} (apply eids+ (map #(select-eids ces %) r))
-       #{:- '-} (apply eids- (map #(select-eids ces %) r))
+       #{:* '*} (apply eids* (map fm r))
+       #{:+ '+} (apply eids+ (map fm r))
+       #{:- '-} (apply eids- (map fm r))
        (eids fr)))
    :else (eids eids-query)))
 
@@ -463,7 +463,6 @@
       (if (nil? r) default r)))
 
   )
-
 
 ;; private utils
 
