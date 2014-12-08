@@ -172,4 +172,3 @@
    (anim-infinite-linear-rotate-updater obj c)
    (anim-linear-rotate-finisher obj 0)
    ))
-

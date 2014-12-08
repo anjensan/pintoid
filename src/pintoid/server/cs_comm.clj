@@ -4,8 +4,8 @@
    [clojure.core.async :refer
     [<! >! <!! >!! put! close! thread go chan go-loop]]
    [cheshire.core :as json]
-   [clojure.set :refer [union]]
-   ))
+   [clojure.tools.logging :as log]
+   [clojure.set :refer [union]]))
 
 (def client-chans (atom {}))
 (def client-notifier-agents (atom {}))
@@ -16,7 +16,7 @@
         pl (or pids (keys cc))]
     (doseq [eid (or pids (keys cc))]
       (when-let [ch (cc eid)]
-        (log-debug "eid" eid ">>" message)
+        (log/trace "eid" eid ">>" message)
         (go (>! ch message))))))
 
 
@@ -29,7 +29,7 @@
 
 
 (defmethod handle-client-message :default [eid m]
-  (println "unknown message" m "from" eid))
+  (log/warn "unknown message" m "from" eid))
 
 
 (defn drop-client-connection [eid]
@@ -49,7 +49,7 @@
       (do
         (if message
           (do
-            (log-debug "eid" eid "<<" message)
+            (log/trace "eid" eid "<<" message)
             (handle-client-message eid message)
             (recur))
           (handle-client-error eid :failure error)))
@@ -98,7 +98,6 @@
 
 (defn send-snapshots-to-all-clients []
   (let [w (fix-world-state)]
-    (log-debug "send snapshot" w)
     (doseq [eid (keys @client-chans)]
       (send-world-snapshot-to-client w eid))))
 
@@ -106,22 +105,22 @@
 ;; --- handlers here!
 
 (defmethod handle-client-message :failure [eid params]
-  (println "client failure" (:error params)))
+  (log/warn "client failure" (:error params)))
 
 
 (defmethod handle-client-message :connected [eid m]
-  (log-info "new player" eid)
+  (log/info "new player" eid)
   (let [ps (game-add-new-player eid)]
     ;; XXX
     (send-message-to-clients [eid] {:cmd :init-player :player (player-init-obj eid ps)})))
 
 
 (defmethod handle-client-message :disconnect [eid _]
-  (log-info "player" eid "disconnected")
+  (log/info "player" eid "disconnected")
   (drop-client-connection eid)
   (game-remove-player eid))
 
 
 (defmethod handle-client-message :user-input [eid m]
-  (log-debug "user input player" m)
+  (log/trace "user input player" m)
   (game-process-user-input eid (:data m)))

@@ -7,6 +7,7 @@
    [chord.http-kit :refer [wrap-websocket-handler]]
    [hiccup.page :refer [html5 include-js include-css]]
    [hiccup.form :refer [form-to email-field submit-button]]
+   [clojure.tools.logging :as log]
    ))
 
 
@@ -47,27 +48,17 @@
 
 
 (defn ws-handler [req]
-  (println "connection from" (:remote-addr req))
+  (log/info "connection from" (:remote-addr req))
   (if (:ws-channel req)
     (add-new-client-connection req)
     (do
-      (log-info "UUPS no WS" req)
+      (log/warn "UUPS no WS" req)
       {:status 404 :body "uups, no WS"})))
-
-
-(defn wrap-ws-check [h]
-  (fn [req]
-    (when-not (:websocket? req)
-      (println "NO WS CHAN" req))
-    (h req)))
 
 
 (defroutes app-routes
   (GET "/" [] (response (index-page)))
-  (GET "/ws" [] (-> ws-handler
-                    (wrap-websocket-handler {:format :json-kw})
-                    (wrap-ws-check)
-                    ))
+  (GET "/ws" [] (wrap-websocket-handler ws-handler {:format :json-kw}))
   (GET "/game" [] (response (game-page)))
   (resources "/js" {:root "js"})
   (resources "/img" {:root "img"})
