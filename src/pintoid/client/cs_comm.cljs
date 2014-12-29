@@ -2,8 +2,7 @@
   (:use
    [pintoid.client.engine :only
     [update-world-snapshot!
-     update-player-state!
-     ]]
+     update-player-state!]]
    [pintoid.client.animation :only
     [defer-action!]]
    [pintoid.client.utils :only [panic! limit-str]])
@@ -51,9 +50,9 @@
     (go (>! c msg))))
 
 
-(defn spawn-user-input-sender [ui-fn]
+(defn spawn-user-input-sender [user-input-fn]
   (go-loop []
-    (let [ui (ui-fn)]
+    (let [ui (user-input-fn)]
       (send-message-to-server {:cmd :user-input :data ui}))
     (<! (timeout user-input-update-delay))
     (recur)))
@@ -77,11 +76,10 @@
 
 
 (defmethod handle-server-message :snapshot [m]
-  (let [{:keys [at game entts-json]} m
-        entts (js/JSON.parse entts-json)]
+  (let [{:keys [at game entts-json]} m]
     (defer-action!
       (fn []
-        (update-world-snapshot! at game entts)))))
+        (update-world-snapshot! at game (js/JSON.parse entts-json))))))
 
 
 (defmethod handle-server-message :init-player [m]

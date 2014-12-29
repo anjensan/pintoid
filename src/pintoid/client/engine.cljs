@@ -4,15 +4,13 @@
           defer-action!
           linear-move!
           linear-rotate!
-          infinite-linear-rotate!
-          ]]
+          infinite-linear-rotate!]]
         [pintoid.client.graphics :only
          [create-entity-pixi-object
           delete-entity-pixi-object
           move-player-camera!
           update-pixi-score!
-          update-pixi-death!
-          ]]
+          update-pixi-death!]]
         [clojure.walk :only [keywordize-keys]])
   (:require-macros
    [pintoid.client.utils :refer [log]]))

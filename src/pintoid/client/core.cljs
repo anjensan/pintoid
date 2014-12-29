@@ -3,29 +3,21 @@
    [pintoid.client.utils :only [panic!]]
    [pintoid.client.cs-comm :only
     [init-cs-communication
-     send-message-to-server
-     handle-server-message
-     spawn-user-input-sender
-     ]]
-   [pintoid.client.engine :only [world]]
+     spawn-user-input-sender]]
    [pintoid.client.animation :only
     [process-animation!
      process-deffered-actions!]]
    [pintoid.client.graphics :only
     [init-pixi-renderer
-     render-graphics!
-     load-textures
-     ]]
+     render-graphics!]]
    [pintoid.client.uinput :only
     [init-user-input
      get-user-input-state]])
-
   (:require [dommy.core :as d])
   (:require-macros
    [dommy.core :refer [sel1]]
    [pintoid.client.utils :refer [log]]
    ))
-
 
 (enable-console-print!)
 
@@ -39,13 +31,11 @@
 
 ;; --
 
-(defn client-time [] (.now js/Date))
-
-(defn game-time [] (:at @world))
+(defn client-time []
+  (.now js/Date))
 
 (defn drawing-loop [_]
-  (let [gt (game-time)
-        ct (client-time)
+  (let [ct (client-time)
         cgt (+ ct client-server-time-diff)
         at (- cgt animation-interpolation-lag network-latency)]
     (log :trace "draw-loop" at)
@@ -54,14 +44,11 @@
     (process-deffered-actions!))
   (js/requestAnimationFrame drawing-loop))
 
-
 (defn start-app []
   (init-cs-communication)
   (init-user-input)
-  (load-textures)
   (spawn-user-input-sender get-user-input-state)
   (d/append! (sel1 :body) (init-pixi-renderer))
   (drawing-loop 0))
-
 
 (set! (.-onload js/window) start-app)

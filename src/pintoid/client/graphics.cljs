@@ -1,17 +1,14 @@
 (ns pintoid.client.graphics
   (:use [pintoid.client.animation :only
          [linear-move!
-          last-animation-time
-          ]])
+          last-animation-time]])
   (:require-macros
-   [pintoid.client.utils :refer [log]]
-   ))
+   [pintoid.client.utils :refer [log]]))
 
 ;; ---
 
 (def bg-texture :back)
-(def textures [:white :clojure :black :racket_blue :racket_red
-               :star1])
+(def textures [:white :clojure :black :racket_blue :racket_red :star1])
 
 (def camera-movement-duration 800)
 
@@ -30,15 +27,9 @@
 
 (declare texture-url)
 (declare get-texture)
-(declare add-texture)
-(declare load-texture)
+(declare load-all-textures)
 
 ;; --
-
-(defn load-textures []
-  (reset! pixi-textures
-   (into {}
-    (map (fn [x] [x (load-texture x)]) textures))))
 
 (defn init-pixi-labels []
   (let [score-pos (.-position pixi-score-value)
@@ -61,27 +52,23 @@
   (let [text (str "Death: " value)]
     (.setText pixi-death-value text)))
 
-(defn set-text-label-text [text])
-
 (defn init-pixi-renderer []
+  (load-all-textures)
   (let [texture (get-texture bg-texture)
-        ;; FIXME: don't use 100500 :)
         bg-sprite (new js/PIXI.TilingSprite texture map-width map-height)
         bg-sprite-pos (.-position bg-sprite)]
     (.addChild pixi-stage pixi-gamefield)
     (set! (.-x bg-sprite-pos) (- (/ map-width 2)))
     (set! (.-y bg-sprite-pos) (- (/ map-height 2)))
     (.addChild pixi-gamefield bg-sprite))
-   (init-pixi-labels)
-   (update-pixi-score! 0)
-   (update-pixi-death! 0)
-   (.-view pixi-renderer))
-
+  (init-pixi-labels)
+  (update-pixi-score! 0)
+  (update-pixi-death! 0)
+  (.-view pixi-renderer))
 
 (defn- current-camera-position []
   (let [p (.-position pixi-gamefield)]
     [(.-x p) (.-y p)]))
-
 
 (defn move-player-camera! [t1 t2 xy1 xy2]
   (let [neg (fn [[x y]] [(- (/ cnvs-width 2) x)
@@ -101,15 +88,19 @@
   (str "/img/" (name texture) ".png"))
 
 (defn load-texture [n]
-  (.fromImage js/PIXI.Texture (texture-url n)))
+  (swap!
+   pixi-textures
+   (fn [ts]
+     (assoc ts n (.fromImage js/PIXI.Texture (texture-url n)))))
+  (@pixi-textures n))
 
-(defn add-texture [n]
-  (let [t (load-texture n)]
-    (swap! pixi-textures assoc t)
-    t))
+(defn load-all-textures []
+  (doseq [t textures]
+    (load-texture t)))
 
 (defn get-texture [n]
-  (or (get @pixi-textures n) (add-texture n)))
+  (or (@pixi-textures n)
+      (load-texture n)))
 
 (defn create-sprite
   ([texture-name [x y] [ax ay]]
@@ -125,48 +116,32 @@
   ([texture-name xy]
      (create-sprite texture-name xy [0.5 0.5])))
 
-
-(defn add-to-gamefield! [pobj pixi-filter]
-  (when pixi-filter (set! (.-filters pobj) (array pixi-filter)))
+(defn add-to-gamefield! [pobj]
   (.addChild pixi-gamefield pobj)
   pobj)
-
 
 (defmulti create-entity-pixi-object (comp keyword :type))
 
 (defmethod create-entity-pixi-object :default [entity]
   (let [texture (:texture entity :clojure)
-        xy (:xy entity [0 0])
-        sprite (create-sprite texture xy)]
-    (add-to-gamefield! sprite nil)))
-
+        xy (:xy entity [0 0])]
+    (add-to-gamefield! (create-sprite texture xy))))
 
 (defmethod create-entity-pixi-object :player [entity]
   (add-to-gamefield!
-   (create-sprite :racket_blue (:xy entity)) nil))
-
-
-(defmethod create-entity-pixi-object :black [entity]
-  ;;(let [pixi-filter (js/PIXI.TwistFilter.)
-  ;;      filter-offcet (.-offset pixi-filter)]
-  ;;  (set! (.-angle pixi-filter) 10)
-  ;;  (set! (.-radius pixi-filter) 0.2)
-  ;;  (set! (.-x filter-offcet) 0.15)
-  ;;  (set! (.-y filter-offcet) 0.27))
-  (add-to-gamefield!
-   (create-sprite (:texture entity :black1) (:xy entity))
-   nil))
-
+   (create-sprite :racket_blue (:xy entity))))
 
 (defmethod create-entity-pixi-object :self-player [entity]
   (add-to-gamefield!
-   (create-sprite :racket_red (:xy entity)) nil))
+   (create-sprite :racket_red (:xy entity))))
 
+(defmethod create-entity-pixi-object :black [entity]
+  (add-to-gamefield!
+   (create-sprite (:texture entity :black1) (:xy entity))))
 
 (defmethod create-entity-pixi-object :clojure [entity]
   (add-to-gamefield!
-   (create-sprite :clojure (:xy entity)) nil))
-
+   (create-sprite :clojure (:xy entity))))
 
 ;; ---
 
@@ -174,7 +149,6 @@
   (when pixi-object
     (log :debug "delte pixi obj" pixi-object)
     (.removeChild pixi-gamefield pixi-object)))
-
 
 (defn render-graphics! []
   (.render pixi-renderer pixi-stage))
