@@ -7,6 +7,7 @@
 (def gravity-g 0.005)
 (def engine-forward-force 0.12)
 (def engine-reverse-force 0.05)
+(def rotate-speed 0.15)
 
 (def bullet-ahead-time 200)
 (def max-user-view-distance 1500)

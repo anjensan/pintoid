@@ -1,52 +1,44 @@
 (ns pintoid.client.uinput
+  (:use [clojure.set :only [map-invert]])
   (:require-macros
    [pintoid.client.utils :refer [log]]))
 
-(def active-keys (array))
-(def angle 0)
+(def active-keys (atom #{}))
 
-(defn handle-keydown [e]
+(def key-to-keycode
+  {:space 32
+   :arrow-left 37
+   :arrow-right 39
+   :arrow-up 38
+   :arrow-down 40
+   :enter 13})
+
+(def keycode-to-key
+  (map-invert key-to-keycode))
+
+(defn handle-keypress [e]
   (let [evt (or e (.event js/window))
-        char-code (or (.-keyCode evt) (.-which evt))]
-    (when (< (.indexOf active-keys char-code) 0) 
-      (.push active-keys char-code))
-    (log :debug "active keys" active-keys)))
-      
-(defn handle-keyup [e]
-  (let [evt (or e (.event js/window))
-        char-code (or (.-keyCode evt) (.-which evt))
-        new-active-keys (.filter active-keys
-                                 (fn [key] (not= key char-code)) )]
-    (set! active-keys new-active-keys)))
+        key-code (or (.-keyCode evt) (.-which evt))
+        key (keycode-to-key key-code)
+        type (.-type e)]
+    (when key
+      (case type
+        "keydown" (swap! active-keys conj key)
+        "keyup" (swap! active-keys disj key)))))
 
 (defn init-user-input []
-  (.addEventListener js/window "keydown" handle-keydown false)
-  (.addEventListener js/window "keyup" handle-keyup false))
+  (.addEventListener js/window "keydown" handle-keypress false)
+  (.addEventListener js/window "keyup" handle-keypress false))
 
-
-(defn key-pressed? [char-code] 
-  (>= (.indexOf active-keys char-code) 0))
+(defn key-pressed? [key]
+  (@active-keys key))
 
 (defn get-user-input-state []
-  (let [space 32
-        arrow-left 37
-        arrow-right 39
-        arrow-up 38
-        arrow-down 40
-        enter 13
-        rotate-step (/ (.-PI js/Math) 10)
-        engine-dir (cond
-                      (key-pressed? arrow-up) 1
-                      (key-pressed? arrow-down) -1
-                      :else 0)
-        ]
-    (when (key-pressed? arrow-left)
-      (set! angle (- angle rotate-step)))
-    (when (key-pressed? arrow-right)
-      (set! angle (+ angle rotate-step)))
-
-    {:angle angle
+  (let [ac @active-keys
+        tc1 #(if (ac %1) %2 0)
+        engine-dir (+ (tc1 :arrow-up 1)(tc1 :arrow-down -1))
+        rotate-dir (+ (tc1 :arrow-left -1)(tc1 :arrow-right 1))]
+    {:rotate-dir rotate-dir
      :engine-dir engine-dir
-     :fire? (key-pressed? space)
-     :alt-fire? (key-pressed? enter)}
-    ))
+     :fire? (ac :space)
+     :alt-fire? (ac :enter)}))

@@ -82,14 +82,14 @@
       (-> w
           (sys-capture-users-input)
           (sys-spawn-bullets now)
-          (sys-change-engine-based-on-ui)
+          (sys-change-engine-based-on-ui now)
           (sys-kill-outdated-entities now)
           (sys-simulate-physics now)
           (sys-collide-entities)
           (sys-kill-collided-entities)
           (sys-kill-entities-out-of-gamefield)
-          (sys-fixate-world-state)
           (sys-attach-world-time now)
+          (sys-fixate-world-state)
           ))))
 
 (defn run-world-simulation-tick []
@@ -270,17 +270,19 @@
             
 
 (def sys-change-engine-based-on-ui
-  (system-each-into
-   [:* :player :user-input]
-   (fn [w eid]
-     (let [ui (w eid :user-input)
-           a (:angle ui 0)
-           ed (:engine-dir ui)
-           ef (case ed -1 (- engine-reverse-force) 1 engine-forward-force 0)
-           fxy (vas a ef)]
-       [[eid :self-fxy fxy]
-        [eid :angle a]]))))
-
+  (system-timed
+   (system-each-into
+    [:* :player :user-input]
+    (fn [w eid dt]
+      (let [ui (w eid :user-input)
+            rd (:rotate-dir ui 0)
+            angle (w eid :angle 0)
+            angle' (+ angle (* rd rotate-speed))
+            ed (:engine-dir ui)
+            ef (case ed -1 (- engine-reverse-force) 1 engine-forward-force 0)
+            fxy (vas angle' ef)]
+        [[eid :self-fxy fxy]
+         [eid :angle angle']])))))
 
 ;; --
 
