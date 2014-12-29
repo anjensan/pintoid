@@ -1,6 +1,7 @@
 (ns pintoid.client.animation
   (:require
-   [pintoid.client.utils :refer [obj-uid limit-str]])
+   [pintoid.client.utils :refer [obj-uid limit-str]]
+   [goog.object])
   (:require-macros
    [pintoid.client.utils :refer [log]]))
 
@@ -16,18 +17,15 @@
 ;; completely skip outdated animations
 (def max-allowed-actions-lag 1000)
 
-; (def initial-player-angle ((/ (.PI js/Math) 2))
-
 ;; current (last) *animation* time
 (def last-animation-time 0)
 
-;; TODO: add init function?
 ;; animation-id => (array t1 t2 do-anim-fn! finish-anim-fn!)
 (def active-animations (js-obj))
 (def deffered-actions (array))
 
 ;; anim-start-time (t1) => array of [aid [t1 t2 anim-fn! finish-anim-fn!]]
-(def pending-actions-map (js-obj))
+(def pending-actions-map (array))
 
 ;; sorted list of keys from #'pending-actions-map
 (def pending-actions-times (array))
@@ -39,31 +37,31 @@
 (defn add-action!
   [t act-fn!]
   (log :trace "add action at" t ":" (limit-str 80 act-fn!))
-  (let [tx (long t)
-        al (aget pending-actions-map tx)]
-    (if al
-      (.push al act-fn!)
-      (let [al' (array)]
-        (aset pending-actions-map tx al')
-        (.push al' act-fn!)
-        (.push pending-actions-times tx)
-        (.sort pending-actions-times -)))))
-
-
-(defn- add-pending-animation! [aid t1 t2 avec]
-  (log :trace "add penging animation" aid t1 t2)
-  (add-action! t1 (fn [] (aset active-animations aid avec))))
+  (if (<= t last-animation-time)
+    (act-fn!)
+    (let [tx (long t)
+          al (aget pending-actions-map tx)]
+      (if al
+        (.push al act-fn!)
+        (let [al' (array)]
+          (aset pending-actions-map tx al')
+          (.push al' act-fn!)
+          (.push pending-actions-times tx)
+          (.sort pending-actions-times -))))))
 
 (defn add-animation!
   ([aid t1 t2 animate-fn!]
-     (add-animation! aid t1 t2 animate-fn! nil))
-  ([aid t1 t2 animate-fn! finish-fn!]
+     (add-animation! aid t1 t2 animate-fn! nil nil))
+  ([aid t1 t2 animate-fn! init-fn! finish-fn!]
      (when (>= t2 last-animation-time)
        (let [aid (name aid)
-             av (array aid t1 t2 animate-fn! finish-fn!)]
-         (if (> t1 last-animation-time)
-           (add-pending-animation! aid t1 t2 av)
-             (aset active-animations aid av))))))
+             av (array t1 t2 animate-fn! finish-fn!)]
+         (log :trace "add penging animation" aid t1 t2)
+         (add-action!
+          t1
+          (fn []
+            (when init-fn! (init-fn!))
+            (aset active-animations aid av)))))))
 
 (defn- run-scheduled-actions [time]
   (loop []
@@ -77,31 +75,27 @@
         (recur)))))
 
 (defn- run-active-animations [time]
-  (doseq [aid (js/Object.keys active-animations)]
-    (let [animation (aget active-animations aid)
-          ;; [t1 t2 an-fn! fin-fn!] animation
-          aid (aget animation 0)
-          t1 (aget animation 1)
-          t2 (aget animation 2)
-          an-fn! (aget animation 3)
-          fin-fn! (aget animation 4)]
-      (when (<= t1 time)
-        (if (<= t2 time)
-          (do
-            (js-delete active-animations aid)
-            (when fin-fn! (fin-fn!)))
-          (when an-fn!
-            (an-fn! time)))))))
+  (goog.object/forEach
+   active-animations
+   (fn [[t1 t2 an-fn! fin-fn!] aid _]
+     (when (<= t1 time)
+       (if (<= t2 time)
+         (do
+           (js-delete active-animations aid)
+           (when fin-fn! (fin-fn!)))
+         (when an-fn!
+           (an-fn! time)))))))
 
 (defn process-deffered-actions! []
-  (doseq [x deffered-actions]
-    (x))
-  (set! (.-length deffered-actions) 0))
+  (doseq [da deffered-actions] (da))
+  (set! deffered-actions (array)))
 
 (defn process-animation! [time]
   (run-scheduled-actions time)
   (run-active-animations time)
   (set! last-animation-time time))
+
+;; ---
 
 (defn- mk-linear-interpolator [t1 t2 v1 v2]
   (let [t2-t1 (- t2 t1)
@@ -114,10 +108,10 @@
 (defn- anim-linear-updater
   [obj t1 t2 xy1 xy2]
   (let [p (.-position obj)
-        [sx sy] xy1
-        [dx dy] xy2
-        xi (mk-linear-interpolator t1 t2 sx dx)
-        yi (mk-linear-interpolator t1 t2 sy dy)]
+        [x1 y1] xy1
+        [x2 y2] xy2
+        xi (mk-linear-interpolator t1 t2 x1 x2)
+        yi (mk-linear-interpolator t1 t2 y1 y2)]
     (fn [time]
       (let [x' (xi time)
             y' (yi time)]
@@ -128,9 +122,9 @@
   [obj xy2]
   (fn []
     (let [p (.-position obj)
-          [dx dy] xy2]
-      (set! (.-x p) dx)
-      (set! (.-y p) dy))))
+          [x2 y2] xy2]
+      (set! (.-x p) x2)
+      (set! (.-y p) y2))))
 
 (defn- anim-linear-rotate-updater [obj t1 t2 angle1 angle2]
   (let [ai (mk-linear-interpolator t1 t2 angle1 angle2)]
@@ -152,23 +146,26 @@
    t1
    t2
    (when xy1 (anim-linear-updater obj t1 t2 xy1 xy2))
+   nil
    (anim-linear-finisher obj xy2)
    ))
 
 (defn linear-rotate! [aid obj t1 t2 angle1 angle2]
+  (log :trace "linear-rotate" obj t1 t2 angle1 angle2)
   (add-animation!
    (if aid aid (str "rot-" (obj-uid obj)))
    t1
    t2
    (when angle1 (anim-linear-rotate-updater obj t1 t2 angle1 angle2))
+   nil
    (anim-linear-rotate-finisher obj angle2)
    ))
 
 (defn infinite-linear-rotate! [aid obj c]
+  (log :trace "inf-linear-rot" obj c)
   (add-animation!
    (if aid aid (str "rot-" (obj-uid obj)))
    1
    (.-MAX_VALUE js/Number)
    (anim-infinite-linear-rotate-updater obj c)
-   (anim-linear-rotate-finisher obj 0)
    ))
