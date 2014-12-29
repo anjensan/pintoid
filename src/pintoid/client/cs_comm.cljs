@@ -11,7 +11,7 @@
    [cljs.core.async :refer [<! >! close! timeout]])
   (:require-macros
    [cljs.core.async.macros :refer [go go-loop]]
-   [pintoid.client.utils :refer [log log-info log-debug]]))
+   [pintoid.client.utils :refer [log]]))
 
 
 (def user-input-update-delay 50)
@@ -33,20 +33,20 @@
 
 
 (defn receive-server-messages [ws-chan]
-  (log-info "receive messages from ws-socket")
+  (log :info "receive messages from ws-socket")
   (go-loop []
     (when-let [{:keys [message error]} (<! ws-chan)]
       (if error
         (panic! error)
         (do
-          (log-debug "server msg:" (limit-str 120 message))
+          (log :debug "server msg:" (limit-str 120 message))
           (handle-server-message message)
           (recur))))))
 
 
 (defn send-message-to-server [msg]
   (when-let [c server-ws-channel]
-    (log-debug "send to server:" (limit-str 120 msg))
+    (log :debug "send to server:" (limit-str 120 msg))
     (go (>! c msg))))
 
 
@@ -60,7 +60,7 @@
 
 (defn init-cs-communication []
   (go
-    (log-info "init cs communication")
+    (log :info "init cs communication")
     (let [{:keys [ws-channel error]}
           (<! (ws-ch websocket-url {:format :json-kw}))]
       (if error
