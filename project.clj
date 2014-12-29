@@ -4,11 +4,11 @@
 
   :dependencies [[org.clojure/clojure "1.6.0"]
                  [org.clojure/core.async "0.1.346.0-17112a-alpha"]
-                 [org.clojure/clojurescript "0.0-2411"]
+                 [org.clojure/clojurescript "0.0-2511"]
                  [org.clojure/data.int-map "0.1.0"]
                  [org.clojure/tools.logging "0.3.1"]
                  [ring/ring-core "1.3.2"]
-                 [jarohen/chord "0.4.2"]
+                 [jarohen/chord "0.5.0"]
                  [compojure/compojure "1.3.1"]
                  [hiccup/hiccup "1.0.5"]
                  [prismatic/dommy "1.0.0"]
