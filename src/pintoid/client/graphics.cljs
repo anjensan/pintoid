@@ -46,11 +46,11 @@
 
 (defn update-pixi-score! [value]
   (let [text (str "Score: " value)]
-    (.setText pixi-score-value text)))
+    (set! (.-text pixi-score-value) text)))
 
 (defn update-pixi-death! [value]
   (let [text (str "Death: " value)]
-    (.setText pixi-death-value text)))
+    (set! (.-text pixi-death-value) text)))
 
 (defn init-pixi-renderer []
   (load-all-textures)
