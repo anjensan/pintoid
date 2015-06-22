@@ -1,8 +1,5 @@
 (ns pintoid.server.utils)
 
-(defn current-os-time []
-  (System/currentTimeMillis))
-
 (defmacro when-some* [bindings & body]
   (if (empty? bindings)
     (list* 'do body)

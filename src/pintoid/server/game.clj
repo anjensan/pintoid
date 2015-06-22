@@ -3,7 +3,7 @@
 
 ;; -- api
 (declare fix-world-state)
-(declare init-world-state)
+(declare init-game-state)
 (declare game-remove-player)
 (declare game-add-new-player)
 (declare take-game-snapshot)
@@ -63,7 +63,7 @@
 (defn game-process-user-input [eid user-input]
   (swap! users-input assoc eid user-input))
 
-(defn init-world-state []
+(defn init-game-state []
   (send world sys-init-world-state (rand-nth game-maps)))
 
 ;; --
@@ -78,7 +78,7 @@
 
 (def sys-one-world-simulation-tick
   (fn [w]
-    (let [now (current-os-time)]
+    (let [now (System/currentTimeMillis)]
       (-> w
           (sys-capture-users-input)
           (sys-spawn-bullets now)

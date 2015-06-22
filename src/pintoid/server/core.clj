@@ -15,7 +15,7 @@
 
 (defn start-scheduler! []
   (let [s (java.util.concurrent.ScheduledThreadPoolExecutor. 5)]
-    (init-world-state)
+    (init-game-state)
     (schedule-at-fixed-rate s 80 #'send-snapshots-to-all-clients)
     (schedule-at-fixed-rate s 30 #'run-world-simulation-tick)
     s))
