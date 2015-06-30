@@ -12,7 +12,11 @@
                  [compojure/compojure "1.3.4"]
                  [hiccup/hiccup "1.0.5"]
                  [prismatic/dommy "1.1.0"]
-                 [ch.qos.logback/logback-classic "1.1.3"]]
+                 [ch.qos.logback/logback-classic "1.1.3"]
+                 [net.mikera/vectorz-clj "0.30.1"]
+                 [net.mikera/core.matrix "0.36.1"]
+                 [criterium "0.4.3"]
+                 ]
 
   :plugins [[lein-pdo "0.1.1"]
             [lein-cljsbuild "1.0.6"]
@@ -22,8 +26,8 @@
   ;; config
   :frodo/config-resource "conf/development.edn"
   ;; :frodo/config-resource "conf/production.edn"
-  ;; :jvm-opts ^:replace ["-XX:+UseCompressedOops"]
-  ;; :aot :all
+
+  :jvm-opts ^:replace []
   
   ;; commands
   :aliases {"dev" ["do"
