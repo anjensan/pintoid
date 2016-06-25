@@ -47,7 +47,7 @@
 (defroutes app-routes
   (GET "/" [] (response (page-index)))
   (GET "/game" [] (response (page-game)))
-  (GET "/ws" [] (wrap-websocket-handler game-ws-handler {:format :json-kw}))
+  (GET "/ws" [] (wrap-websocket-handler game-ws-handler {:format :transit-json}))
   (resources "/js" {:root "js"})
   (resources "/img" {:root "img"})
   (resources "/css" {:root "css"}))

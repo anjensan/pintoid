@@ -57,9 +57,9 @@
   (reset!
    world
    (-> @world
-       (handle-rem-entities (aget entts "rem") at)
-       (handle-add-entities (aget entts "add") at)
-       (handle-upd-entities (aget entts "upd") at)
+       (handle-rem-entities (:rem entts) at)
+       (handle-add-entities (:add entts) at)
+       (handle-upd-entities (:upd entts) at)
        (update-game game-upd at)
        (assoc :at (long at))
        (run-actions!))))
@@ -106,9 +106,8 @@
 (defn- handle-add-entities [w es at]
   (log :debug "add" (count es) "entities")
   (let [add-ent-fn
-        (fn [w ent-state-json]
-          (let [ent (keywordize-keys (js->clj ent-state-json))
-                eid (:eid ent)
+        (fn [w ent]
+          (let [eid (:eid ent)
                 entx (if (= eid (:self-eid w))
                        (assoc ent :type :self-player)
                        ent)
@@ -132,7 +131,7 @@
     (reduce rem-ent-fn w es)))
 
 (defn merge-entity-upd [old-state patch]
-  (merge old-state (keywordize-keys (js->clj patch))))
+  (merge old-state patch))
 
 
 (defn- handle-upd-entities [w es at]
@@ -140,10 +139,10 @@
   (let [t1 (:at w)
         t2 at
         add-ent-fn
-        (fn [w ent-patch-json]
-          (let [eid (aget ent-patch-json "eid")
+        (fn [w ent-patch]
+          (let [eid (:eid ent-patch)
                 old-state (get-in w [:entities eid])
-                new-state (merge-entity-upd old-state ent-patch-json)]
+                new-state (merge-entity-upd old-state ent-patch)]
             (log :trace "upd entity" eid patch)
             (-> w
                 (update-in [:entities] assoc eid new-state)

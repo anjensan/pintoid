@@ -87,7 +87,8 @@
      {:command :snapshot
       :at at
       :game gs
-      :entts-json (json/encode snapshot)
+      ;; :entts-json (json/encode snapshot)
+      :entts snapshot
       })
     (assoc pss :client-eids new-c-eids)))
 

@@ -30,7 +30,7 @@
   (go
     (log :info "init cs communication")
     (let [{:keys [ws-channel error]}
-          (<! (ws-ch websocket-url {:format :json-kw}))]
+          (<! (ws-ch websocket-url {:format :transit-json}))]
       (if error
         (panic! error)
         (do
@@ -77,16 +77,16 @@
 
 (defmethod handle-server-message :ping [m]
   ;; TODO: implement
-  .)
+  )
 
 
 (defmethod handle-server-message :snapshot [m]
-  (let [{:keys [at game entts-json]} m]
+  (let [{:keys [at game entts]} m]
     (set! client-server-time-diff
           (-
            (+ at (/ client-server-ping 2))
            (js/performance.now)))
-    (defer-action! update-world-snapshot! at game (js/JSON.parse entts-json))))
+    (defer-action! update-world-snapshot! at game entts)))
 
 
 (defmethod handle-server-message :init-player [m]
