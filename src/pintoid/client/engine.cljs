@@ -1,153 +1,41 @@
 (ns pintoid.client.engine
-  (:use [pintoid.client.animation :only
-         [add-action!
-          defer-action!
-          linear-move!
-          linear-rotate!
-          infinite-linear-rotate!]]
-        [pintoid.client.graphics :only
-         [create-entity-pixi-object
-          delete-entity-pixi-object
-          move-player-camera!
-          update-pixi-score!
-          update-pixi-death!]]
-        [clojure.walk :only [keywordize-keys]])
+  (:use [pintoid.client.ceh :only
+         [entity
+          world-time
+          changed-eids
+          empty-world
+          apply-world-patch
+          player-entity]]
+        [clojure.walk :only
+         [keywordize-keys]])
+  (:require [pintoid.client.animation :as a]
+            [pintoid.client.graphics :as g])
   (:require-macros
-   [pintoid.client.utils :refer [log]]))
+   [pintoid.client.utils :refer [log foreach!]]))
 
-
-
-(def empty-world
-  {
-   :at 0
-   :self-eid nil
-   :player {:xy [0 0]}
-   :entities {}                         ; {entity-id -> entity}
-   ;; eid - entity id, number
-   :actions ()
-   })
 
 ;; map: entity-id -> pixi-obj (root)
 (def eid-pixiobj (atom {}))
 
 ;; world state
-(def world (atom empty-world))
-
-;; --
-
-(declare update-world-snapshot!)
-
-(declare handle-add-entities)
-(declare handle-upd-entities)
-(declare handle-rem-entities)
-(declare update-game)
-
-(declare add-action)
-(declare run-actions!)
-
-(declare update-entity!)
-(declare add-entity!)
-(declare remove-entity!)
-(declare update-player-score!)
-
-;; ss - SnapShot -- JSON OBJECT!
-
-(defn update-world-snapshot! [at game-upd entts]
-  (log :debug "update world snapshot" at game-upd entts)
-  (reset!
-   world
-   (-> @world
-       (handle-rem-entities (:rem entts) at)
-       (handle-add-entities (:add entts) at)
-       (handle-upd-entities (:upd entts) at)
-       (update-game game-upd at)
-       (assoc :at (long at))
-       (run-actions!))))
+(def world (atom (empty-world)))
 
 
-(defn update-player-state! [ps]
-  (log :debug "update player" ps)
-  (swap! world
-         (fn [w]
-           (let [xy (:xy ps)
-                 eid (:eid ps)]
-             (-> w
-                 (assoc-in [:player :xy] xy)
-                 (assoc :self-eid eid))))))
+(declare handle-addrem-sprite-entities)
+(declare handle-sprites-movement!)
+(declare handle-sprites-rotation!)
+(declare handle-player-state!)
 
 
-(defn add-action
-  ([w af] (let [a (:actions w)
-                a' (conj a af)]
-            (assoc w :actions a')))
-  ([w af x] (add-action w #(af x)))
-  ([w af x y] (add-action w #(af x y)))
-  ([w af x y & z] (add-action w #(apply af x y z))))
-
-
-(defn run-actions! [w]
-  (let [as (:actions w)]
-    (doseq [a as] (a))
-    (assoc w :actions ())))
-
-
-(defn update-game [w gup t2]
-  (let [t1 (:at w)
-        cur-pxy (get-in w [:player :xy])
-        pxy (:player-xy gup)
-        deaths (:deaths gup 0)
-        score (:score gup 0)]
-    (-> w
-     (assoc-in [:player :xy] pxy)
-     (add-action update-player-score! t2 deaths score)
-     (add-action move-player-camera! t1 t2 cur-pxy pxy))))
-
-
-(defn- handle-add-entities [w es at]
-  (log :debug "add" (count es) "entities")
-  (let [add-ent-fn
-        (fn [w ent]
-          (let [eid (:eid ent)
-                entx (if (= eid (:self-eid w))
-                       (assoc ent :type :self-player)
-                       ent)
-                ]
-            (log :trace "add entity" eid ent)
-            (-> w
-                (update-in [:entities] assoc eid entx)
-                (add-action add-entity! eid at entx))))]
-    (reduce add-ent-fn w es)))
-
-
-(defn- handle-rem-entities [w es at]
-  (log :debug "rem" (count es) "entities")
-  (let [rem-ent-fn
-        (fn [w eid]
-          (log :trace "add entity" eid)
-          (-> w
-              (update-in [:entities] dissoc eid)
-              (add-action remove-entity! eid at
-                          (get-in w [:entities eid]))))]
-    (reduce rem-ent-fn w es)))
-
-(defn merge-entity-upd [old-state patch]
-  (merge old-state patch))
-
-
-(defn- handle-upd-entities [w es at]
-  (log :debug "upd" (count es) "entities")
-  (let [t1 (:at w)
-        t2 at
-        add-ent-fn
-        (fn [w ent-patch]
-          (let [eid (:eid ent-patch)
-                old-state (get-in w [:entities eid])
-                new-state (merge-entity-upd old-state ent-patch)]
-            (log :trace "upd entity" eid patch)
-            (-> w
-                (update-in [:entities] assoc eid new-state)
-                (add-action update-entity! eid old-state t1 new-state t2))))]
-    (reduce add-ent-fn w es)))
+(defn update-world-snapshot! [wpatch]
+  (log :debug "update world snapshot" wpatch)
+  (let [w1 @world
+        w2 (swap! world apply-world-patch wpatch)]
+    (handle-addrem-sprite-entities w1 w2 wpatch)
+    (handle-sprites-movement! w1 w2 wpatch)
+    (handle-sprites-rotation! w1 w2 wpatch)
+    (handle-player-state! w1 w2 wpatch)
+    ))
 
 
 (defn resolve-entity-object [eid]
@@ -155,45 +43,69 @@
   (get @eid-pixiobj eid))
 
 
-(defn remove-entity! [eid t2 estate]
-  ;; delete animation?
-  (when-let [obj (resolve-entity-object eid)]
-    (add-action!
+(defn handle-sprites-movement! [w1 w2 wpatch]
+  (let [t1 (world-time w1)
+        t2 (world-time w2)]
+    (foreach! [eid (changed-eids wpatch :xy)]
+      (when-let [obj (resolve-entity-object eid)]
+        (let [e1 (entity w1 eid)
+              e2 (entity w2 eid)
+              xy1 (:xy e1)
+              xy2 (:xy e2)]
+          (when (and xy2 (not= xy1 xy2))
+            (if xy1
+              (a/linear-move! obj t1 t2 xy1 xy2)
+              (a/instant-move! obj t1 t2 xy2))))))))
+
+
+(defn handle-sprites-rotation! [w1 w2 wpatch]
+  (let [t1 (world-time w1)
+        t2 (world-time w2)]
+    (foreach! [eid (changed-eids wpatch :angle)]
+      (when-let [obj (resolve-entity-object eid)]
+        (let [e1 (entity w1 eid)
+              e2 (entity w2 eid)
+              a1 (:angle e1)
+              a2 (:angle e2)]
+          (when (and a2 (not= a1 a2))
+            (if a1
+              (a/linear-rotate! obj t1 t2 a1 a2)
+              (a/instant-rotate! obj t1 t2 a2))))))))
+
+
+(defn handle-player-state! [w1 w2 wpatch]
+  (let [t2 (world-time w2)
+        t1 (world-time w1)
+        p1 (player-entity w1)
+        p2 (player-entity w2)
+        pxy1 (:xy p1)
+        pxy2 (:xy p2)
+        deaths (:deaths p2)
+        score (:score p2)]
+    (g/move-player-camera! t1 t2 pxy1 pxy2)
+    (a/add-action!
      t2
      (fn []
-       (delete-entity-pixi-object obj)
-       (swap! eid-pixiobj dissoc eid)
-       ))))
+       (g/update-player-score! score)
+       (g/update-player-death! deaths)))))
 
 
-(defn add-entity! [eid _ entity]
-  (when-let [obj (create-entity-pixi-object entity)]
-    ; (println ".-type"  (:type entity))
-    (when (#{"star" "ast"} (:type entity) ) 
-      (infinite-linear-rotate! nil obj 1e-3))
-
-    (when (#{"black"} (:type entity) ) 
-      (infinite-linear-rotate! nil obj 1))
-    (swap! eid-pixiobj assoc eid obj)))
-
-
-(defn update-entity! [eid estate1 t1 estate2 t2]
-  (let [old-xy (:xy estate1)
-        new-xy (:xy estate2)
-        angle1 (:angle estate1)
-        angle2 (:angle estate2)
-        ]
-    (when (not= old-xy new-xy)
-      (when-let [obj (resolve-entity-object eid)]
-        (linear-move! nil obj t1 t2 old-xy new-xy)))
-
-    (when (not= angle1 angle2)
-      (when-let [obj (resolve-entity-object eid)]
-        (linear-rotate! nil obj t1 t2 angle1 angle2)))))
-
-(defn update-player-score! [t1 deaths score]
-  (add-action!
-   t1
-   (fn []
-     (update-pixi-score! score)
-     (update-pixi-death! deaths))))
+(defn handle-addrem-sprite-entities [w1 w2 wpatch]
+  (foreach! [eid (changed-eids wpatch :eid)]
+    (let [entity (entity w2 eid)]
+      (if (:eid entity)
+        ;; TODO: split into 2 handlers.
+        ;; add new entity
+        (when-let [obj (g/create-entity-pixi-object entity)]
+          (swap! eid-pixiobj assoc eid obj)
+          (when (#{"star" "ast"} (:type entity) )
+            (a/infinite-linear-rotate! obj 1e-3))
+          (when (#{"black"} (:type entity) )
+            (a/infinite-linear-rotate! obj 1)))
+        ;; remove entity
+        (when-let [obj (resolve-entity-object eid)]
+          (a/add-action!
+           (world-time w2)
+           (fn []
+             (g/delete-entity-pixi-object obj)
+             (swap! eid-pixiobj dissoc eid))))))))

@@ -1,24 +1,24 @@
 (ns pintoid.client.animation
   (:require
-   [pintoid.client.utils :refer [obj-uid limit-str]]
+   [pintoid.client.utils :refer [limit-str]]
    [goog.object])
   (:require-macros
    [pintoid.client.utils :refer [log]]))
 
-
 ;; -- API
-
 (declare linear-move!)
+(declare instant-move!)
 (declare process-animation!)
 (declare process-deffered-actions!)
 
-;; -- animations
+;; == Animations
 
 ;; completely skip outdated animations
 (def max-allowed-actions-lag 1000)
 
 ;; current (last) *animation* time
 (def last-animation-time 0)
+(def animation-uid-counter (atom 0))
 
 ;; animation-id => (array t1 t2 do-anim-fn! finish-anim-fn!)
 (def active-animations (js-obj))
@@ -30,9 +30,13 @@
 ;; sorted list of keys from #'pending-actions-map
 (def pending-actions-times (array))
 
+
+;; == Animloop implementation
+
 (defn defer-action!
   ([act-fn!] (.push deffered-actions act-fn!))
   ([act-fn! & args] (defer-action! #(apply act-fn! args))))
+
 
 (defn add-action!
   [t act-fn!]
@@ -49,19 +53,20 @@
           (.push pending-actions-times tx)
           (.sort pending-actions-times -))))))
 
+
 (defn add-animation!
   ([aid t1 t2 animate-fn!]
      (add-animation! aid t1 t2 animate-fn! nil nil))
   ([aid t1 t2 animate-fn! init-fn! finish-fn!]
      (when (>= t2 last-animation-time)
-       (let [aid (name aid)
-             av (array t1 t2 animate-fn! finish-fn!)]
+       (let [av (array t1 t2 animate-fn! finish-fn!)]
          (log :trace "add penging animation" aid t1 t2)
          (add-action!
           t1
           (fn []
             (when init-fn! (init-fn!))
             (aset active-animations aid av)))))))
+
 
 (defn- run-scheduled-actions [time]
   (loop []
@@ -73,6 +78,7 @@
         (js-delete pending-actions-map t)
         (.shift pending-actions-times)
         (recur)))))
+
 
 (defn- run-active-animations [time]
   (goog.object/forEach
@@ -86,16 +92,19 @@
          (when an-fn!
            (an-fn! time)))))))
 
+
 (defn process-deffered-actions! []
   (doseq [da deffered-actions] (da))
   (set! deffered-actions (array)))
+
 
 (defn process-animation! [time]
   (run-scheduled-actions time)
   (run-active-animations time)
   (set! last-animation-time time))
 
-;; ---
+
+;; === Animations
 
 (defn- mk-linear-interpolator [t1 t2 v1 v2]
   (let [t2-t1 (- t2 t1)
@@ -104,6 +113,7 @@
       (let [dd (* (- t2 t) ddc)
             sd (- 1 dd)]
         (+ (* v1 dd) (* v2 sd))))))
+
 
 (defn- anim-linear-updater
   [obj t1 t2 xy1 xy2]
@@ -118,6 +128,7 @@
         (set! (.-x p) x')
         (set! (.-y p) y')))))
 
+
 (defn- anim-linear-finisher
   [obj xy2]
   (fn []
@@ -126,45 +137,72 @@
       (set! (.-x p) x2)
       (set! (.-y p) y2))))
 
+
 (defn- anim-linear-rotate-updater [obj t1 t2 angle1 angle2]
   (let [ai (mk-linear-interpolator t1 t2 angle1 angle2)]
     (fn [t]
       (set! (.-rotation obj) (ai t)))))
 
+
 (defn- anim-infinite-linear-rotate-updater [obj c]
   (fn [t]
     (set! (.-rotation obj) (* t c))))
+
 
 (defn- anim-linear-rotate-finisher [obj angle]
   (fn []
     (set! (.-rotation obj) angle)))
 
-(defn linear-move! [aid obj t1 t2 xy1 xy2]
+
+(defn- object-animation-id [anim-kind obj]
+  (let [aid (or
+             (.--pintoid-anim-uid obj)
+             (set! (.--pintoid-anim-uid obj) (str (swap! animation-uid-counter inc))))]
+    (.concat aid anim-kind)))
+
+
+(defn linear-move! [obj t1 t2 xy1 xy2]
   (log :trace "linear-move" obj t1 t2 xy1 xy2)
   (add-animation!
-   (if aid aid (str "lm-" (obj-uid obj)))
-   t1
-   t2
+   (object-animation-id obj "lm") t1 t2
    (when xy1 (anim-linear-updater obj t1 t2 xy1 xy2))
    nil
-   (anim-linear-finisher obj xy2)
-   ))
+   (anim-linear-finisher obj xy2)))
 
-(defn linear-rotate! [aid obj t1 t2 angle1 angle2]
+
+(defn instant-move! [obj t1 t2 xy]
+  (log :trace "instant-move" obj t1 t2 xy)
+  (add-animation!
+   (object-animation-id obj "lm") t1 t2
+   nil
+   nil
+   (anim-linear-finisher obj xy)))
+
+
+(defn linear-rotate! [obj t1 t2 angle1 angle2]
   (log :trace "linear-rotate" obj t1 t2 angle1 angle2)
   (add-animation!
-   (if aid aid (str "rot-" (obj-uid obj)))
-   t1
-   t2
+   (object-animation-id obj "rot") t1 t2
    (when angle1 (anim-linear-rotate-updater obj t1 t2 angle1 angle2))
    nil
    (anim-linear-rotate-finisher obj angle2)
    ))
 
-(defn infinite-linear-rotate! [aid obj c]
+
+(defn instant-rotate! [obj t1 t2 angle]
+  (log :trace "instant-rotate" obj t1 t2 angle)
+  (add-animation!
+   (object-animation-id obj "rot") t1 t2
+   nil
+   nil
+   (anim-linear-rotate-finisher obj angle)
+   ))
+
+
+(defn infinite-linear-rotate! [obj c]
   (log :trace "inf-linear-rot" obj c)
   (add-animation!
-   (if aid aid (str "rot-" (obj-uid obj)))
+   (object-animation-id obj "rot")
    1
    (.-MAX_VALUE js/Number)
    (anim-infinite-linear-rotate-updater obj c)

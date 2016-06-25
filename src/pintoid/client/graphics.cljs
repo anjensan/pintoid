@@ -22,8 +22,8 @@
 (def pixi-gamefield (new js/PIXI.DisplayObjectContainer))
 
 (def pixi-textures (atom {}))
-(def pixi-score-value (js/PIXI.Text. "Score: 0"))
-(def pixi-death-value (js/PIXI.Text. "Death: 0"))
+(def player-score-value (js/PIXI.Text. "Score: 0"))
+(def player-death-value (js/PIXI.Text. "Death: 0"))
 
 (declare texture-url)
 (declare get-texture)
@@ -32,25 +32,25 @@
 ;; --
 
 (defn init-pixi-labels []
-  (let [score-pos (.-position pixi-score-value)
-        death-pos (.-position pixi-death-value)
+  (let [score-pos (.-position player-score-value)
+        death-pos (.-position player-death-value)
         style (js-obj "fill" "white" "font" "normal 22px Arial")]
     (set! (.-x score-pos) 3)
     (set! (.-y score-pos) 3)
     (set! (.-x death-pos) 3)
     (set! (.-y death-pos) 27)
-    (.setStyle pixi-score-value style)
-    (.setStyle pixi-death-value style)
-    (.addChild pixi-stage pixi-score-value)
-    (.addChild pixi-stage pixi-death-value)))
+    (.setStyle player-score-value style)
+    (.setStyle player-death-value style)
+    (.addChild pixi-stage player-score-value)
+    (.addChild pixi-stage player-death-value)))
 
-(defn update-pixi-score! [value]
+(defn update-player-score! [value]
   (let [text (str "Score: " value)]
-    (set! (.-text pixi-score-value) text)))
+    (set! (.-text player-score-value) text)))
 
-(defn update-pixi-death! [value]
+(defn update-player-death! [value]
   (let [text (str "Death: " value)]
-    (set! (.-text pixi-death-value) text)))
+    (set! (.-text player-death-value) text)))
 
 (defn init-pixi-renderer []
   (load-all-textures)
@@ -62,8 +62,8 @@
     (set! (.-y bg-sprite-pos) (- (/ map-height 2)))
     (.addChild pixi-gamefield bg-sprite))
   (init-pixi-labels)
-  (update-pixi-score! 0)
-  (update-pixi-death! 0)
+  (update-player-score! 0)
+  (update-player-death! 0)
   (.-view pixi-renderer))
 
 (defn- current-camera-position []
@@ -74,7 +74,6 @@
   (let [neg (fn [[x y]] [(- (/ cnvs-width 2) x)
                          (- (/ cnvs-height 2) y)])]
     (linear-move!
-     nil
      pixi-gamefield
      t1
      t2
@@ -129,11 +128,7 @@
 
 (defmethod create-entity-pixi-object :player [entity]
   (add-to-gamefield!
-   (create-sprite :racket_blue (:xy entity))))
-
-(defmethod create-entity-pixi-object :self-player [entity]
-  (add-to-gamefield!
-   (create-sprite :racket_red (:xy entity))))
+   (create-sprite (if (:self-player entity) :racket_red :racket_blue) (:xy entity))))
 
 (defmethod create-entity-pixi-object :black [entity]
   (add-to-gamefield!

@@ -1,8 +1,7 @@
 (ns pintoid.client.cs-comm
   (:use
    [pintoid.client.engine :only
-    [update-world-snapshot!
-     update-player-state!]]
+    [update-world-snapshot!]]
    [pintoid.client.animation :only
     [defer-action!]]
    [pintoid.client.utils :only [panic! limit-str]])
@@ -35,10 +34,14 @@
         (panic! error)
         (do
           (set! server-ws-channel ws-channel)
-          (receive-server-messages ws-channel))))))
+          (receive-server-messages ws-channel)
+          (on-channel-connected))))))
 
 
 ;; == Send to server
+
+(defn on-channel-connected []
+  (send-message-to-server {:command :join-game}))
 
 (defn send-message-to-server [msg]
   (when-let [c server-ws-channel]
@@ -56,7 +59,7 @@
 
 ;; == Receive from server
 
-(defmulti handle-server-message (comp keyword :command))
+(defmulti receive-message (comp keyword :command))
 
 (defn receive-server-messages [ws-chan]
   (log :info "receive messages from ws-socket")
@@ -66,28 +69,16 @@
         (panic! error)
         (do
           (log :debug "server msg:" (limit-str 120 message))
-          (handle-server-message message)
+          (receive-message message)
           (recur))))))
 
 
-(defmethod handle-server-message :default [msg]
+(defmethod receive-message :default [msg]
   (log :info "unknown server message" msg))
 
 
-
-(defmethod handle-server-message :ping [m]
-  ;; TODO: implement
-  )
-
-
-(defmethod handle-server-message :snapshot [m]
-  (let [{:keys [at game entts]} m]
-    (set! client-server-time-diff
-          (-
-           (+ at (/ client-server-ping 2))
+(defmethod receive-message :wpatch [m]
+  (set! client-server-time-diff
+        (- (+ (:time m) (/ client-server-ping 2))
            (js/performance.now)))
-    (defer-action! update-world-snapshot! at game entts)))
-
-
-(defmethod handle-server-message :init-player [m]
-  (update-player-state! (:player m)))
+  (defer-action! update-world-snapshot! m))

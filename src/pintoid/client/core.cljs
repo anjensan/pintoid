@@ -6,6 +6,7 @@
    [pintoid.client.cs-comm :only
     [init-cs-communication
      spawn-user-input-sender
+     send-message-to-server
      client-server-time-diff]]
    [pintoid.client.animation :only
     [process-animation!
@@ -42,8 +43,8 @@
 (defn start-app []
   (init-cs-communication)
   (init-user-input)
-  (spawn-user-input-sender get-user-input-state)
   (d/append! (sel1 :body) (init-pixi-renderer))
+  (spawn-user-input-sender get-user-input-state)
   (drawing-loop 0))
 
 

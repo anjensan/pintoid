@@ -1,128 +1,204 @@
 (ns pintoid.server.cs-comm
-  (:use [pintoid.server game utils ecs])
+  (:use [pintoid.server game utils ecs math])
   (:require
+   [clojure.data.int-map :as im]
    [clojure.core.async :refer
     [<! >! <!! >!! put! close! thread go chan go-loop]]
    [cheshire.core :as json]
    [clojure.tools.logging :as log]
    [clojure.set :refer [union]]))
 
-(def client-chans (atom {}))
+(def client-chans (ref {}))
 
 ;; TODO: Replace with 'client-avatar-agents'
-(def client-notifier-agents (atom {}))
+(def avatars (ref {}))
 
 
-(defn send-message-to-clients [pids message]
-  (let [cc @client-chans
-        pl (or pids (keys cc))]
-    (doseq [eid (or pids (keys cc))]
-      (when-let [ch (cc eid)]
-        (log/trace "eid" eid ">>" message)
-        (go (>! ch message))))))
+(defn create-avatar [pid req]
+  (log/trace "create avatar" pid req)
+  (agent
+   {:pid pid
+    :ws-channel (:ws-channel req)}))
 
 
-(defn send-command-to-clients [pids command message]
-  (send-message-to-clients pids (assoc message :command command)))
+(defmulti handle-client-message
+  (fn [eid message a] (:command message)))
 
 
-(defmulti handle-client-message #(-> %2 :command keyword))
+(defn- send-message-to-client [pid message]
+  (send
+   (get @avatars pid)
+   (fn [avatar]
+     (log/trace "pid" pid ">>" message)
+     (go (>! (:ws-channel avatar) message))
+     avatar)))
 
 
-(defmethod handle-client-message :default [eid m]
-  (log/warn "unknown message" m "from" eid))
+(defn on-client-disconnected [eid]
+  (log/info "player" eid "disconnected")
+  (dosync
+   (game-remove-player eid)
+   (alter avatars dissoc eid)))
 
 
-(defn drop-client-connection [eid]
-  (when-let [ch (@client-chans eid)]
-    (close! ch))
-  (swap! client-notifier-agents dissoc eid)
-  (swap! client-chans dissoc eid))
+(defn drop-client-connection! [eid]
+  (when-let [a (get @avatars eid)]
+    (send a (fn [a] (close! (:ws-channel a) a)))))
 
 
-(defn handle-client-error [eid command error]
-  (handle-client-message eid {:command command :error error}))
-
-
-(defn spawn-wschan-reading-loop [eid ws-channel]
+(defn- spawn-wschan-reading-loop [eid ws-channel]
   (go-loop []
-    (if-let [{:keys [message error] :as msg} (<! ws-channel)]
+    (if-let [{:keys [message error]} (<! ws-channel)]
       (do
-        (if message
-          (do
-            (log/trace "eid" eid "<<" message)
-            (handle-client-message eid message)
-            (recur))
-          (handle-client-error eid :failure error)))
-      (handle-client-error eid :disconnect nil))))
+        (when error
+          (log/warn "eid" eid "!!" error))
+        (when message
+          (log/trace "eid" eid "<<" message)
+          (send
+           (get @avatars eid)
+           (fn [a] (or (handle-client-message eid message a) a))))
+        (recur))
+      (on-client-disconnected eid))))
 
 
 (defn add-new-client-connection [req]
   (let [eid (next-entity-id)
-        ws-channel (:ws-channel req)]
-    (swap! client-notifier-agents assoc eid (agent {:pid eid}))
-    (swap! client-chans assoc eid ws-channel)
-    (spawn-wschan-reading-loop eid ws-channel)
-    (handle-client-message eid {:command :connected :req req})
-    eid))
+        ws-channel (:ws-channel req)
+        a (create-avatar eid req)]
+    (dosync
+     (alter avatars assoc eid a)
+     (send a (fn [s]
+               (assoc s :ws-chan-reader
+                      (spawn-wschan-reading-loop eid (:ws-channel s))))))))
 
 
-;; ---
+;; == Handle client commands.
 
-(defn create-and-send-world-snapshot-agent-upd [pss w eid]
-  (let [at (get-world-time w)
-        gs (take-game-snapshot w eid)
-        client-eids (:client-eids pss #{})
-        snapshot (take-entities-snapshot w eid client-eids)
-        rem-eids (:rem snapshot)
-        add-eids (map :eid (:add snapshot))
-        new-c-eids (->>
-                    client-eids
-                    (remove (set rem-eids))
-                    (union (set add-eids))
-                    (set))
-        ]
-    (send-message-to-clients
-     [eid]
-     {:command :snapshot
-      :at at
-      :game gs
-      ;; :entts-json (json/encode snapshot)
-      :entts snapshot
-      })
-    (assoc pss :client-eids new-c-eids)))
+(defmethod handle-client-message :default [pid m a]
+  (log/warn "unknown message from" pid ":" m)
+  a)
 
 
-(defn send-world-snapshot-to-client [w eid]
-  (when-let [a (@client-notifier-agents eid)]
-    (send-off a create-and-send-world-snapshot-agent-upd w eid)))
+(defmethod handle-client-message :join-game [pid m a]
+  (log/info "new player" pid)
+  (game-add-new-player pid)
+  a)
+
+
+(defmethod handle-client-message :user-input [pid m a]
+  (log/trace "user input player" m)
+  (game-process-user-input pid (:data m))
+  (assoc a :user-input (:data m)))
+
+
+;; == Send world patch
+
+(declare take-world-snapshot)
+(declare construct-world-patch)
+
+(defn- map-val
+  ([f] (map (fn [[k v]] [k (f v)])))
+  ([f m] (into (empty m) (map-val f) m)))
+
+
+(defn- maybe-int-map [m]
+  (into (im/int-map) m))
+
+
+(defn- create-and-send-world-patch [a w]
+  (let [pid (:pid a)
+        at (get-world-time w)]
+    (if (w pid :player)
+      (do
+        (let [[a snapshot] (take-world-snapshot a w)
+              [a wpatch] (construct-world-patch a snapshot)]
+          (log/trace "send to" pid "wpatch" wpatch)
+          (send-message-to-client
+           pid
+           {:command :wpatch
+            :self pid
+            :time at
+            :ecs wpatch})
+          (assoc a :actual-world w))
+        )
+      (do
+        (log/trace "player" pid "not in game" a (entity w pid))
+        a))))
 
 
 (defn send-snapshots-to-all-clients []
   (let [w (fix-world-state)]
-    (doseq [eid (keys @client-chans)]
-      (send-world-snapshot-to-client w eid))))
+    (dosync
+     (doseq [[pid a] @avatars]
+       (send-off a create-and-send-world-patch w)))))
 
 
-;; --- handlers here!
-
-(defmethod handle-client-message :failure [eid params]
-  (log/warn "client failure" (:error params)))
+(defn- econcat [& cols]
+  (eduction cat cols))
 
 
-(defmethod handle-client-message :connected [eid m]
-  (log/info "new player" eid)
-  (let [ps (game-add-new-player eid)]
-    ;; XXX
-    (send-message-to-clients [eid] {:command :init-player :player (player-init-obj eid ps)})))
+(defn- make-component-patch [prev-cm cm]
+  (into
+   []
+   cat
+   [(eduction  ;; added & updated comps
+     (filter (fn [[eid v]] (not= v (get prev-cm eid))))
+     cm)
+    (eduction  ;; removed comps
+     (comp
+      (filter (fn [[eid _]] (nil? (get cm eid))))
+      (map (fn [[eid _]] [eid nil])))
+     prev-cm)]))
 
 
-(defmethod handle-client-message :disconnect [eid _]
-  (log/info "player" eid "disconnected")
-  (drop-client-connection eid)
-  (game-remove-player eid))
+(defn- construct-world-patch [a snapshot]
+  (let [last-snapshot (:last-snapshot a)]
+    [(assoc a :last-snapshot snapshot)
+     (into {} (map (fn [[cid cm]]
+                     [cid,
+                      (make-component-patch
+                       (get last-snapshot cid) cm)]))
+           snapshot)]))
 
 
-(defmethod handle-client-message :user-input [eid m]
-  (log/trace "user input player" m)
-  (game-process-user-input eid (:data m)))
+;; == World snapshot
+
+(defn- point->vec [p]
+  (when p
+    ((juxt :x :y) p)))
+
+
+(defn emap [f c]
+  (eduction (map f) c))
+
+
+(defn convey-component
+  [w & {:keys [cid eids map-fn filter-fn]}]
+  (let [ef (map (fn [eid] [eid (w eid cid)]))
+        ef (if filter-fn (comp ef (filter filter-fn)) ef)
+        ef (if map-fn (comp ef (map-val map-fn)) ef)
+        ees (entity-ids w cid)
+        eids (if eids (eids* eids ees) ees)]
+    (into (im/int-map) ef eids)))
+
+
+;; TODO: Game logic => move outside this ns.
+(defn take-world-snapshot [a w]
+  (let [pid (:pid a)
+        visible0 (:visible-eids a)
+        player-xy (w pid :xy)
+        is-visible? (fn [eid] (< (dist (w eid :xy) player-xy) 1000))
+        visible (into (im/dense-int-set) (filter is-visible?) (entity-ids w :xy))
+        cc (partial convey-component w)
+        ]
+    [(assoc a :visible-eids visible),
+     {:type (cc :cid :type, :eids visible)
+      :xy (cc :cid :xy, :map-fn point->vec, :eids visible)
+      :angle (cc :cid :angle, :eids visible)
+      :texture (cc :cid :texture, :eids visible)
+      :dangle (cc :cid :dangle, :eids visible)
+      :score (cc :cid :score)
+      :deaths (cc :cid :deaths)
+      :eid (into (im/int-map) (map (fn [eid] [eid eid])) visible)
+      :self-player {pid true}
+      }]))

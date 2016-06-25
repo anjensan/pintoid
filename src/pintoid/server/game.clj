@@ -6,7 +6,6 @@
 (declare init-game-state)
 (declare game-remove-player)
 (declare game-add-new-player)
-(declare take-game-snapshot)
 (declare run-world-simulation-tick)
 
 ;; -- various systems
@@ -54,9 +53,7 @@
    world
    (fn [w]
      (let [xy (search-new-player-pos w eid)]
-       (add-entity w eid (merge player-proto {:xy xy})))))
-  (await world)
-  (entity @world eid))
+       (add-entity w eid (merge player-proto {:player true :xy xy}))))))
 
 (defn game-process-user-input [eid user-input]
   (swap! users-input assoc eid user-input))
@@ -192,54 +189,6 @@
          (sys-physics-update-vxy dt)
          (sys-physics-move dt)))))
 
-
-;; TODO: move to cs_comm.cljs
-
-(defn point->vec [p]
-  (when p
-    ((juxt :x :y) p)))
-
-(defn take-game-snapshot [w eid]
-  {:player-eid eid
-   :deaths (w eid :deaths 0)
-   :score (w eid :score 0)
-   :player-xy (point->vec (w eid :xy))
-   })
-
-(defn entitiy-upd-obj [w eid]
-  {:eid eid
-   :xy (point->vec (w eid :xy))
-   :angle (w eid :angle)
-   })
-
-(defn entitiy-add-obj [w eid]
-  {:eid eid
-   :type (w eid :type)
-   :xy (point->vec (w eid :xy))
-   :angle (w eid :angle)
-   :texture (w eid :texture)
-   :dangle (w eid :dangle)
-   })
-
-(defn player-init-obj [eid ps]
-  {:eid eid
-   :type :player
-   :xy (point->vec (:xy ps))
-   :angle (:angle ps)
-   })
-
-(defn take-entities-snapshot [w eid client-eids]
-  (let [;; TODO: send only coords of entities, compare with prev packet
-        ;; entities (for [[eid es] (:entities g)] {:xy (:xy es)})
-        all-eids (eids$ w :xy)              ; TODO: use special marker here
-        cl-eids (eids client-eids)
-        new-eids (seq (eids- all-eids cl-eids))
-        upd-eids (seq (eids* all-eids cl-eids))
-        rem-eids (seq (eids- cl-eids all-eids))
-        ]
-    {:upd (map #(entitiy-upd-obj w %) upd-eids)
-     :add (map #(entitiy-add-obj w %) new-eids)
-     :rem rem-eids}))
 
 (defn sys-spawn-bullets [w now]
   (reduce
