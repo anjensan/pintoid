@@ -2,26 +2,22 @@
   (:require [clojure.data.int-map :as im]))
 
 ;; -- API
-
 (declare create-ecs)
 (declare next-entity-id)
 (declare add-new-entity)
 (declare entity)
 
-(declare system-transient)
-(declare system-each)
-(declare system-each-into)
-(declare system-timed)
-(declare system-async)
-(declare system-stateful)
+(declare make-timed-system)
+(declare make-async-system)
+(declare make-stateful-system)
 (declare quantize-time)
 
 ;; sets of entity-ids
+(declare eids)
 (declare eids+)
 (declare eids*)
 (declare eids-)
-(declare eids)
-(declare select-eids)
+(declare eids$)
 
 (defprotocol ImmutableECS
   ;; (ecs 1 :x) ~ (component ecs 1 :x)
@@ -32,7 +28,7 @@
 
 (defprotocol PersistentECS
   ;; (conj ecs [1 :x ()]) ~ (put-component ecs 1 :x ())
-  (put-component [ecs component-id entity-id comp])
+  (put-component [ecs entity-id component-id comp])
   (add-entity [ecs entity-id] [ecs entity-id cid-comp-map])
   (drop-entity [ecs entity-id])
   )
@@ -46,8 +42,9 @@
 
 (def ^:private entity-id-counter (atom 16r400))
 
-(defn next-entity-id []
-  (swap! entity-id-counter inc))
+(defn next-entity-id
+  ([] (next-entity-id :unknown))
+  ([entity-kind] (swap! entity-id-counter inc)))
 
 
 ;; -- declarations
@@ -63,31 +60,6 @@
 
 
 ;; -- systems
-
-(defn system-transient [sys-fn]
-  (fn [ecs & rs]
-    (persistent! (apply sys-fn (transient ecs) rs))))
-
-(defn system-each [eids-query sys-fn]
-  (fn [ecs & rs]
-    (let [ss (select-eids ecs eids-query)]
-      (if (seq ss)
-        (reduce
-         #(let [x (apply sys-fn %1 %2 rs)] (if (nil? x) %1 x))
-         ecs
-         ss)
-        ecs))))
-
-(defn system-each-into [eids-query sys-fn]
-  (fn [ecs & rs]
-    (let [ss (select-eids ecs eids-query)]
-      (if (seq ss)
-        (persistent!
-         (reduce
-          #(reduce conj! %1 (apply sys-fn ecs %2 rs))
-          (transient ecs)
-          ss))
-        ecs))))
 
 (defn- convert-to-integrals
   [xs]
@@ -105,7 +77,7 @@
     (when (seq nxs)
       (concat (butlast nxs) (vector (long (+ r (last nxs))))))))
 
-(defn quantize-time
+(defn- quantize-time
   ([]
    (fn [ecs dt]
      [dt]))
@@ -127,10 +99,10 @@
            (convert-to-integrals (repeat n2 n2dt))
            (repeat n1 max-dt)))))))
 
-(defn system-timed
-  ([sys-fn]
-   (system-timed nil sys-fn))
-  ([dt-quant sys-fn]
+(defn make-timed-system
+  ([sys-state-fn]
+   (make-timed-system nil sys-state-fn))
+  ([dt-quant sys-state-fn]
    (let [sid (next-entity-id)
          tq-fn (cond
                  (nil? dt-quant) (quantize-time)
@@ -138,38 +110,42 @@
                  (vector? dt-quant) (apply quantize-time dt-quant)
                  (fn? dt-quant) dt-quant)]
      (fn [ecs cur-time & rs]
-       (let [prev-time (or (:last-time (ecs sid ::system)) cur-time)
+       (let [prev-time (or (:last-time (ecs sid :system)) cur-time)
              dt (if prev-time (- cur-time prev-time) 0)
              dt-s (tq-fn ecs dt)
              target-time (reduce + prev-time dt-s)]
          (-> (if (== cur-time prev-time)
                ecs
-               (reduce #(apply sys-fn %1 %2 rs) ecs dt-s))
-             (add-entity sid {::system {:last-time target-time :system-fn sys-fn}})))))))
+               (reduce #(apply sys-state-fn %1 %2 rs) ecs dt-s))
+             (add-entity sid {:system {:last-time target-time}
+                              :type :system})))))))
 
-(defn system-async
+
+(defn make-async-system
   ([system-fn-fn]
-   (let [sid (next-entity-id)]
+   (let [sid (next-entity-id :system)]
      [(fn [ecs & rs]
         (let [d (future (apply system-fn-fn ecs rs))]
           (-> ecs
-              (add-entity sid {::system {:system-fn-fn system-fn-fn :update-fn d}}))))
+              (add-entity sid {:system {:update-fn d}
+                               :type :system}))))
       (fn [ecs & rs]
-        (if-let [p (:update-fn (ecs sid ::system))]
+        (if-let [p (:update-fn (ecs sid :system))]
           (-> ecs
               (drop-entity sid)
               (apply @p ecs rs))))])))
 
-(defn system-stateful
-  ([sys-fn]
-   (system-stateful sys-fn nil))
-  ([initial-state sys-fn]
-   (let [sid (next-entity-id)]
+
+(defn make-stateful-system
+  ([sys-state-fn]
+   (make-stateful-system nil sys-state-fn))
+  ([initial-state sys-state-fn]
+   (let [sid (next-entity-id :system)]
      (fn [ecs & rs]
-       (let [state (:state (ecs sid ::system) initial-state)
-             [ecs' state'] (apply sys-fn ecs state)]
-         (-> ecs'
-             (add-entity sid {::system {:system-fn sys-fn :state state'}})))))))
+       (let [state (ecs sid :system initial-state)
+             [ecs' state'] (apply sys-state-fn ecs state)]
+         (add-entity ecs' sid {:system state'
+                               :type :system}))))))
 
 ;; -- misc
 
@@ -195,7 +171,7 @@
     (into {} (map (fn [ck] [ck (ecs entity-id ck)]) cids))))
 
 (defn add-new-entity [w cid-comp-map]
-  (add-entity w (next-entity-id) cid-comp-map))
+  (add-entity w (next-entity-id (:type cid-comp-map)) cid-comp-map))
 
 (defn eids+ [& es]
   (reduce im/union (map eids es)))
@@ -214,13 +190,13 @@
      xs
      (im/dense-int-set (seq xs)))))
 
-(defn select-eids [ces eids-query]
+(defn eids$ [ces eids-query]
   (cond
     (keyword? eids-query) (entity-ids ces eids-query)
     (empty? eids-query) (eids)
     (vector? eids-query)
     (let [[f & r :as fr] eids-query
-          fm #(select-eids ces %)]
+          fm #(eids$ ces %)]
       (condp #(%1 %2) f
         #{:* '*} (apply eids* (map fm r))
         #{:+ '+} (apply eids+ (map fm r))

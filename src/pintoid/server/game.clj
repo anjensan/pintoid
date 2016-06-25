@@ -54,9 +54,7 @@
    world
    (fn [w]
      (let [xy (search-new-player-pos w eid)]
-       (-> w
-           (add-entity eid player-proto)
-           (put-component eid :xy xy)))))
+       (add-entity w eid (merge player-proto {:xy xy})))))
   (await world)
   (entity @world eid))
 
@@ -68,122 +66,132 @@
 
 ;; --
 
-(def sys-fixate-world-state
-  (fn [w]
-    (reset! last-stable-world w)))
+(defn sys-fixate-world-state [w]
+  (reset! last-stable-world w))
 
-(def sys-init-world-state
-  (fn [w gm]
-    (reduce add-new-entity w gm)))
 
-(def sys-one-world-simulation-tick
-  (fn [w]
-    (let [now (System/currentTimeMillis)]
-      (-> w
-          (sys-capture-users-input)
-          (sys-spawn-bullets now)
-          (sys-change-engine-based-on-ui now)
-          (sys-kill-outdated-entities now)
-          (sys-simulate-physics now)
-          (sys-collide-entities)
-          (sys-kill-collided-entities)
-          (sys-kill-entities-out-of-gamefield)
-          (sys-attach-world-time now)
-          (sys-fixate-world-state)
-          ))))
+(defn sys-init-world-state [w gm]
+  (reduce add-new-entity w gm))
+
+
+(defn sys-one-world-simulation-tick [w]
+  (let [now (System/currentTimeMillis)]
+    (-> w
+      (sys-capture-users-input)
+      (sys-spawn-bullets now)
+      (sys-change-engine-based-on-ui now)
+      (sys-kill-outdated-entities now)
+      (sys-simulate-physics now)
+      (sys-collide-entities)
+      (sys-kill-collided-entities)
+      (sys-kill-entities-out-of-gamefield)
+      (sys-attach-world-time now)
+      (sys-fixate-world-state))))
+
 
 (defn run-world-simulation-tick []
   (send-off world sys-one-world-simulation-tick))
 
 
-(def sys-attach-world-time
-  (fn [w now]
-    (add-entity w time-eid {:time now})))
+(defn sys-attach-world-time [w now]
+  (add-entity w time-eid {:time now}))
 
-(def sys-kill-outdated-entities
-  (system-each :sched-kill-at
-   (fn [w eid now]
-     (when (<= (w eid :sched-kill-at) now)
-       (kill-entity w eid)))))
 
-(def sys-kill-entities-out-of-gamefield
-  (system-each :xy
-   (fn [w eid]
-     (when (entity-out-of-gamefield? w eid)
-       (kill-entity w eid)))))
+(defn sys-kill-outdated-entities [w now]
+  (transduce
+   (filter #(<= (w % :sched-kill-at) now))
+   (completing kill-entity)
+   w
+   (eids$ w :sched-kill-at)))
 
-(def sys-collide-entities
-  (fn [w]
+
+(defn sys-kill-entities-out-of-gamefield [w]
+  (transduce
+   (filter #(entity-out-of-gamefield? w %))
+   (completing kill-entity)
+   w
+   (eids$ w :xy)))
+
+
+(defn sys-collide-entities [w]
     ;; TODO: optimize collision detect alg, currently it's O(n^2)!
-    (let [;; TODO: use marker component :collidable or :collision-shape
-          coll-eids (select-eids w [:* :radius :xy])]
-      (reduce
-       (fn [w eid]
-         (put-component
-          w eid :collide-with
-          (seq (filter #(is-colliding? w eid %) coll-eids))))
-       w
-       coll-eids))))
+  (let [;; TODO: use marker component :collidable or :collision-shape
+        coll-eids (eids$ w [:* :radius :xy])]
+    (reduce
+     (fn [w eid]
+       (put-component
+        w eid :collide-with
+        (seq (filter #(is-colliding? w eid %) coll-eids))))
+     w
+     coll-eids)))
 
-(def sys-kill-collided-entities
-  (system-each
-   :collide-with
-   (fn [w eid]
+
+(defn sys-kill-collided-entities [w]
+  (reduce
+   (fn [w' eid]
      (let [et (w eid :type)
            cw (w eid :collide-with)
            cwt (map #(w % :type) cw)]
-
        ;; TODO: move out, use multimethods/protocols?
        (cond
+         ;; everything kills player except own bullets
+         (and (= et :player)
+              (some #(not= eid (:owner (w % :bullet))) cw))
+         (let [all-bullets-owners (keep #(:owner (w % :bullet)) cw)
+               bullets-owners (remove #(= eid %) all-bullets-owners)]
+           (as-> w' w
+             (reduce inc-player-score w' bullets-owners)
+             (kill-player w' eid)))
 
-        ;; everything kills player except own bullets
-        (and (= et :player)
-             (some #(not= eid (:owner (w % :bullet))) cw))
-        (let [all-bullets-owners (keep #(:owner (w % :bullet)) cw)
-              bullets-owners (remove #(= eid %) all-bullets-owners)]
-          (as-> w w
-                (reduce inc-player-score w bullets-owners)
-                (kill-player w eid)))
+         ;; everything kills bullet except other bullets & players
+         (and (= et :bullet) (not-any? #{:bullet :player} cwt))
+         (kill-entity w' eid)
 
-        ;; everything kills bullet except other bullets & players
-        (and (= et :bullet) (not-any? #{:bullet :player} cwt))
-        (kill-entity w eid))
+         :else w')))
+   w
+   (eids$ w :collide-with)))
 
-       ))))
 
-(def sys-physics-move
-  (system-each-into
-   [:* :xy :phys-move [:+ :vxy :fxy]]
-   (fn [w eid dt]
-    (let [xy (w eid :xy)
-          fxy (w eid :fxy vector-0)
-          m (w eid :mass 1)
-          axy (vs* fxy (/ m))
-          vxy (w eid :vxy vector-0)
-          vxy' (v+ vxy (vs* axy dt))
-          dt2 (/ dt 2)
-          xy' (v+ xy (vs* vxy dt2) (vs* vxy' dt2))]
-      [[eid :vxy vxy']
-       [eid :xy xy']]))))
+(defn sys-physics-move [w dt]
+  (into
+   w
+   (mapcat
+    (fn [eid]
+      (let [xy (w eid :xy)
+            fxy (w eid :fxy vector-0)
+            m (w eid :mass 1)
+            vxy (w eid :vxy vector-0)
+            axy (vs* fxy (/ m))
+            vxy' (v+ vxy (vs* axy dt))
+            dt2 (/ dt 2)
+            xy' (v+ xy (vs* vxy dt2) (vs* vxy' dt2))]
+        [[eid :vxy vxy']
+         [eid :xy xy']])))
+    (eids$ w [:* :xy :phys-move [:+ :vxy :fxy]])))
 
-(def sys-physics-update-vxy
-  (system-each-into
-   [:* :xy :mass :phys-move]
-   (fn [w eid dt]
-     (let [xy (w eid :xy)
-           m (w eid :mass 1)
+
+(defn sys-physics-update-vxy [w dt]
+  (into
+   w
+   (map
+    (fn [eid]
+      (let [xy (w eid :xy)
+            m (w eid :mass 1)
            fxy (reduce
                 #(v+ %1 (calc-gravity-force m (w %2 :mass) xy (w %2 :xy)))
                 (w eid :self-fxy vector-0)
-                (select-eids w [:- [:* :phys-act :xy :mass] [eid]]))]
-       [[eid :fxy fxy]]))))
+                (eids$ w [:- [:* :phys-act :xy :mass] [eid]]))]
+        [eid :fxy fxy])))
+   (eids$ w [:* :xy :mass :phys-move])))
+
 
 (def sys-simulate-physics
-  (system-timed
+  (make-timed-system
    (fn [w dt]
      (-> w
          (sys-physics-update-vxy dt)
          (sys-physics-move dt)))))
+
 
 ;; TODO: move to cs_comm.cljs
 
@@ -223,7 +231,7 @@
 (defn take-entities-snapshot [w eid client-eids]
   (let [;; TODO: send only coords of entities, compare with prev packet
         ;; entities (for [[eid es] (:entities g)] {:xy (:xy es)})
-        all-eids (select-eids w :xy)              ; TODO: use special marker here
+        all-eids (eids$ w :xy)              ; TODO: use special marker here
         cl-eids (eids client-eids)
         new-eids (seq (eids- all-eids cl-eids))
         upd-eids (seq (eids* all-eids cl-eids))
@@ -233,56 +241,62 @@
      :add (map #(entitiy-add-obj w %) new-eids)
      :rem rem-eids}))
 
-(def sys-spawn-bullets
-  (system-each
-   [:* :player :user-input]
-   (fn [w eid now]
-     (let [ui (w eid :user-input)]
-       (when (or (:fire? ui) (:alt-fire? ui))
-         (let [b-proto (if (:fire? ui) bullet-proto bullet-alt-proto)
-               bullet (:bullet b-proto)
-               b-cooldown (:cooldown bullet)
-               last-fire-at (w eid :last-fire-at)]
-           (when (or (nil? last-fire-at) (< (+ last-fire-at b-cooldown) now))
-             (let [xy (w eid :xy)
-                   vxy (w eid :vxy vector-0)
-                   angle (w eid :angle)
-                   b-vxy (v+ vxy (vas angle (:velocity bullet)))
-                   b-xy xy
-                   b-lifetime (:lifetime bullet)]
-               (-> w
-                   (put-component eid :last-fire-at now)
-                   (add-new-entity
-                    (assoc b-proto
-                      :xy b-xy
-                      :vxy b-vxy
-                      :sched-kill-at (+ now b-lifetime)
-                      :bullet (assoc bullet :owner eid)
-                      :angle angle)))))))))))
+(defn sys-spawn-bullets [w now]
+  (reduce
+   (fn [w' eid]
+     (or
+      (let [ui (w eid :user-input)]
+        (when (or (:fire? ui) (:alt-fire? ui))
+          (let [b-proto (if (:fire? ui) bullet-proto bullet-alt-proto)
+                bullet (:bullet b-proto)
+                b-cooldown (:cooldown bullet)
+                last-fire-at (w eid :last-fire-at)]
+            (when (or (nil? last-fire-at) (< (+ last-fire-at b-cooldown) now))
+              (let [xy (w eid :xy)
+                    vxy (w eid :vxy vector-0)
+                    angle (w eid :angle)
+                    b-vxy (v+ vxy (vas angle (:velocity bullet)))
+                    b-xy xy
+                    b-lifetime (:lifetime bullet)]
+                (-> w'
+                    (put-component eid :last-fire-at now)
+                    (add-new-entity
+                      (assoc b-proto
+                        :xy b-xy
+                        :vxy b-vxy
+                        :sched-kill-at (+ now b-lifetime)
+                        :bullet (assoc bullet :owner eid)
+                        :angle angle))))))))
+      w'))
+   w
+   (eids$ w [:* :player :user-input])))
 
-(def sys-capture-users-input
-  (fn [w]
-    (let [ui @users-input]
-      (into
-       w
-       (for [eid (select-eids w :player)]
-         [eid :user-input (get ui eid)])))))
+
+(defn sys-capture-users-input [w]
+  (let [ui @users-input]
+    (into
+     w
+     (for [eid (eids$ w :player)]
+       [eid :user-input (get ui eid)]))))
 
 
 (def sys-change-engine-based-on-ui
-  (system-timed
-   (system-each-into
-    [:* :player :user-input]
-    (fn [w eid dt]
-      (let [ui (w eid :user-input)
-            rd (:rotate-dir ui 0)
-            angle (w eid :angle 0)
-            angle' (+ angle (* rd rotate-speed))
-            ed (:engine-dir ui)
-            ef (case ed -1 (- engine-reverse-force) 1 engine-forward-force 0)
-            fxy (vas angle' ef)]
-        [[eid :self-fxy fxy]
-         [eid :angle angle']])))))
+  (make-timed-system
+   (fn [w dt]
+     (into
+      w
+      (mapcat
+       (fn [eid]
+         (let [ui (w eid :user-input)
+               rd (:rotate-dir ui 0)
+               angle (w eid :angle 0)
+               angle' (+ angle (* rd rotate-speed))
+               ed (:engine-dir ui)
+               ef (case ed -1 (- engine-reverse-force) 1 engine-forward-force 0)
+               fxy (vas angle' ef)]
+           [[eid :self-fxy fxy]
+            [eid :angle angle']])))
+      (eids$ w [:* :player :user-input])))))
 
 ;; --
 
