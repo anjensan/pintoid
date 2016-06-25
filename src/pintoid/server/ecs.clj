@@ -71,8 +71,7 @@
 (defn system-each [eids-query sys-fn]
   (fn [ecs & rs]
     (let [ss (select-eids ecs eids-query)]
-      ;; workaround http://dev.clojure.org/jira/browse/DIMAP-2
-      (if (seq (seq ss))
+      (if (seq ss)
         (reduce
          #(let [x (apply sys-fn %1 %2 rs)] (if (nil? x) %1 x))
          ecs
@@ -82,8 +81,7 @@
 (defn system-each-into [eids-query sys-fn]
   (fn [ecs & rs]
     (let [ss (select-eids ecs eids-query)]
-      ;; workaround http://dev.clojure.org/jira/browse/DIMAP-2
-      (if (seq (seq ss))
+      (if (seq ss)
         (persistent!
          (reduce
           #(reduce conj! %1 (apply sys-fn ecs %2 rs))
@@ -237,21 +235,21 @@
      cid-eids
      eid-cids
      the-meta]
-  
+
   ImmutableECS
-  
+
   (component [_ entity-id component-id]
     (when-some [cm (cid-eid-comp component-id)]
       (cm entity-id)))
-  
+
   (component-ids [_ entity-id]
     (eid-cids entity-id))
-  
+
   (entity-ids [_ component-id]
     (cid-eids component-id))
-  
+
   PersistentECS
-  
+
   (drop-entity [this entity-id]
     (if-let [cids (eid-cids entity-id)]
       (PersistentECSImpl.
@@ -268,7 +266,7 @@
        (dissoc eid-cids entity-id)
        the-meta)
       this))
-  
+
   (add-entity [this entity-id]
     (if (eid-cids entity-id)
       this
@@ -277,7 +275,7 @@
        cid-eids
        (assoc eid-cids entity-id (or (eid-cids entity-id) (sorted-set)))
        the-meta)))
-  
+
   (add-entity [this entity-id cid-comp-map]
     (PersistentECSImpl.
      (persistent!
@@ -293,13 +291,13 @@
      (assoc eid-cids entity-id
             (into (or (eid-cids entity-id) (sorted-set)) (map first cid-comp-map)))
      the-meta))
-  
+
   (put-component [this entity-id component-id comp]
     (let [eid-comp (cid-eid-comp component-id)
           old-is-nil (nil? (when eid-comp (eid-comp entity-id)))
           new-is-nil (nil? comp)]
       (cond
-        
+
         ;; update
         (not (or old-is-nil new-is-nil))
         (PersistentECSImpl.
@@ -307,7 +305,7 @@
          cid-eids
          eid-cids
          the-meta)
-        
+
         ;; delete
         (and (not old-is-nil) new-is-nil)
         (PersistentECSImpl.
@@ -315,7 +313,7 @@
          (assoc cid-eids component-id (disj (cid-eids component-id) entity-id))
          (assoc eid-cids entity-id (disj (eid-cids entity-id) component-id))
          the-meta)
-        
+
         ;; insert
         (and old-is-nil (not new-is-nil) (eid-cids entity-id))
         (PersistentECSImpl.
@@ -323,60 +321,60 @@
          (assoc cid-eids component-id (conj (or (cid-eids component-id) (eids)) entity-id))
          (assoc eid-cids entity-id (conj (eid-cids entity-id) component-id))
          the-meta)
-        
+
         :else this)))
-  
+
   clojure.lang.Counted
   (count [_]
     (reduce + (map (comp count second) cid-eid-comp)))
-  
+
   clojure.lang.IPersistentCollection
-  
+
   (cons [this [entity-id component-id comp]]
     (.put-component this entity-id component-id comp))
-  
+
   (empty [_]
     (PersistentECSImpl. {} {} {} the-meta))
-  
+
   (seq [this]
     (seq
      (for [eid (keys eid-cids)
            cid (eid-cids eid)]
        [eid cid (this eid cid)])))
-  
+
   (equiv [this other]
     (and
      (== (count this) (count other))
      (= (seq this) (seq other))))
-  
+
   clojure.lang.IFn
-  
+
   (invoke [this [entity-id component-id]]
     (.component this entity-id component-id))
-  
+
   (invoke [this entity-id component-id]
     (.component this entity-id component-id))
-  
+
   (invoke [this entity-id component-id default]
     (let [r (.component this entity-id component-id)]
       (if (nil? r) default r)))
-  
+
   clojure.lang.IObj
-  
+
   (meta [_]
     the-meta)
-  
+
   (withMeta [_ meta]
     (PersistentECSImpl. cid-eid-comp cid-eids eid-cids meta))
-  
+
   clojure.lang.IEditableCollection
-  
+
   (asTransient [_]
     (->TransientECSImpl
      (transient cid-eid-comp)
      cid-eids
      eid-cids))
-  
+
   )
 
 
@@ -384,27 +382,27 @@
     [^:unsynchronized-mutable cid-eid-comp
      ^:unsynchronized-mutable cid-eids
      ^:unsynchronized-mutable eid-cids]
-  
+
   ImmutableECS
-  
+
   (component [_ entity-id component-id]
     (when-some [cm (cid-eid-comp component-id)]
       (cm entity-id)))
-  
+
   (component-ids [_ entity-id]
     (eid-cids entity-id))
-  
+
   (entity-ids [_ component-id]
     (cid-eids component-id))
-  
+
   TransientECS
-  
+
   (put-component! [this entity-id component-id comp]
     (let [eid-comp (cid-eid-comp component-id)
           old-is-nil (nil? (when eid-comp (eid-comp entity-id)))
           new-is-nil (nil? comp)]
       (if-not new-is-nil
-        
+
         (when (or (not old-is-nil) (eid-cids entity-id))
           ;; insert or update
           (when old-is-nil
@@ -416,11 +414,11 @@
                   (assoc!
                    (maybe-transient cid-eids) component-id
                    (conj (or (cid-eids component-id) (eids)) entity-id))))
-          
+
           (let [new-eid-comp (assoc! (maybe-transient (or eid-comp {})) entity-id comp)]
             (when-not (identical? eid-comp new-eid-comp)
               (set! cid-eid-comp (assoc! cid-eid-comp component-id new-eid-comp)))))
-        
+
         (when-not old-is-nil
           ;; delete
           (set! cid-eid-comp
@@ -437,31 +435,31 @@
                  (disj (eid-cids entity-id) component-id)))
           )))
     this)
-  
+
   clojure.lang.ITransientCollection
-  
+
   (conj [this [entity-id component-id comp]]
     (.put-component! this entity-id component-id comp))
-  
+
   (persistent [_]
     (->PersistentECSImpl
      (persistent-map-rec1! cid-eid-comp)
      (maybe-persistent! cid-eids)
      (maybe-persistent! eid-cids)
      nil))
-  
+
   clojure.lang.IFn
-  
+
   (invoke [this [entity-id component-id]]
     (.component this entity-id component-id))
-  
+
   (invoke [this entity-id component-id]
     (.component this entity-id component-id))
-  
+
   (invoke [this entity-id component-id default]
     (let [r (.component this entity-id component-id)]
       (if (nil? r) default r)))
-  
+
   )
 
 ;; private utils

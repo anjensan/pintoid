@@ -1,2 +1,0 @@
-{:frodo/config
- {:web {:port 8080 :app pintoid.server.core/app}}}

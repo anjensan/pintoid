@@ -3,7 +3,7 @@
    [pintoid.server cs-comm game])
   (:require
    [frodo.web]
-   [pintoid.server.handler]
+   [pintoid.server.web]
    [ring.middleware.params]
    [ring.middleware.session]))
 
@@ -24,7 +24,7 @@
   (.shutdown s))
 
 (def ring-handler
-  (-> #'pintoid.server.handler/app-routes
+  (-> #'pintoid.server.web/app-routes
       (ring.middleware.params/wrap-params)
       (ring.middleware.session/wrap-session)))
 

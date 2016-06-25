@@ -1,4 +1,6 @@
 (ns pintoid.client.core
+  (:require [cljsjs.pixi]
+            [dommy.core :as d])
   (:use
    [pintoid.client.utils :only [panic!]]
    [pintoid.client.cs-comm :only
@@ -13,7 +15,6 @@
    [pintoid.client.uinput :only
     [init-user-input
      get-user-input-state]])
-  (:require [dommy.core :as d])
   (:require-macros
    [dommy.core :refer [sel1]]
    [pintoid.client.utils :refer [log]]

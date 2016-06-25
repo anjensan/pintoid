@@ -120,7 +120,7 @@
       (reduce
        (fn [w eid]
          (put-component
-          w eid :collide-with 
+          w eid :collide-with
           (seq (filter #(is-colliding? w eid %) coll-eids))))
        w
        coll-eids))))
@@ -144,7 +144,7 @@
           (as-> w w
                 (reduce inc-player-score w bullets-owners)
                 (kill-player w eid)))
-        
+
         ;; everything kills bullet except other bullets & players
         (and (= et :bullet) (not-any? #{:bullet :player} cwt))
         (kill-entity w eid))
@@ -259,7 +259,7 @@
                       :sched-kill-at (+ now b-lifetime)
                       :bullet (assoc bullet :owner eid)
                       :angle angle)))))))))))
-     
+
 (def sys-capture-users-input
   (fn [w]
     (let [ui @users-input]
@@ -267,7 +267,7 @@
        w
        (for [eid (select-eids w :player)]
          [eid :user-input (get ui eid)])))))
-            
+
 
 (def sys-change-engine-based-on-ui
   (system-timed

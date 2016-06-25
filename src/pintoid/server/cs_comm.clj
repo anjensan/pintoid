@@ -90,7 +90,7 @@
       })
     (assoc pss :client-eids new-c-eids)))
 
-    
+
 (defn send-world-snapshot-to-client [w eid]
   (when-let [a (@client-notifier-agents eid)]
     (send-off a create-and-send-world-snapshot-agent-upd w eid)))
