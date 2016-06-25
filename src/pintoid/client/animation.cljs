@@ -31,8 +31,8 @@
 (def pending-actions-times (array))
 
 (defn defer-action!
-  [act-fn!]
-  (.push deffered-actions act-fn!))
+  ([act-fn!] (.push deffered-actions act-fn!))
+  ([act-fn! & args] (defer-action! #(apply act-fn! args))))
 
 (defn add-action!
   [t act-fn!]

@@ -183,7 +183,6 @@
         new-xy (:xy estate2)
         angle1 (:angle estate1)
         angle2 (:angle estate2)
-        
         ]
     (when (not= old-xy new-xy)
       (when-let [obj (resolve-entity-object eid)]

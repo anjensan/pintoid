@@ -8,6 +8,8 @@
    [clojure.set :refer [union]]))
 
 (def client-chans (atom {}))
+
+;; TODO: Replace with 'client-avatar-agents'
 (def client-notifier-agents (atom {}))
 
 
@@ -21,11 +23,10 @@
 
 
 (defn send-command-to-clients [pids command message]
-  (send-message-to-clients pids (assoc message :cmd command)))
+  (send-message-to-clients pids (assoc message :command command)))
 
 
-(defmulti handle-client-message
-  (fn [eid m] (keyword (:cmd m))))
+(defmulti handle-client-message #(-> %2 :command keyword))
 
 
 (defmethod handle-client-message :default [eid m]
@@ -39,8 +40,8 @@
   (swap! client-chans dissoc eid))
 
 
-(defn handle-client-error [eid cmd error]
-  (handle-client-message eid {:cmd cmd :error error}))
+(defn handle-client-error [eid command error]
+  (handle-client-message eid {:command command :error error}))
 
 
 (defn spawn-wschan-reading-loop [eid ws-channel]
@@ -62,7 +63,7 @@
     (swap! client-notifier-agents assoc eid (agent {:pid eid}))
     (swap! client-chans assoc eid ws-channel)
     (spawn-wschan-reading-loop eid ws-channel)
-    (handle-client-message eid {:cmd :connected :req req})
+    (handle-client-message eid {:command :connected :req req})
     eid))
 
 
@@ -83,7 +84,7 @@
         ]
     (send-message-to-clients
      [eid]
-     {:cmd :snapshot
+     {:command :snapshot
       :at at
       :game gs
       :entts-json (json/encode snapshot)
@@ -112,7 +113,7 @@
   (log/info "new player" eid)
   (let [ps (game-add-new-player eid)]
     ;; XXX
-    (send-message-to-clients [eid] {:cmd :init-player :player (player-init-obj eid ps)})))
+    (send-message-to-clients [eid] {:command :init-player :player (player-init-obj eid ps)})))
 
 
 (defmethod handle-client-message :disconnect [eid _]

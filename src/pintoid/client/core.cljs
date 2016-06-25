@@ -5,7 +5,8 @@
    [pintoid.client.utils :only [panic!]]
    [pintoid.client.cs-comm :only
     [init-cs-communication
-     spawn-user-input-sender]]
+     spawn-user-input-sender
+     client-server-time-diff]]
    [pintoid.client.animation :only
     [process-animation!
      process-deffered-actions!]]
@@ -22,28 +23,21 @@
 
 (enable-console-print!)
 
-;; (- server-time client-time)
-;; TODO: ping server every 10secs & update
-(def client-server-time-diff 0)
-(def network-latency 50)
-
-;; should be ~ (/ 2000 server-snapshots-per-second)
+;; TODO: implement adaptive interpolation lag (based on ping).
 (def animation-interpolation-lag 100)
 
-;; --
 
-(defn client-time []
-  (.now js/Date))
+;; == Initialize game
 
-(defn drawing-loop [_]
-  (let [ct (client-time)
-        cgt (+ ct client-server-time-diff)
-        at (- cgt animation-interpolation-lag network-latency)]
-    (log :trace "draw-loop" at)
-    (process-animation! at)
+(defn drawing-loop [timestamp]
+  (js/requestAnimationFrame drawing-loop)
+  (let [server-timestamp (+ timestamp client-server-time-diff)
+        draw-at (- server-timestamp animation-interpolation-lag)]
+    (log :trace "draw-loop" draw-at)
+    (process-animation! draw-at)
     (render-graphics!)
-    (process-deffered-actions!))
-  (js/requestAnimationFrame drawing-loop))
+    (js/setTimeout process-deffered-actions! 0)))
+
 
 (defn start-app []
   (init-cs-communication)
@@ -51,5 +45,6 @@
   (spawn-user-input-sender get-user-input-state)
   (d/append! (sel1 :body) (init-pixi-renderer))
   (drawing-loop 0))
+
 
 (set! (.-onload js/window) start-app)
