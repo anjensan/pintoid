@@ -1,5 +1,5 @@
 (ns pintoid.server.web
-  (:use [pintoid.server cs-comm utils])
+  (:use [pintoid.server cswiring utils])
   (:require
    [ring.util.response :refer [response redirect]]
    [compojure.core :refer [defroutes GET POST]]

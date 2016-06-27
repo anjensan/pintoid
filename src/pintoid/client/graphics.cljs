@@ -1,9 +1,6 @@
 (ns pintoid.client.graphics
-  (:use [pintoid.client.animation :only
-         [linear-move!
-          last-animation-time]])
-  (:require-macros
-   [pintoid.client.utils :refer [log]]))
+  (:require [pintoid.client.animation :as a])
+  (:require-macros [pintoid.client.utils :refer [log]]))
 
 ;; ---
 
@@ -19,9 +16,10 @@
 
 (def pixi-stage (new js/PIXI.Stage))
 (def pixi-renderer (.autoDetectRenderer js/PIXI cnvs-width cnvs-height))
+
 (def pixi-gamefield (new js/PIXI.DisplayObjectContainer))
 
-(def pixi-textures (atom {}))
+(def pixi-loaded-textures (atom {}))
 (def player-score-value (js/PIXI.Text. "Score: 0"))
 (def player-death-value (js/PIXI.Text. "Death: 0"))
 
@@ -73,7 +71,7 @@
 (defn move-player-camera! [t1 t2 xy1 xy2]
   (let [neg (fn [[x y]] [(- (/ cnvs-width 2) x)
                          (- (/ cnvs-height 2) y)])]
-    (linear-move!
+    (a/linear-move
      pixi-gamefield
      t1
      t2
@@ -88,17 +86,17 @@
 
 (defn load-texture [n]
   (swap!
-   pixi-textures
+   pixi-loaded-textures
    (fn [ts]
      (assoc ts n (.fromImage js/PIXI.Texture (texture-url n)))))
-  (@pixi-textures n))
+  (get @pixi-loaded-textures n))
 
 (defn load-all-textures []
   (doseq [t textures]
     (load-texture t)))
 
 (defn get-texture [n]
-  (or (@pixi-textures n)
+  (or (get @pixi-loaded-textures n)
       (load-texture n)))
 
 (defn create-sprite
@@ -118,6 +116,7 @@
 (defn add-to-gamefield! [pobj]
   (.addChild pixi-gamefield pobj)
   pobj)
+
 
 (defmulti create-entity-pixi-object (comp keyword :type))
 

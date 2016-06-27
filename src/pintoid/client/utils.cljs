@@ -9,16 +9,6 @@
   ([f m] (into (empty m) (map-val f) m)))
 
 
-(defn vcall
-  ([f v] (map f v))
-  ([f a1 v] (map #(f a1 %) v))
-  ([f a1 a2 v] (map #(f a1 a2 %) v))
-  ([f a1 a2 a3 v] (map #(f a1 a2 a3 %) v))
-  ([f a1 a2 a3 a4 & asv]
-   (let [as (vec (butlast asv)) v (last asv)]
-     (map #(apply f a1 a2 a3 a4 (conj as %)) v))))
-
-
 (defn transpose-mom [mom]
   "Transpose map of maps.
    => (transpose-mom {:a {1 2 3 4}, :b {1 :x 2 :y}})

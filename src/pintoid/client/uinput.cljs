@@ -21,10 +21,9 @@
         key-code (or (.-keyCode evt) (.-which evt))
         key (keycode-to-key key-code)
         type (.-type e)]
-    (when key
-      (case type
-        "keydown" (swap! active-keys conj key)
-        "keyup" (swap! active-keys disj key)))))
+    (case type
+      "keydown" (swap! active-keys conj key)
+      "keyup" (swap! active-keys disj key))))
 
 (defn init-user-input []
   (.addEventListener js/window "keydown" handle-keypress false)
@@ -35,10 +34,8 @@
 
 (defn get-user-input-state []
   (let [ac @active-keys
-        tc1 #(if (ac %1) %2 0)
-        engine-dir (+ (tc1 :arrow-up 1)(tc1 :arrow-down -1))
-        rotate-dir (+ (tc1 :arrow-left -1)(tc1 :arrow-right 1))]
-    {:rotate-dir rotate-dir
-     :engine-dir engine-dir
+        tc1 #(if (ac %1) %2 0)]
+    {:rotate-dir (+ (tc1 :arrow-left -1) (tc1 :arrow-right 1))
+     :engine-dir (+ (tc1 :arrow-up 1) (tc1 :arrow-down -1))
      :fire? (ac :space)
      :alt-fire? (ac :enter)}))

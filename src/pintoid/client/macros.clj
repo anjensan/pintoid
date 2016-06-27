@@ -7,6 +7,7 @@
   `(reduce (~(or xf `identity) (fn [_# ~s] ~@body)) nil ~sq))
 
 
+;; TODO: replace with something better (klang?)
 (defmacro log [level & ms]
   (case level
     :trace (when (#{:trace} log-level) `(println "TRACE:" ~@ms))

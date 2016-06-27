@@ -8,8 +8,10 @@
           player-entity]]
         [clojure.walk :only
          [keywordize-keys]])
-  (:require [pintoid.client.animation :as a]
-            [pintoid.client.graphics :as g])
+  (:require
+   [pintoid.client.animation :as a]
+   [pintoid.client.animloop :as al]
+   [pintoid.client.graphics :as g])
   (:require-macros
    [pintoid.client.utils :refer [log foreach!]]))
 
@@ -19,23 +21,6 @@
 
 ;; world state
 (def world (atom (empty-world)))
-
-
-(declare handle-addrem-sprite-entities)
-(declare handle-sprites-movement!)
-(declare handle-sprites-rotation!)
-(declare handle-player-state!)
-
-
-(defn update-world-snapshot! [wpatch]
-  (log :debug "update world snapshot" wpatch)
-  (let [w1 @world
-        w2 (swap! world apply-world-patch wpatch)]
-    (handle-addrem-sprite-entities w1 w2 wpatch)
-    (handle-sprites-movement! w1 w2 wpatch)
-    (handle-sprites-rotation! w1 w2 wpatch)
-    (handle-player-state! w1 w2 wpatch)
-    ))
 
 
 (defn resolve-entity-object [eid]
@@ -54,8 +39,8 @@
               xy2 (:xy e2)]
           (when (and xy2 (not= xy1 xy2))
             (if xy1
-              (a/linear-move! obj t1 t2 xy1 xy2)
-              (a/instant-move! obj t1 t2 xy2))))))))
+              (a/linear-move obj t1 t2 xy1 xy2)
+              (a/instant-move obj t1 t2 xy2))))))))
 
 
 (defn handle-sprites-rotation! [w1 w2 wpatch]
@@ -69,8 +54,8 @@
               a2 (:angle e2)]
           (when (and a2 (not= a1 a2))
             (if a1
-              (a/linear-rotate! obj t1 t2 a1 a2)
-              (a/instant-rotate! obj t1 t2 a2))))))))
+              (a/linear-rotate obj t1 t2 a1 a2)
+              (a/instant-rotate obj t1 t2 a2))))))))
 
 
 (defn handle-player-state! [w1 w2 wpatch]
@@ -83,7 +68,7 @@
         deaths (:deaths p2)
         score (:score p2)]
     (g/move-player-camera! t1 t2 pxy1 pxy2)
-    (a/add-action!
+    (al/add-action!
      t2
      (fn []
        (g/update-player-score! score)
@@ -99,13 +84,24 @@
         (when-let [obj (g/create-entity-pixi-object entity)]
           (swap! eid-pixiobj assoc eid obj)
           (when (#{"star" "ast"} (:type entity) )
-            (a/infinite-linear-rotate! obj 1e-3))
+            (a/infinite-linear-rotate obj 1e-3))
           (when (#{"black"} (:type entity) )
-            (a/infinite-linear-rotate! obj 1)))
+            (a/infinite-linear-rotate obj 1)))
         ;; remove entity
         (when-let [obj (resolve-entity-object eid)]
-          (a/add-action!
+          (al/add-action!
            (world-time w2)
            (fn []
              (g/delete-entity-pixi-object obj)
              (swap! eid-pixiobj dissoc eid))))))))
+
+
+(defn update-world-snapshot! [wpatch]
+  (log :debug "update world snapshot" wpatch)
+  (let [w1 @world
+        w2 (swap! world apply-world-patch wpatch)]
+    (handle-addrem-sprite-entities w1 w2 wpatch)
+    (handle-sprites-movement! w1 w2 wpatch)
+    (handle-sprites-rotation! w1 w2 wpatch)
+    (handle-player-state! w1 w2 wpatch)
+    ))

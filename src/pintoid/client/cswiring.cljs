@@ -1,9 +1,7 @@
-(ns pintoid.client.cs-comm
+(ns pintoid.client.cswiring
   (:use
-   [pintoid.client.engine :only
-    [update-world-snapshot!]]
-   [pintoid.client.animation :only
-    [defer-action!]]
+   [pintoid.client.engine :only [update-world-snapshot!]]
+   [pintoid.client.animloop :only [defer-action!]]
    [pintoid.client.utils :only [panic! limit-str]])
   (:require
    [chord.client :refer [ws-ch]]
@@ -24,6 +22,7 @@
 
 
 (declare receive-server-messages)
+(declare on-channel-connected)
 
 (defn init-cs-communication []
   (go
@@ -40,13 +39,24 @@
 
 ;; == Send to server
 
-(defn on-channel-connected []
-  (send-message-to-server {:command :join-game}))
-
 (defn send-message-to-server [msg]
   (when-let [c server-ws-channel]
     (log :debug "send to server:" (limit-str 120 msg))
     (go (>! c msg))))
+
+
+(declare receive-message)
+
+(defn receive-server-messages [ws-chan]
+  (log :info "receive messages from ws-socket")
+  (go-loop []
+    (when-let [{:keys [message error]} (<! ws-chan)]
+      (if error
+        (panic! error)
+        (do
+          (log :debug "server msg:" (limit-str 120 message))
+          (receive-message message)
+          (recur))))))
 
 
 (defn spawn-user-input-sender [make-user-input-snapshot-fn]
@@ -61,16 +71,9 @@
 
 (defmulti receive-message (comp keyword :command))
 
-(defn receive-server-messages [ws-chan]
-  (log :info "receive messages from ws-socket")
-  (go-loop []
-    (when-let [{:keys [message error]} (<! ws-chan)]
-      (if error
-        (panic! error)
-        (do
-          (log :debug "server msg:" (limit-str 120 message))
-          (receive-message message)
-          (recur))))))
+
+(defn on-channel-connected []
+  (send-message-to-server {:command :join-game}))
 
 
 (defmethod receive-message :default [msg]
@@ -82,3 +85,5 @@
         (- (+ (:time m) (/ client-server-ping 2))
            (js/performance.now)))
   (defer-action! update-world-snapshot! m))
+
+

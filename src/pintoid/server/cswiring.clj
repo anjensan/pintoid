@@ -1,4 +1,4 @@
-(ns pintoid.server.cs-comm
+(ns pintoid.server.cswiring
   (:use [pintoid.server game utils ecs math])
   (:require
    [clojure.data.int-map :as im]
@@ -8,21 +8,13 @@
    [clojure.tools.logging :as log]
    [clojure.set :refer [union]]))
 
-(def client-chans (ref {}))
-
-;; TODO: Replace with 'client-avatar-agents'
 (def avatars (ref {}))
-
 
 (defn create-avatar [pid req]
   (log/trace "create avatar" pid req)
   (agent
    {:pid pid
     :ws-channel (:ws-channel req)}))
-
-
-(defmulti handle-client-message
-  (fn [eid message a] (:command message)))
 
 
 (defn- send-message-to-client [pid message]
@@ -33,18 +25,13 @@
      (go (>! (:ws-channel avatar) message))
      avatar)))
 
-
-(defn on-client-disconnected [eid]
-  (log/info "player" eid "disconnected")
-  (dosync
-   (game-remove-player eid)
-   (alter avatars dissoc eid)))
-
-
 (defn drop-client-connection! [eid]
   (when-let [a (get @avatars eid)]
     (send a (fn [a] (close! (:ws-channel a) a)))))
 
+
+(declare handle-client-message)
+(declare on-client-disconnected)
 
 (defn- spawn-wschan-reading-loop [eid ws-channel]
   (go-loop []
@@ -74,6 +61,18 @@
 
 ;; == Handle client commands.
 
+
+(defn on-client-disconnected [eid]
+  (log/info "player" eid "disconnected")
+  (dosync
+   (game-remove-player eid)
+   (alter avatars dissoc eid)))
+
+
+(defmulti handle-client-message
+  (fn [eid message a] (:command message)))
+
+
 (defmethod handle-client-message :default [pid m a]
   (log/warn "unknown message from" pid ":" m)
   a)
@@ -101,26 +100,20 @@
   ([f m] (into (empty m) (map-val f) m)))
 
 
-(defn- maybe-int-map [m]
-  (into (im/int-map) m))
-
-
 (defn- create-and-send-world-patch [a w]
   (let [pid (:pid a)
         at (get-world-time w)]
     (if (w pid :player)
-      (do
-        (let [[a snapshot] (take-world-snapshot a w)
-              [a wpatch] (construct-world-patch a snapshot)]
-          (log/trace "send to" pid "wpatch" wpatch)
-          (send-message-to-client
-           pid
-           {:command :wpatch
-            :self pid
-            :time at
-            :ecs wpatch})
-          (assoc a :actual-world w))
-        )
+      (let [[a snapshot] (take-world-snapshot a w)
+            [a wpatch] (construct-world-patch a snapshot)]
+        (log/trace "send to" pid "wpatch" wpatch)
+        (send-message-to-client
+         pid
+         {:command :wpatch
+          :self pid
+          :time at
+          :ecs wpatch})
+        (assoc a :actual-world w))
       (do
         (log/trace "player" pid "not in game" a (entity w pid))
         a))))

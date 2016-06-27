@@ -3,12 +3,12 @@
             [dommy.core :as d])
   (:use
    [pintoid.client.utils :only [panic!]]
-   [pintoid.client.cs-comm :only
+   [pintoid.client.cswiring :only
     [init-cs-communication
      spawn-user-input-sender
      send-message-to-server
      client-server-time-diff]]
-   [pintoid.client.animation :only
+   [pintoid.client.animloop :only
     [process-animation!
      process-deffered-actions!]]
    [pintoid.client.graphics :only
@@ -27,8 +27,6 @@
 ;; TODO: implement adaptive interpolation lag (based on ping).
 (def animation-interpolation-lag 100)
 
-
-;; == Initialize game
 
 (defn drawing-loop [timestamp]
   (js/requestAnimationFrame drawing-loop)

@@ -1,6 +1,6 @@
 (ns pintoid.server.core
   (:use
-   [pintoid.server cs-comm game])
+   [pintoid.server cswiring game])
   (:require
    [frodo.web]
    [pintoid.server.web]
