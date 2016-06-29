@@ -1,6 +1,7 @@
 (ns pintoid.client.core
   (:require [cljsjs.pixi]
-            [dommy.core :as d])
+            [dommy.core :as d]
+            [pintoid.client.graphics.core :as g])
   (:use
    [pintoid.client.utils :only [panic!]]
    [pintoid.client.cswiring :only
@@ -8,10 +9,10 @@
      spawn-user-input-sender
      send-message-to-server
      client-server-time-diff]]
-   [pintoid.client.animloop :only
+   [pintoid.client.graphics.animloop :only
     [process-animation!
      process-deffered-actions!]]
-   [pintoid.client.graphics :only
+   [pintoid.client.graphics.core :only
     [init-pixi-renderer
      render-graphics!]]
    [pintoid.client.uinput :only
@@ -19,7 +20,7 @@
      get-user-input-state]])
   (:require-macros
    [dommy.core :refer [sel1]]
-   [pintoid.client.utils :refer [log]]
+   [pintoid.client.macros :refer [log]]
    ))
 
 (enable-console-print!)
@@ -41,7 +42,10 @@
 (defn start-app []
   (init-cs-communication)
   (init-user-input)
-  (d/append! (sel1 :body) (init-pixi-renderer))
+  (d/append! (sel1 :body) (g/init-pixi-renderer))
+  (g/init-pixi-labels)
+  (g/update-player-death! 0)
+  (g/update-player-score! 0)
   (spawn-user-input-sender get-user-input-state)
   (drawing-loop 0))
 

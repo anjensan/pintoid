@@ -1,4 +1,4 @@
-(ns pintoid.client.utils)
+(ns pintoid.client.macros)
 
 (def log-level :info)
 

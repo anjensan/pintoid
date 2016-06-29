@@ -29,14 +29,15 @@
    :mass 100
    :angle 0
    :radius 30
+   :sprite :racket-red
    })
 
 
 (def bullet-proto
   {:type :bullet
-   :texture :ast1
+   :sprite :ast6
    :fxy (->Vector 0 0)
-   :xy (->Vector 0 0)
+   :position (->Vector 0 0)
    :phys-move true
    :mass 50
    :angle 0
@@ -48,9 +49,9 @@
 
 (def bullet-alt-proto
   {:type :bullet
-   :texture :ast2
+   :sprite :ast2
    :fxy (->Vector 0 0)
-   :xy (->Vector 0 0)
+   :position (->Vector 0 0)
    :phys-move true
    :phys-act true
    :mass 2000
@@ -61,35 +62,35 @@
             :velocity 2.1}
    })
 
-(defn star [xy mass radius texture dangle]
+(defn star [xy mass radius sprite dangle]
   {
    :type :star
-   :xy xy
+   :position xy
    :mass mass
    :phys-act true
-   :texture texture
+   :sprite sprite
    :radius radius
    :dangle dangle
    })
 
-(defn planet [xy mass radius texture dangle]
+(defn planet [xy mass radius sprite dangle]
   {
    :type :planet
-   :xy xy
+   :position xy
    :mass mass
    :phys-act true
-   :texture texture
+   :sprite sprite
    :radius radius
    :dangle dangle
    })
 
-(defn asteroid [xy mass radius texture dangle]
+(defn asteroid [xy mass radius sprite dangle]
   {
    :type :ast
-   :xy xy
+   :position xy
    :mass mass
    :phys-move true
-   :texture texture
+   :sprite sprite
    :radius radius
    :dangle dangle
    })
@@ -97,41 +98,66 @@
 (defn black-hole [xy dangle]
   {
    :type :black
-   :xy xy
+   :position xy
    :mass 5000
    :phys-act true
-   :texture :black1
+   :sprite :black-hole
    :radius 1
    :dangle dangle
    })
 
+(defn simple-sprite [id image]
+  {:sprite-proto
+   {:id id
+    :type :sprite
+    :anchor [0.5 0.5]
+    :texture (str "/img/" image)}})
+
+(defn texture [id image]
+  {:texture-info
+   {:id id
+    :image (str "/img/" image)}})
+
 (def game-maps
   [[
+    (texture :racket-red "racket_red.png")
+    (texture :racket-blue "racket_blue.png")
+    (simple-sprite :racket-blue "racket_blue.png")
+    (simple-sprite :racket-red "racket_red.png")
+    (simple-sprite :black-hole "black1.png")
+    (simple-sprite :star1 "star1.png")
+    (simple-sprite :star2 "star2.png")
+    (simple-sprite :star3 "star3.png")
+    (simple-sprite :planet1 "pink_planet1.png")
+    (simple-sprite :planet2 "green_planet1.png")
+    (simple-sprite :ast1 "ast1.png")
+    (simple-sprite :ast2 "ast2.png")
+    (simple-sprite :ast3 "ast3.png")
+    (simple-sprite :ast4 "ast4.png")
+    (simple-sprite :ast5 "ast5.png")
+    (simple-sprite :ast6 "ast6.png")
+
     (black-hole (->Vector 0 0) 0.2)
     (star (->Vector -2100 -1350) 500 33 :star1 0.1)
     (star (->Vector 1200 500) 2000 20 :star2 0.1)
     (star (->Vector -900 -700) 1000 66 :star3 0.1)
     (star (->Vector 400 300) 175 70 :star4 0.1)
-    (star (->Vector -2400 -655) 2000 25 :star2 0.1)
-    (star (->Vector 1100 -1700) 1000 66 :star3 0.1)
     (star (->Vector -1600 1000) 1750 70 :star4 0.1)
-    (planet (->Vector -2440 -900) 150 10 :green_planet1 0.1)
-    (planet (->Vector 100 -100) 100 9 :green_planet1 0.1)
-    (planet (->Vector 900 -2440) 200 11 :pink_planet1 0.1)
-    (planet (->Vector 100 2100) 150 8 :pink_planet1 0.1)
-    (planet (->Vector -1100 1100) 120 10 :pink_planet1 0.1)
-    (planet (->Vector -440 -200) 150 10 :green_planet1 0.1)
-    (planet (->Vector 2300 -100) 100 9 :green_planet1 0.1)
-    (planet (->Vector -900 -2240) 200 11 :pink_planet1 0.1)
-    (planet (->Vector 1020 -2100) 150 8 :pink_planet1 0.1)
-    (planet (->Vector -100 1100) 120 10 :pink_planet1 0.1)
+
+    (planet (->Vector -2440 -900) 150 10 :planet1 0.1)
+    (planet (->Vector 10 -100) 100 9 :planet1 0.1)
+    (planet (->Vector 900 -2140) 200 11 :planet2 0.1)
+    (planet (->Vector -900 -2240) 200 11 :planet1 0.1)
+
     (asteroid (->Vector -1220 -1232) 50 3 :ast1 0.1)
     (asteroid (->Vector -200 -300) 50 3 :ast2 0.1)
-    (asteroid (->Vector -400 -200) 40 3 :ast3 0.1)
-    (asteroid (->Vector -200 -1200) 70 3 :ast4 0.1)
-    (asteroid (->Vector -2100 -2100) 80 3 :ast5 0.1)
-    (asteroid (->Vector 1200 510) 90 3 :ast2 0.1)
     (asteroid (->Vector -920 -700) 70 3 :ast3 0.1)
-    (asteroid (->Vector 1000 -1500) 80 3 :ast1 0.1)
-    (asteroid (->Vector 1100 -1810) 80 3 :ast1 0.1)
+    (asteroid (->Vector 1900 1500) 80 3 :ast4 0.1)
+    (asteroid (->Vector 2100 -1110) 80 3 :ast1 0.1)
+    (asteroid (->Vector -1920 -1232) 50 3 :ast1 0.1)
+    (asteroid (->Vector -200 -300) 50 3 :ast2 0.1)
+    (asteroid (->Vector -320 -710) 70 3 :ast3 0.1)
+    (asteroid (->Vector 100 -1000) 80 3 :ast4 0.1)
+    (asteroid (->Vector 110 -310) 80 3 :ast1 0.1)
+
    ]])

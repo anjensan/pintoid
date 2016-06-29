@@ -1,7 +1,7 @@
 (ns pintoid.client.uinput
   (:use [clojure.set :only [map-invert]])
   (:require-macros
-   [pintoid.client.utils :refer [log]]))
+   [pintoid.client.macros :refer [log]]))
 
 (def active-keys (atom #{}))
 

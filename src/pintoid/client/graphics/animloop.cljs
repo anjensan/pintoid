@@ -1,6 +1,6 @@
-(ns pintoid.client.animloop
-  (:require [goog.object])
-  (:require-macros [pintoid.client.utils :refer [log]]))
+(ns pintoid.client.graphics.animloop
+  (:require [goog.object] [goog.array])
+  (:require-macros [pintoid.client.macros :refer [log]]))
 
 
 ;; completely skip outdated animations
@@ -36,8 +36,7 @@
         (let [al' (array)]
           (aset pending-actions-map tx al')
           (.push al' act-fn!)
-          (.push pending-actions-times tx)
-          (.sort pending-actions-times -))))))
+          (goog.array.binaryInsert pending-actions-times tx))))))
 
 
 (defn add-animation!

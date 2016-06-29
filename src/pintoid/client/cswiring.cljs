@@ -1,14 +1,14 @@
 (ns pintoid.client.cswiring
   (:use
    [pintoid.client.engine :only [update-world-snapshot!]]
-   [pintoid.client.animloop :only [defer-action!]]
+   [pintoid.client.graphics.animloop :only [defer-action!]]
    [pintoid.client.utils :only [panic! limit-str]])
   (:require
    [chord.client :refer [ws-ch]]
    [cljs.core.async :refer [<! >! close! timeout]])
   (:require-macros
    [cljs.core.async.macros :refer [go go-loop]]
-   [pintoid.client.utils :refer [log]]))
+   [pintoid.client.macros :refer [log]]))
 
 
 (def client-server-time-diff 0)

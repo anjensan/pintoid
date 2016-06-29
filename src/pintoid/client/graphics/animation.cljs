@@ -1,6 +1,6 @@
-(ns pintoid.client.animation
-  (:use [pintoid.client.animloop :only [add-animation!]])
-  (:require-macros [pintoid.client.utils :refer [log]]))
+(ns pintoid.client.graphics.animation
+  (:use [pintoid.client.graphics.animloop :only [add-animation!]])
+  (:require-macros [pintoid.client.macros :refer [log]]))
 
 
 (def animation-uid-counter (atom 0))

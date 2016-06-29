@@ -179,19 +179,21 @@
 (defn take-world-snapshot [a w]
   (let [pid (:pid a)
         visible0 (:visible-eids a)
-        player-xy (w pid :xy)
-        is-visible? (fn [eid] (< (dist (w eid :xy) player-xy) 1000))
-        visible (into (im/dense-int-set) (filter is-visible?) (entity-ids w :xy))
+        player-xy (w pid :position)
+        is-visible? (fn [eid] (< (dist (w eid :position) player-xy) 1000))
+        visible (into (im/dense-int-set) (filter is-visible?) (entity-ids w :position))
         cc (partial convey-component w)
         ]
     [(assoc a :visible-eids visible),
      {:type (cc :cid :type, :eids visible)
-      :xy (cc :cid :xy, :map-fn point->vec, :eids visible)
+      :position (cc :cid :position, :map-fn point->vec, :eids visible)
       :angle (cc :cid :angle, :eids visible)
       :texture (cc :cid :texture, :eids visible)
       :dangle (cc :cid :dangle, :eids visible)
+      :sprite (cc :cid :sprite, :eids visible)
       :score (cc :cid :score)
       :deaths (cc :cid :deaths)
-      :eid (into (im/int-map) (map (fn [eid] [eid eid])) visible)
       :self-player {pid true}
+      :texture-info (cc :cid :texture-info)
+      :sprite-proto (cc :cid :sprite-proto)
       }]))

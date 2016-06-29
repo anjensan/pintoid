@@ -2,7 +2,7 @@
   (:use
    [clojure.set :only [union]])
   (:require-macros
-   [pintoid.client.utils :refer [log]]))
+   [pintoid.client.macros :refer [log]]))
 
 
 (defrecord -World [time selfid entities])
@@ -48,8 +48,10 @@
      (fn [es [cid cs]]
        (reduce
         (fn [es [eid c]]
-          (let [ent (get es eid)]
-            (assoc! es eid (if (nil? c) (dissoc ent cid) (assoc ent cid c)))))
+          (let [ent (or (get es eid) {:eid eid})
+                ent' (if (nil? c) (dissoc ent cid) (assoc ent cid c))]
+            ;; TODO: Cleanup removed entities & modify wpatch/changed-eids (add removed eids)
+            (assoc! es eid ent')))
         es
         cs))
      (transient entities)

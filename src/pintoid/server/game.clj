@@ -53,7 +53,7 @@
    world
    (fn [w]
      (let [xy (search-new-player-pos w eid)]
-       (add-entity w eid (merge player-proto {:player true :xy xy}))))))
+       (add-entity w eid (merge player-proto {:player true :position xy}))))))
 
 (defn game-process-user-input [eid user-input]
   (swap! users-input assoc eid user-input))
@@ -107,13 +107,13 @@
    (filter #(entity-out-of-gamefield? w %))
    (completing kill-entity)
    w
-   (eids$ w :xy)))
+   (eids$ w :position)))
 
 
 (defn sys-collide-entities [w]
     ;; TODO: optimize collision detect alg, currently it's O(n^2)!
   (let [;; TODO: use marker component :collidable or :collision-shape
-        coll-eids (eids$ w [:* :radius :xy])]
+        coll-eids (eids$ w [:* :radius :position])]
     (reduce
      (fn [w eid]
        (put-component
@@ -154,17 +154,17 @@
    w
    (mapcat
     (fn [eid]
-      (let [xy (w eid :xy)
+      (let [xy (w eid :position)
             fxy (w eid :fxy vector-0)
             m (w eid :mass 1)
-            vxy (w eid :vxy vector-0)
+            vxy (w eid :velocity vector-0)
             axy (vs* fxy (/ m))
             vxy' (v+ vxy (vs* axy dt))
             dt2 (/ dt 2)
             xy' (v+ xy (vs* vxy dt2) (vs* vxy' dt2))]
-        [[eid :vxy vxy']
-         [eid :xy xy']])))
-    (eids$ w [:* :xy :phys-move [:+ :vxy :fxy]])))
+        [[eid :velocity vxy']
+         [eid :position xy']])))
+    (eids$ w [:* :position :phys-move [:+ :velocity :fxy]])))
 
 
 (defn sys-physics-update-vxy [w dt]
@@ -172,14 +172,14 @@
    w
    (map
     (fn [eid]
-      (let [xy (w eid :xy)
+      (let [xy (w eid :position)
             m (w eid :mass 1)
            fxy (reduce
-                #(v+ %1 (calc-gravity-force m (w %2 :mass) xy (w %2 :xy)))
+                #(v+ %1 (calc-gravity-force m (w %2 :mass) xy (w %2 :position)))
                 (w eid :self-fxy vector-0)
-                (eids$ w [:- [:* :phys-act :xy :mass] [eid]]))]
+                (eids$ w [:- [:* :phys-act :position :mass] [eid]]))]
         [eid :fxy fxy])))
-   (eids$ w [:* :xy :mass :phys-move])))
+   (eids$ w [:* :position :mass :phys-move])))
 
 
 (def sys-simulate-physics
@@ -201,8 +201,8 @@
                 b-cooldown (:cooldown bullet)
                 last-fire-at (w eid :last-fire-at)]
             (when (or (nil? last-fire-at) (< (+ last-fire-at b-cooldown) now))
-              (let [xy (w eid :xy)
-                    vxy (w eid :vxy vector-0)
+              (let [xy (w eid :position)
+                    vxy (w eid :velocity vector-0)
                     angle (w eid :angle)
                     b-vxy (v+ vxy (vas angle (:velocity bullet)))
                     b-xy xy
@@ -211,8 +211,8 @@
                     (put-component eid :last-fire-at now)
                     (add-new-entity
                       (assoc b-proto
-                        :xy b-xy
-                        :vxy b-vxy
+                        :position b-xy
+                        :velocity b-vxy
                         :sched-kill-at (+ now b-lifetime)
                         :bullet (assoc bullet :owner eid)
                         :angle angle))))))))
@@ -261,13 +261,13 @@
 (defn kill-player [w eid]
   (let [xy' (search-new-player-pos w eid)]
     (-> w
-        (conj [eid :xy xy'])
-        (conj [eid :vxy nil])
+        (conj [eid :position xy'])
+        (conj [eid :velocity nil])
         (conj [eid :deaths (inc (w eid :deaths 0))]))))
 
 
 (defn entity-out-of-gamefield? [w eid]
-  (when-let [xy (w eid :xy)]
+  (when-let [xy (w eid :position)]
     (let [[x y] ((juxt :x :y) xy)]
       (not
        (and
@@ -280,8 +280,8 @@
    (when-not (== e1 e2)
     (when-some* [r1 (w e1 :radius)
                  r2 (w e2 :radius)
-                 p1 (w e1 :xy)
-                 p2 (w e2 :xy)]
+                 p1 (w e1 :position)
+                 p2 (w e2 :position)]
       (< (dist p1 p2) (+ r1 r2)))))
 
 (defn kill-entity [w eid]
