@@ -9,20 +9,20 @@
 (def textures (atom {}))
 
 
-(defn add-prototype [proto]
+(defn add-prototype [id proto]
   ;; Invalidate/recreate/mark all affected sprites.
-  (swap! prototypes assoc (:id proto) proto))
+  (swap! prototypes assoc id proto))
 
 
 (defn- create-texture-object [{:keys [id image]}]
   (js/PIXI.Texture.fromImage image))
 
 
-(defn add-texture [{:keys [id] :as tinfo}]
+(defn add-texture [id tinfo]
   ;; TODO: Invalidate/recreate/mark all affected sprites.
   (let [t (create-texture-object tinfo)]
     (js/PIXI.Texture.addTextureToCache (name id) t)
-    (swap! textures id t)))
+    (swap! textures assoc id t)))
 
 
 (defn get-texture [t]
@@ -37,7 +37,8 @@
 
 
 (defn make-sprite [id]
-  (construct-sprite-object (get @prototypes id empty-sprite-proto)))
+  (construct-sprite-object
+   (get @prototypes id empty-sprite-proto)))
 
 
 (defmethod construct-sprite-object :default [proto]
@@ -48,36 +49,32 @@
   (js/PIXI.Point. x y))
 
 
-(defn populate-display-object-properties [obj props]
+(defn set-sprite-properties [obj props]
   (when-let [position (get props :position)] (set! (.-position obj) (vec-to-point position)))
   (when-let [pivot (get props :pivot)] (set! (.-pivot obj) (vec-to-point pivot)))
   (when-let [rotation (get props :rotation)] (set! (.-rotation obj) rotation))
   (when-let [alpha (get props :alpha)] (set! (.-alpha obj) alpha))
   (when-let [scale (get props :scale)] (set! (.-scale obj) scale))
-  (when-let [visible (get props :visible)] (set! (.-visible obj) visible)))
-
-
-(defn populate-sprite-properties [obj props]
-  (populate-display-object-properties obj props)
+  (when-let [visible (get props :visible)] (set! (.-visible obj) visible))
   (when-let [anchor (get props :anchor)] (set! (.-anchor obj) (vec-to-point anchor))))
 
 
 (defn- construct-and-add-children [obj ch-protos]
   (doseq [cp ch-protos]
-    (let [c (construct-sprite-object cp)]
+    (let [c (make-sprite cp)]
       (.addChild obj c))))
 
 
-(defmethod construct-sprite-object :sprite [proto]
+(defmethod construct-sprite-object :sprite [proto entity]
   (let [t (get-texture (get proto :texture ::clojure))
         s (js/PIXI.Sprite. t)]
+    (set-sprite-properties s proto)
     (construct-and-add-children s (:children proto))
-    (populate-sprite-properties s proto)
     s))
 
 
 (defmethod construct-sprite-object :container [proto]
   (let [s (js/PIXI.Container.)]
-    (populate-sprite-properties s proto)
     (construct-and-add-children s (:children proto))
+    (set-sprite-properties s proto)
     s))

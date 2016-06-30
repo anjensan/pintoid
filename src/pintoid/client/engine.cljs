@@ -28,12 +28,14 @@
 
 (defn handle-sprites-prototypes! [w1 w2 wpatch]
   (foreach! [eid (changed-eids wpatch :sprite-proto)]
-    (gs/add-prototype (:sprite-proto (entity w2 eid)))))
+    (foreach! [[id proto] (:sprite-proto (entity w2 eid))]
+      (gs/add-prototype id proto))))
 
 
 (defn handle-textures-info! [w1 w2 wpatch]
   (foreach! [eid (changed-eids wpatch :texture-info)]
-    (gs/add-texture (:texture-info (entity w2 eid)))))
+    (foreach! [[id tinfo] (:texture-info (entity w2 eid))]
+      (gs/add-texture id tinfo))))
 
 
 (defn handle-sprites-movement! [w1 w2 wpatch]
@@ -92,7 +94,9 @@
         ;; TODO: split into 2 handlers.
         ;; add new entity
         ;; TODO: Also we need to specify correct :position etc.
-        (add-entity-sprite entity)
+        (al/add-action!
+         (world-time w2)
+         (fn [] (add-entity-sprite entity)))
         ;; remove entity
         (when-let [obj (g/get-sprite eid)]
           (al/add-action!

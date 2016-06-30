@@ -108,20 +108,19 @@
 
 (defn simple-sprite [id image]
   {:sprite-proto
-   {:id id
-    :type :sprite
-    :anchor [0.5 0.5]
-    :texture (str "/img/" image)}})
+   {id {:type :sprite
+         :anchor [0.5 0.5]
+         :texture (str "/img/" image)}}})
 
 (defn texture [id image]
   {:texture-info
-   {:id id
-    :image (str "/img/" image)}})
+   {id {:image (str "/img/" image)}}})
 
 (def game-maps
   [[
     (texture :racket-red "racket_red.png")
     (texture :racket-blue "racket_blue.png")
+
     (simple-sprite :racket-blue "racket_blue.png")
     (simple-sprite :racket-red "racket_red.png")
     (simple-sprite :black-hole "black1.png")

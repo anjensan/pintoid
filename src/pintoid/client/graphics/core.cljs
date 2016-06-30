@@ -94,6 +94,7 @@
     (when-let [old-obj (get @sprites eid)]
       (.removeChild old-obj.parent old-obj))
     (let [obj (s/make-sprite (:sprite entity))]
+      (s/set-sprite-properties obj entity)
       (.addChild *root* obj)
       (swap! sprites assoc eid obj)
       obj)))
