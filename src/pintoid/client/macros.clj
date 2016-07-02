@@ -14,3 +14,16 @@
     :debug (when (#{:trace :debug} log-level) `(println "DEBUG: " ~@ms))
     :info `(println "PINTOID:" ~@ms)
     (throw (ex-info "Unknown log level" {:level level}))))
+
+
+(defmacro goog-base [method & args]
+  `(goog/base (~'js* "this") ~(name method) ~@args))
+
+
+(defmacro goog-extend [type base-type ctor & methods]
+  `(do
+     (defn ~type ~@ctor)
+     (goog/inherits ~type ~base-type)
+     ~@(for [[mname & mbody] methods]
+         `(set! (.. ~type -prototype ~(symbol (str "-" mname)))
+                (fn ~@mbody)))))

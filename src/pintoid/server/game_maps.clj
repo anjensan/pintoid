@@ -35,7 +35,7 @@
 
 (def bullet-proto
   {:type :bullet
-   :sprite :ast6
+   :sprite :bullet
    :fxy (->Vector 0 0)
    :position (->Vector 0 0)
    :phys-move true
@@ -49,7 +49,7 @@
 
 (def bullet-alt-proto
   {:type :bullet
-   :sprite :ast2
+   :sprite :ast6
    :fxy (->Vector 0 0)
    :position (->Vector 0 0)
    :phys-move true
@@ -123,7 +123,6 @@
 
     (simple-sprite :racket-blue "racket_blue.png")
     (simple-sprite :racket-red "racket_red.png")
-    (simple-sprite :black-hole "black1.png")
     (simple-sprite :star1 "star1.png")
     (simple-sprite :star2 "star2.png")
     (simple-sprite :star3 "star3.png")
@@ -135,6 +134,36 @@
     (simple-sprite :ast4 "ast4.png")
     (simple-sprite :ast5 "ast5.png")
     (simple-sprite :ast6 "ast6.png")
+
+    {:sprite-proto
+     {:bullet {:type :animator
+               :rand-shift true
+               :a-rotation {:kind :saw :period 200 :min 0 :max 6.3}
+               :a-scale {:kind :sin :period 500 :min 0.1 :max 0.8}
+               :child {:type :container
+                       :children [{:type :sprite
+                                   :anchor [0.5 0.5]
+                                   :scale 0.4
+                                   :texture "/img/ast6.png"
+                                   :position [0 30]}
+                                  {:type :sprite
+                                   :anchor [0.5 0.5]
+                                   :scale 0.4
+                                   :texture "/img/ast6.png"
+                                   :position [-20 -8]}
+                                  {:type :sprite
+                                   :anchor [0.5 0.5]
+                                   :scale 0.4
+                                   :texture "/img/ast6.png"
+                                   :position [20 -8]}]}}
+      :black-hole {:type :animator
+                   :a-scale {:kind :sin :period 5000 :min 0.9 :max 1.1 :power 2}
+                   :a-rotation {:kind :saw :period 30 :min 0 :max 6.3}
+                   :child {:type :sprite
+                           :texture "/img/black1.png"
+                           :anchor [0.5 0.5]}
+                   }
+      }}
 
     (black-hole (->Vector 0 0) 0.2)
     (star (->Vector -2100 -1350) 500 33 :star1 0.1)

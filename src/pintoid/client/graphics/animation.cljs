@@ -51,11 +51,6 @@
       (set! (.-rotation obj) (ai t)))))
 
 
-(defn- anim-infinite-linear-rotate-updater [obj c]
-  (fn [t]
-    (set! (.-rotation obj) (* t c))))
-
-
 (defn- anim-linear-rotate-finisher [obj angle]
   (fn []
     (set! (.-rotation obj) angle)))
@@ -96,14 +91,4 @@
    nil
    nil
    (anim-linear-rotate-finisher obj angle)
-   ))
-
-
-(defn infinite-linear-rotate [obj c]
-  (log :trace "inf-linear-rot" obj c)
-  (add-animation!
-   (object-animation-id obj "rot")
-   1
-   (.-MAX_VALUE js/Number)
-   (anim-infinite-linear-rotate-updater obj c)
    ))

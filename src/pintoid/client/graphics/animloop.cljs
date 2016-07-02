@@ -12,6 +12,7 @@
 ;; animation-id => (array t1 t2 do-anim-fn! finish-anim-fn!)
 (def active-animations (js-obj))
 (def deffered-actions (array))
+(def simple-active-animations (js-obj))
 
 ;; anim-start-time (t1) => array of [aid [t1 t2 anim-fn! finish-anim-fn!]]
 (def pending-actions-map (array))
@@ -53,6 +54,12 @@
             (aset active-animations aid av)))))))
 
 
+(defn animate! [aid animate-fn!]
+  (if animate-fn!
+    (aset simple-active-animations aid animate-fn!)
+    (js-delete simple-active-animations aid)))
+
+
 (defn- run-scheduled-actions [time]
   (loop []
     (when-let [t (first pending-actions-times)]
@@ -66,6 +73,10 @@
 
 
 (defn- run-active-animations [time]
+  (goog.object/forEach
+   simple-active-animations
+   (fn [an-fn! aid _]
+     (an-fn! time)))
   (goog.object/forEach
    active-animations
    (fn [[t1 t2 an-fn! fin-fn!] aid _]

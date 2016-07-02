@@ -106,12 +106,7 @@
 
 
 (defmethod add-entity-sprite :default [entity]
-  (let [obj (g/new-sprite entity)]
-    ;; TODO: Replace with loop animations / effects.
-    (when (#{"star" "ast"} (:type entity) )
-      (a/infinite-linear-rotate obj 1e-3))
-    (when (#{"black"} (:type entity) )
-      (a/infinite-linear-rotate obj 1))))
+  (g/new-sprite entity))
 
 
 (defmethod add-entity-sprite :player [entity]

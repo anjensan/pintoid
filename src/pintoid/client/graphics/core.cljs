@@ -86,13 +86,14 @@
   (when-let [obj (get @sprites eid)]
     (when obj.parent
       (.removeChild obj.parent obj))
-    (swap! sprites dissoc eid)))
+    (swap! sprites dissoc eid)
+    (.destroy obj)))
 
 
 (defn new-sprite [entity]
   (when-let [eid (:eid entity)]
     (when-let [old-obj (get @sprites eid)]
-      (.removeChild old-obj.parent old-obj))
+      (.removeChild (.-parent old-obj) old-obj))
     (let [obj (s/make-sprite (:sprite entity))]
       (s/set-sprite-properties obj entity)
       (.addChild *root* obj)
