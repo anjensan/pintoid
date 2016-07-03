@@ -16,8 +16,8 @@
 
 (def map-width 5000)
 (def map-height 5000)
-(def cnvs-width (- (.-innerWidth js/window) 100))
-(def cnvs-height (- (.-innerHeight js/window) 100))
+(def canvas-width 1600)
+(def canvas-height 900)
 
 (def player-score-value (js/PIXI.Text. "Score: 0"))
 (def player-death-value (js/PIXI.Text. "Death: 0"))
@@ -41,6 +41,42 @@
     (.addChild pixi-stage player-score-value)
     (.addChild pixi-stage player-death-value)))
 
+
+(defn- scale-canvas-to-window [c]
+  (let [w js/window
+        wiw (.-innerWidth w)
+        wih (.-innerHeight w)
+        cow (.-offsetWidth c)
+        coh (.-offsetHeight c)
+        sx (/ wiw cow)
+        sy (/ wih coh)
+        smm (/ (min sx sy) (max sx sy))
+        ;; when sx ~ sy use max to avoid white borders around the canvas
+        s (if (> smm 0.996) (max sx sy) (min sx sy))]
+    (set! (.. c -style -transformOrigin) "0 0")
+    (set! (.. c -style -transform) (str "scale(" s ")"))
+    (set! (.. c -style -paddingLeft) 0)
+    (set! (.. c -style -paddingRight) 0)
+    (set! (.. c -style -paddingTop) 0)
+    (set! (.. c -style -paddingBottom) 0)
+    (set! (.. c -display) "block")
+    (let [margin (str (/ (- wiw (* s cow)) 2) "px")]
+      (set! (.. c -style -marginLeft) margin)
+      (set! (.. c -style -marginRight) margin))
+    (let [margin (str (/ (- wih (* s coh)) 2) "px")]
+      (set! (.. c -style -marginTop) margin)
+      (set! (.. c -style -marginBottom) margin))))
+
+
+(defn init-autoscaling [canvas]
+  (.addEventListener
+   js/window "resize"
+   (fn [event]
+     (when pixi-renderer
+       (scale-canvas-to-window canvas))))
+  (scale-canvas-to-window canvas))
+
+
 (defn update-player-score! [value]
   (let [text (str "Score: " value)]
     (set! (.-text player-score-value) text)))
@@ -50,13 +86,13 @@
     (set! (.-text player-death-value) text)))
 
 (defn init-pixi-renderer []
-  (let [renderer (.autoDetectRenderer js/PIXI cnvs-width cnvs-height)
+  (let [renderer (.autoDetectRenderer js/PIXI canvas-width canvas-height)
         texture (s/get-texture "/img/back.png")
         bg-sprite (new js/PIXI.TilingSprite texture map-width map-height)
         bg-sprite-pos (.-position bg-sprite)]
     (.addChild pixi-stage pixi-gamefield)
-    (set! (.. pixi-gamefield -position -x) (/ cnvs-width 2))
-    (set! (.. pixi-gamefield -position -y) (/ cnvs-height 2))
+    (set! (.. pixi-gamefield -position -x) (/ canvas-width 2))
+    (set! (.. pixi-gamefield -position -y) (/ canvas-height 2))
     (set! (.-x bg-sprite-pos) (- (/ map-width 2)))
     (set! (.-y bg-sprite-pos) (- (/ map-height 2)))
     (set! pixi-renderer renderer)

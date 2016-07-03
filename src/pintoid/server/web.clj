@@ -32,8 +32,10 @@
    [:head
     [:title "Pintoid"]
     (include-js "/js/pintoid.js")
-    (include-css "/css/main.css")]
-   [:body {:style "background: lightgray;"}
+    (include-css "/css/main.css")
+    [:style "* {padding: 0; margin: 0}"]
+    ]
+   [:body {:style "background: dimgray; overflow: hidden"}
     [:div.content]]))
 
 

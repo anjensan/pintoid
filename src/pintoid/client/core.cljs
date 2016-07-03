@@ -38,7 +38,9 @@
 (defn start-app []
   (init-cs-communication)
   (init-user-input)
-  (d/append! (sel1 :body) (g/init-pixi-renderer))
+  (let [c (g/init-pixi-renderer)]
+    (d/append! (sel1 :body) c)
+    (g/init-autoscaling c))
   (g/init-pixi-labels)
   (g/update-player-death! 0)
   (g/update-player-score! 0)
