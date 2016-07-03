@@ -4,10 +4,7 @@
 
 
 ;; completely skip outdated animations
-(def max-allowed-actions-lag 3000)
-
-;; current (last) *animation* time
-(def last-animation-time 0)
+(def max-allowed-actions-lag 5000)
 
 ;; animation-id => (array t1 t2 do-anim-fn! finish-anim-fn!)
 (def active-animations (js-obj))
@@ -28,30 +25,27 @@
 
 (defn add-action!
   [t act-fn!]
-  (if (<= t last-animation-time)
-    (act-fn!)
-    (let [tx (long t)
-          al (aget pending-actions-map tx)]
-      (if al
-        (.push al act-fn!)
-        (let [al' (array)]
-          (aset pending-actions-map tx al')
-          (.push al' act-fn!)
-          (goog.array.binaryInsert pending-actions-times tx))))))
+  (let [tx (long t)
+        al (aget pending-actions-map tx)]
+    (if al
+      (.push al act-fn!)
+      (let [al' (array)]
+        (aset pending-actions-map tx al')
+        (.push al' act-fn!)
+        (goog.array.binaryInsert pending-actions-times tx)))))
 
 
 (defn add-animation!
   ([aid t1 t2 animate-fn!]
      (add-animation! aid t1 t2 animate-fn! nil nil))
   ([aid t1 t2 animate-fn! init-fn! finish-fn!]
-     (when (>= t2 last-animation-time)
-       (let [av (array t1 t2 animate-fn! finish-fn!)]
-         (log :trace "add penging animation" aid t1 t2)
-         (add-action!
-          t1
-          (fn []
-            (when init-fn! (init-fn!))
-            (aset active-animations aid av)))))))
+   (let [av (array t1 t2 animate-fn! finish-fn!)]
+     (log :trace "add penging animation" aid t1 t2)
+     (add-action!
+      t1
+      (fn []
+        (when init-fn! (init-fn!))
+        (aset active-animations aid av))))))
 
 
 (defn animate! [aid animate-fn!]
@@ -89,13 +83,12 @@
            (an-fn! time)))))))
 
 
-(defn process-deffered-actions! []
-  (doseq [da deffered-actions] (da))
-  (set! deffered-actions (array)))
+(defn run-deffered-actions! []
+  (let [as deffered-actions]
+    (set! deffered-actions (array))
+    (run! #(%) as)))
 
 
-(defn process-animation! [time]
+(defn run-animations! [time]
   (run-scheduled-actions time)
-  (run-active-animations time)
-  (set! last-animation-time time))
-
+  (run-active-animations time))

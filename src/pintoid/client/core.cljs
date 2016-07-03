@@ -1,7 +1,9 @@
 (ns pintoid.client.core
   (:require [cljsjs.pixi]
             [dommy.core :as d]
-            [pintoid.client.graphics.core :as g])
+            [pintoid.client.graphics.core :as g]
+            [pintoid.client.graphics.animloop :as al]
+            )
   (:use
    [pintoid.client.utils :only [panic!]]
    [pintoid.client.cswiring :only
@@ -9,12 +11,6 @@
      spawn-user-input-sender
      send-message-to-server
      client-server-time-diff]]
-   [pintoid.client.graphics.animloop :only
-    [process-animation!
-     process-deffered-actions!]]
-   [pintoid.client.graphics.core :only
-    [init-pixi-renderer
-     render-graphics!]]
    [pintoid.client.uinput :only
     [init-user-input
      get-user-input-state]])
@@ -34,9 +30,9 @@
   (let [server-timestamp (+ timestamp client-server-time-diff)
         draw-at (- server-timestamp animation-interpolation-lag)]
     (log :trace "draw-loop" draw-at)
-    (process-animation! draw-at)
-    (render-graphics!)
-    (js/setTimeout process-deffered-actions! 0)))
+    (al/run-animations! draw-at)
+    (g/render-graphics!)
+    (js/setTimeout al/run-deffered-actions! 0)))
 
 
 (defn start-app []

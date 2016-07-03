@@ -158,7 +158,7 @@
                                    :position [20 -8]}]}}
       :black-hole {:type :animator
                    :a-scale {:kind :sin :period 5000 :min 0.9 :max 1.1 :power 2}
-                   :a-rotation {:kind :saw :period 30 :min 0 :max 6.3}
+                   :a-rotation {:kind :saw :period 3140 :min 0 :max 6300}
                    :child {:type :sprite
                            :texture "/img/black1.png"
                            :anchor [0.5 0.5]}

@@ -55,6 +55,8 @@
         bg-sprite (new js/PIXI.TilingSprite texture map-width map-height)
         bg-sprite-pos (.-position bg-sprite)]
     (.addChild pixi-stage pixi-gamefield)
+    (set! (.. pixi-gamefield -position -x) (/ cnvs-width 2))
+    (set! (.. pixi-gamefield -position -y) (/ cnvs-height 2))
     (set! (.-x bg-sprite-pos) (- (/ map-width 2)))
     (set! (.-y bg-sprite-pos) (- (/ map-height 2)))
     (set! pixi-renderer renderer)
@@ -63,19 +65,10 @@
 
 
 (defn move-player-camera! [t1 t2 xy1 xy2]
-  (let [neg (fn [[x y]] [(- (/ cnvs-width 2) x)
-                         (- (/ cnvs-height 2) y)])]
-    (a/linear-move
-     pixi-gamefield
-     t1
-     t2
-     (neg xy1)
-     (neg xy2)
-     )))
-
-
-(defn render-graphics! []
-  (.render pixi-renderer pixi-stage))
+  (let [[x1 y1] xy1, [x2 y2] xy2]
+    (a/linear-animate "camera-x" t1 t2 x1 x2 #(set! (.. pixi-gamefield -pivot -x) %))
+    (a/linear-animate "camera-y" t1 t2 y1 y2 #(set! (.. pixi-gamefield -pivot -y) %)))
+  )
 
 
 (defn get-sprite [eid]
@@ -99,3 +92,6 @@
       (.addChild *root* obj)
       (swap! sprites assoc eid obj)
       obj)))
+
+(defn render-graphics! []
+  (.render pixi-renderer pixi-stage))

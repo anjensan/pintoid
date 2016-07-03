@@ -92,3 +92,12 @@
    nil
    (anim-linear-rotate-finisher obj angle)
    ))
+
+
+(defn linear-animate [aid t1 t2 v1 v2 setter]
+  (let [ai (mk-linear-interpolator t1 t2 v1 v2)]
+    (add-animation!
+     aid t1 t2
+     (fn [t] (setter (ai t)))
+     nil
+     (fn [] (setter v2)))))
