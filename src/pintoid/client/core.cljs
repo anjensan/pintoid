@@ -3,7 +3,7 @@
             [dommy.core :as d]
             [pintoid.client.graphics.core :as g]
             [pintoid.client.graphics.animloop :as al]
-            )
+            [taoensso.timbre :as timbre :include-macros true])
   (:use
    [pintoid.client.utils :only [panic!]]
    [pintoid.client.cswiring :only
@@ -16,9 +16,10 @@
      get-user-input-state]])
   (:require-macros
    [dommy.core :refer [sel1]]
-   [pintoid.client.macros :refer [log]]
+   [taoensso.timbre :as timbre]
    ))
 
+(timbre/set-level! :info)
 (enable-console-print!)
 
 ;; TODO: implement adaptive interpolation lag (based on ping).
@@ -29,7 +30,7 @@
   (js/requestAnimationFrame drawing-loop)
   (let [server-timestamp (+ timestamp client-server-time-diff)
         draw-at (- server-timestamp animation-interpolation-lag)]
-    (log :trace "draw-loop" draw-at)
+    (timbre/tracef "Run draw loop at %d" draw-at)
     (al/run-animations! draw-at)
     (g/render-graphics!)
     (js/setTimeout al/run-deffered-actions! 0)))

@@ -1,6 +1,7 @@
 (ns pintoid.client.graphics.animation
-  (:use [pintoid.client.graphics.animloop :only [add-animation!]])
-  (:require-macros [pintoid.client.macros :refer [log]]))
+  (:require
+   [taoensso.timbre :as timbre :include-macros true]
+   [pintoid.client.graphics.animloop :refer [add-animation!]]))
 
 
 (def animation-uid-counter (atom 0))
@@ -57,7 +58,7 @@
 
 
 (defn linear-move [obj t1 t2 xy1 xy2]
-  (log :trace "linear-move" obj t1 t2 xy1 xy2)
+  (timbre/trace "linear-move" obj t1 t2 xy1 xy2)
   (add-animation!
    (object-animation-id obj "lm") t1 t2
    (when xy1 (anim-linear-updater obj t1 t2 xy1 xy2))
@@ -66,7 +67,7 @@
 
 
 (defn instant-move [obj t1 t2 xy]
-  (log :trace "instant-move" obj t1 t2 xy)
+  (timbre/trace "instant-move" obj t1 t2 xy)
   (add-animation!
    (object-animation-id obj "lm") t1 t2
    nil
@@ -75,7 +76,7 @@
 
 
 (defn linear-rotate [obj t1 t2 angle1 angle2]
-  (log :trace "linear-rotate" obj t1 t2 angle1 angle2)
+  (timbre/trace "linear-rotate" obj t1 t2 angle1 angle2)
   (add-animation!
    (object-animation-id obj "rot") t1 t2
    (when angle1 (anim-linear-rotate-updater obj t1 t2 angle1 angle2))
@@ -85,7 +86,7 @@
 
 
 (defn instant-rotate [obj t1 t2 angle]
-  (log :trace "instant-rotate" obj t1 t2 angle)
+  (timbre/trace "instant-rotate" obj t1 t2 angle)
   (add-animation!
    (object-animation-id obj "rot") t1 t2
    nil

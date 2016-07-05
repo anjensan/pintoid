@@ -13,7 +13,7 @@
                  [hiccup/hiccup "1.0.5"]
                  [prismatic/dommy "1.1.0"]
                  [cljsjs/pixi "3.0.10-0"]
-                 [ch.qos.logback/logback-classic "1.1.7"]
+                 [com.taoensso/timbre "4.5.1"]
                  ]
 
   :plugins [[lein-pdo "0.1.1"]

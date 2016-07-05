@@ -4,11 +4,11 @@
    [pintoid.client.graphics.animloop :only [defer-action!]]
    [pintoid.client.utils :only [panic! limit-str]])
   (:require
+   [taoensso.timbre :as timbre :include-macros true]
    [chord.client :refer [ws-ch]]
    [cljs.core.async :refer [<! >! close! timeout]])
   (:require-macros
-   [cljs.core.async.macros :refer [go go-loop]]
-   [pintoid.client.macros :refer [log]]))
+   [cljs.core.async.macros :refer [go go-loop]]))
 
 
 (def client-server-time-diff 0)
@@ -26,7 +26,6 @@
 
 (defn init-cs-communication []
   (go
-    (log :info "init cs communication")
     (let [{:keys [ws-channel error]}
           (<! (ws-ch websocket-url {:format :transit-json}))]
       (if error
@@ -41,20 +40,17 @@
 
 (defn send-message-to-server [msg]
   (when-let [c server-ws-channel]
-    (log :debug "send to server:" (limit-str 120 msg))
     (go (>! c msg))))
 
 
 (declare receive-message)
 
 (defn receive-server-messages [ws-chan]
-  (log :info "receive messages from ws-socket")
   (go-loop []
     (when-let [{:keys [message error]} (<! ws-chan)]
       (if error
         (panic! error)
         (do
-          (log :debug "server msg:" (limit-str 120 message))
           (receive-message message)
           (recur))))))
 
@@ -77,7 +73,7 @@
 
 
 (defmethod receive-message :default [msg]
-  (log :info "unknown server message" msg))
+  (timbre/info "unknown server message" msg))
 
 
 (defmethod receive-message :wpatch [m]

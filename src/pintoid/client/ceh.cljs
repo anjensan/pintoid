@@ -1,8 +1,6 @@
 (ns pintoid.client.ceh
-  (:use
-   [clojure.set :only [union]])
-  (:require-macros
-   [pintoid.client.macros :refer [log]]))
+  (:require
+   [clojure.set :refer [union]]))
 
 
 (defrecord -World [time selfid entities])

@@ -1,7 +1,6 @@
 (ns pintoid.client.graphics.core
   (:require [pintoid.client.graphics.animation :as a]
-            [pintoid.client.graphics.sprite :as s])
-  (:require-macros [pintoid.client.macros :refer [log]]))
+            [pintoid.client.graphics.sprite :as s]))
 
 
 ;; entity id -> sprite object (DisplayObject)

@@ -7,6 +7,7 @@
    [chord.http-kit :refer [wrap-websocket-handler]]
    [hiccup.page :refer [html5 include-js include-css]]
    [clojure.tools.logging :as log]
+   [taoensso.timbre :as timbre]
    ))
 
 
@@ -40,16 +41,23 @@
 
 
 (defn game-ws-handler [req]
-  (log/info "connection from" (:remote-addr req))
+  (timbre/infof "connection from %s" (:remote-addr req))
   (if (:ws-channel req)
     (add-new-client-connection req)
     {:status 404 :body "WebSocket only!"}))
+
+
+(defn add-utf8-chaset [h]
+  (fn [r]
+    (when-let [x (h r)]
+      (ring.util.response/charset x "utf8"))))
 
 
 (defroutes app-routes
   (GET "/" [] (response (page-index)))
   (GET "/game" [] (response (page-game)))
   (GET "/ws" [] (wrap-websocket-handler game-ws-handler {:format :transit-json}))
-  (resources "/js" {:root "js"})
+  (resources "/js" {:root "js"
+                    :mime-types {"js" "text/javascript; charset=utf8"}})
   (resources "/img" {:root "img"})
   (resources "/css" {:root "css"}))

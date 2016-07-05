@@ -1,6 +1,8 @@
 (ns pintoid.client.graphics.animloop
-  (:require [goog.object] [goog.array])
-  (:require-macros [pintoid.client.macros :refer [log]]))
+  (:require
+   [goog.object]
+   [goog.array]
+   [taoensso.timbre :as timbre]))
 
 
 ;; completely skip outdated animations
@@ -40,7 +42,7 @@
      (add-animation! aid t1 t2 animate-fn! nil nil))
   ([aid t1 t2 animate-fn! init-fn! finish-fn!]
    (let [av (array t1 t2 animate-fn! finish-fn!)]
-     (log :trace "add penging animation" aid t1 t2)
+     (timbre/trace "add penging animation" aid t1 t2)
      (add-action!
       t1
       (fn []

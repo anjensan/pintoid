@@ -2,7 +2,8 @@
   (:require
    [cljsjs.pixi]
    [pintoid.client.graphics.animation :as a]
-   [pintoid.client.graphics.animloop :as al])
+   [pintoid.client.graphics.animloop :as al]
+   [taoensso.timbre :as timbre])
   (:require-macros
    [pintoid.client.macros :refer [goog-base goog-extend]]))
 

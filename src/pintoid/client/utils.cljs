@@ -36,7 +36,7 @@
 
 
 (defn panic! [msg]
-  ;; TODO: stop drawing-loop
+  ;; TODO: Stop drawing-loop
   (d/replace-contents!
    (sel1 :#content)
    [:div

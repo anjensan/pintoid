@@ -12,9 +12,10 @@
    [pintoid.client.graphics.animation :as a]
    [pintoid.client.graphics.animloop :as al]
    [pintoid.client.graphics.sprite :as gs]
-   [pintoid.client.graphics.core :as g])
+   [pintoid.client.graphics.core :as g]
+   )
   (:require-macros
-   [pintoid.client.macros :refer [log foreach!]]))
+   [pintoid.client.macros :refer [foreach!]]))
 
 
 ;; map: entity-id -> pixi-obj (root)
@@ -116,7 +117,6 @@
 
 
 (defn update-world-snapshot! [wpatch]
-  (log :debug "update world snapshot" wpatch)
   (let [w1 @world
         w2 (swap! world apply-world-patch wpatch)]
     (handle-textures-info! w1 w2 wpatch)

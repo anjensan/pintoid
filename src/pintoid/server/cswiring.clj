@@ -1,6 +1,8 @@
 (ns pintoid.server.cswiring
-  (:use [pintoid.server game utils ecs math])
+  (:use
+   [pintoid.server game utils ecs math])
   (:require
+   [taoensso.timbre :as timbre]
    [clojure.data.int-map :as im]
    [clojure.core.async :refer
     [<! >! <!! >!! put! close! thread go chan go-loop]]
@@ -8,10 +10,11 @@
    [clojure.tools.logging :as log]
    [clojure.set :refer [union]]))
 
+
 (def avatars (ref {}))
 
 (defn create-avatar [pid req]
-  (log/trace "create avatar" pid req)
+  (timbre/trace "create avatar" pid req)
   (agent
    {:pid pid
     :ws-channel (:ws-channel req)}))
@@ -21,7 +24,7 @@
   (send
    (get @avatars pid)
    (fn [avatar]
-     (log/trace "pid" pid ">>" message)
+     (timbre/trace "pid" pid ">>" message)
      (go (>! (:ws-channel avatar) message))
      avatar)))
 
@@ -38,9 +41,9 @@
     (if-let [{:keys [message error]} (<! ws-channel)]
       (do
         (when error
-          (log/warn "eid" eid "!!" error))
+          (timbre/warn "eid" eid "!!" error))
         (when message
-          (log/trace "eid" eid "<<" message)
+          (timbre/trace "eid" eid "<<" message)
           (send
            (get @avatars eid)
            (fn [a] (or (handle-client-message eid message a) a))))
@@ -63,7 +66,7 @@
 
 
 (defn on-client-disconnected [eid]
-  (log/info "player" eid "disconnected")
+  (timbre/info "player" eid "disconnected")
   (dosync
    (game-remove-player eid)
    (alter avatars dissoc eid)))
@@ -74,18 +77,18 @@
 
 
 (defmethod handle-client-message :default [pid m a]
-  (log/warn "unknown message from" pid ":" m)
+  (timbre/warn "unknown message from" pid ":" m)
   a)
 
 
 (defmethod handle-client-message :join-game [pid m a]
-  (log/info "new player" pid)
+  (timbre/info "new player" pid)
   (game-add-new-player pid)
   a)
 
 
 (defmethod handle-client-message :user-input [pid m a]
-  (log/trace "user input player" m)
+  (timbre/trace "user input player" m)
   (game-process-user-input pid (:data m))
   (assoc a :user-input (:data m)))
 
@@ -106,7 +109,7 @@
     (if (w pid :player)
       (let [[a snapshot] (take-world-snapshot a w)
             [a wpatch] (construct-world-patch a snapshot)]
-        (log/trace "send to" pid "wpatch" wpatch)
+        (timbre/trace "send to" pid "wpatch" wpatch)
         (send-message-to-client
          pid
          {:command :wpatch
@@ -115,7 +118,7 @@
           :ecs wpatch})
         (assoc a :actual-world w))
       (do
-        (log/trace "player" pid "not in game" a (entity w pid))
+        (timbre/trace "player" pid "not in game" a (entity w pid))
         a))))
 
 
