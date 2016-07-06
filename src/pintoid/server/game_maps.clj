@@ -137,7 +137,7 @@
 
     {:sprite-proto
      {:bullet {:type :animator
-               :rand-shift true
+               :shift :start
                :a-rotation {:kind :saw :period 200 :min 0 :max 6.3}
                :a-scale {:kind :sin :period 500 :min 0.1 :max 0.8}
                :child {:type :container
@@ -158,11 +158,11 @@
                                    :position [20 -8]}]}}
       :black-hole {:type :animator
                    :a-scale {:kind :sin :period 5000 :min 0.9 :max 1.1 :power 2}
-                   :a-rotation {:kind :saw :period 3140 :min 0 :max 6300}
-                   :child {:type :sprite
-                           :texture "/img/black1.png"
-                           :anchor [0.5 0.5]}
-                   }
+                   :a-rotation {:kind :saw :period 3140 :min 0 :max 630}
+                   :child {:type :container
+                           :children [{:type :animator
+                                       :a-rotation {:kind :sin :min 0 :max 63 :period 10000}
+                                       :child {:type :sprite :texture "/img/black1.png" :anchor [0.5 0.5]}}]}}
       }}
 
     (black-hole (->Vector 0 0) 0.2)

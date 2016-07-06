@@ -141,7 +141,11 @@
   {:pre [(not (and (:a-scale proto)
                    (or (:a-scale-x proto)
                        (:a-scale-y proto))))]}
-  (let [shift (if (:rand-shift proto) (rand-int 1e10) 0)
+  (let [shift (case (:shift proto :random)
+                :random (rand-int 1e10)
+                :start (- (int (js/performance.now)))
+                :none 0
+                (-> proto :shift int))
         wwf (fn [k setter]
               (when-let [fs (get proto k)]
                 (let [wf (wave-function fs)]
@@ -156,7 +160,8 @@
          (wwf :a-scale-y #(set! (.. %1 -scale -y) %2))]
         anims (vec (remove nil? maybe-anims))]
     (if (== 1 (count anims))
-      (first anims)
+      (let [f (first anims)]
+        #(f %1 (+ %2 shift)))
       (fn [obj t]
         (let [tt (+ t shift)]
           (run! #(% obj tt) anims))))))

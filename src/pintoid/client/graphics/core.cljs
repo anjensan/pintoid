@@ -52,7 +52,7 @@
         sy (/ wih coh)
         smm (/ (min sx sy) (max sx sy))
         ;; when sx ~ sy use max to avoid white borders around the canvas
-        s (if (> smm 0.996) (max sx sy) (min sx sy))]
+        s (if (> smm 0.997) (max sx sy) (min sx sy))]
     (set! (.. c -style -transformOrigin) "0 0")
     (set! (.. c -style -transform) (str "scale(" s ")"))
     (set! (.. c -style -paddingLeft) 0)
