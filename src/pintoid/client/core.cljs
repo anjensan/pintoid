@@ -16,11 +16,10 @@
      get-user-input-state]])
   (:require-macros
    [dommy.core :refer [sel1]]
-   [taoensso.timbre :as timbre]
    ))
 
+
 (timbre/set-level! :info)
-(enable-console-print!)
 
 ;; TODO: implement adaptive interpolation lag (based on ping).
 (def animation-interpolation-lag 100)

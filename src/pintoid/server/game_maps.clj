@@ -107,14 +107,16 @@
    })
 
 (defn simple-sprite [id image]
-  {:sprite-proto
-   {id {:type :sprite
-         :anchor [0.5 0.5]
-         :texture (str "/img/" image)}}})
+  {:assets
+   {id {:class :sprite
+        :type :sprite
+        :anchor [0.5 0.5]
+        :texture (str "/img/" image)}}})
 
 (defn texture [id image]
-  {:texture-info
-   {id {:image (str "/img/" image)}}})
+  {:assets
+   {id {:class :texture
+        :image (str "/img/" image)}}})
 
 (def game-maps
   [[
@@ -135,8 +137,9 @@
     (simple-sprite :ast5 "ast5.png")
     (simple-sprite :ast6 "ast6.png")
 
-    {:sprite-proto
-     {:bullet {:type :animator
+    {:assets
+     {:bullet {:class :sprite
+               :type :animator
                :shift :start
                :a-rotation {:kind :saw :period 200 :min 0 :max 6.3}
                :a-scale {:kind :sin :period 500 :min 0.1 :max 0.8}
@@ -156,7 +159,8 @@
                                    :scale 0.4
                                    :texture "/img/ast6.png"
                                    :position [20 -8]}]}}
-      :black-hole {:type :animator
+      :black-hole {:class :sprite
+                   :type :animator
                    :a-scale {:kind :sin :period 5000 :min 0.9 :max 1.1 :power 2}
                    :a-rotation {:kind :saw :period 3140 :min 0 :max 630}
                    :child {:type :container

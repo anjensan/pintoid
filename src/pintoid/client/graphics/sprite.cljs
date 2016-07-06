@@ -1,51 +1,70 @@
 (ns pintoid.client.graphics.sprite
   (:require
    [cljsjs.pixi]
+   [pintoid.client.asset :as as]
    [pintoid.client.graphics.animation :as a]
    [pintoid.client.graphics.animloop :as al]
    [taoensso.timbre :as timbre])
   (:require-macros
    [pintoid.client.macros :refer [goog-base goog-extend]]))
 
-;; name -> graphical object info (prototype)
-(def empty-sprite-proto {:type :sprite :texture "/img/clojure.png" :anchor [0.5 0.5]})
-(def prototypes (atom {}))
+(def empty-sprite-proto
+  {:class :sprite
+   :type :sprite
+   :texture "/img/clojure.png"
+   :anchor [0.5 0.5]})
 
-;; texture id -> texture object
-(def textures (atom {}))
 
-
-(defn add-prototype [id proto]
-  ;; Invalidate/recreate/mark all affected sprites.
-  (swap! prototypes assoc id proto))
+(def textures (atom))
+(def sprite-protos (atom))
 
 
 (defn- create-texture-object [{:keys [id image]}]
   (js/PIXI.Texture.fromImage image))
 
 
-(defn add-texture [id tinfo]
+(defmethod as/load-asset :texture [id tinfo]
   ;; TODO: Invalidate/recreate/mark all affected sprites.
   (let [t (create-texture-object tinfo)]
     (js/PIXI.Texture.addTextureToCache (name id) t)
     (swap! textures assoc id t)))
 
 
-(defn get-texture [t]
+(defmethod as/unload-asset :texture [id]
+  (js/PIXI.Texture.removeTextureToCache (name id))
+  (swap! textures dissoc id))
+
+
+(defn- get-texture [t]
   (if (string? t)
     (js/PIXI.Texture.fromImage t)
     (get @textures t)))
 
 
-;; TODO: Add entity as optional 2nd argument.
+(defmethod as/get-asset :texture [class id]
+  (get-texture id))
+
+
+(defmethod as/load-asset :sprite [id sprite]
+  (swap! sprite-protos assoc id sprite))
+
+
+(defmethod as/unload-asset :sprite [id]
+  (swap! dissoc sprite-protos id))
+
+
+(defmethod as/get-asset :sprite [class id]
+  (get @sprite-protos id))
+
+
 (defmulti construct-sprite-object :type)
 
 
 (defn make-sprite [spec]
   (construct-sprite-object
-   (if (map? spec)
-     spec
-     (get @prototypes spec))))
+   (cond
+     (map? spec) spec
+     (keyword? spec) (get @sprite-protos spec))))
 
 
 (defmethod construct-sprite-object :default [proto]

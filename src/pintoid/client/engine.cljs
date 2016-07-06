@@ -9,6 +9,7 @@
         [clojure.walk :only
          [keywordize-keys]])
   (:require
+   [pintoid.client.asset :as as]
    [pintoid.client.graphics.animation :as a]
    [pintoid.client.graphics.animloop :as al]
    [pintoid.client.graphics.sprite :as gs]
@@ -18,25 +19,14 @@
    [pintoid.client.macros :refer [foreach!]]))
 
 
-;; map: entity-id -> pixi-obj (root)
-(def eid-pixiobj (atom {}))
-
 ;; world state
 (def world (atom (empty-world)))
 
 
-;; TODO: Merge textures / sprites into packs/lists.
-
-(defn handle-sprites-prototypes! [w1 w2 wpatch]
-  (foreach! [eid (changed-eids wpatch :sprite-proto)]
-    (foreach! [[id proto] (:sprite-proto (entity w2 eid))]
-      (gs/add-prototype id proto))))
-
-
-(defn handle-textures-info! [w1 w2 wpatch]
-  (foreach! [eid (changed-eids wpatch :texture-info)]
-    (foreach! [[id tinfo] (:texture-info (entity w2 eid))]
-      (gs/add-texture id tinfo))))
+(defn handle-addrem-assets! [w1 w2 wpatch]
+  (foreach! [eid (changed-eids wpatch :assets)]
+    (foreach! [[id asset] (:assets (entity w2 eid))]
+      (as/add-asset id asset))))
 
 
 (defn handle-sprites-movement! [w1 w2 wpatch]
@@ -119,8 +109,7 @@
 (defn update-world-snapshot! [wpatch]
   (let [w1 @world
         w2 (swap! world apply-world-patch wpatch)]
-    (handle-textures-info! w1 w2 wpatch)
-    (handle-sprites-prototypes! w1 w2 wpatch)
+    (handle-addrem-assets! w1 w2 wpatch)
     (handle-addrem-sprite-entities w1 w2 wpatch)
     (handle-sprites-movement! w1 w2 wpatch)
     (handle-sprites-rotation! w1 w2 wpatch)

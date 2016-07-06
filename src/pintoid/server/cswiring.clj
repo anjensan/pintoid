@@ -197,6 +197,5 @@
       :score (cc :cid :score)
       :deaths (cc :cid :deaths)
       :self-player {pid true}
-      :texture-info (cc :cid :texture-info)
-      :sprite-proto (cc :cid :sprite-proto)
+      :assets (cc :cid :assets)
       }]))
