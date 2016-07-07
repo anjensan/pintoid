@@ -2,7 +2,11 @@
 
 (set! *unchecked-math* true)
 
-(defrecord Vector [^double x ^double y])
+(defrecord Vector [^double x ^double y]
+  Object
+  (toString [bag]
+    (str [x y])))
+
 (def ^:const vector-0 (Vector. 0 0))
 
 (declare abs)

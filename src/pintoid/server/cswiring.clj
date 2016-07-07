@@ -7,7 +7,6 @@
    [clojure.core.async :refer
     [<! >! <!! >!! put! close! thread go chan go-loop]]
    [cheshire.core :as json]
-   [clojure.tools.logging :as log]
    [clojure.set :refer [union]]))
 
 
@@ -17,16 +16,18 @@
   (timbre/trace "create avatar" pid req)
   (agent
    {:pid pid
+    :host (:remote-addr req)
     :ws-channel (:ws-channel req)}))
 
 
-(defn- send-message-to-client [pid message]
+(defn send-to-client [pid message]
   (send
-   (get @avatars pid)
+   (get  @avatars pid)
    (fn [avatar]
      (timbre/trace "pid" pid ">>" message)
      (go (>! (:ws-channel avatar) message))
      avatar)))
+
 
 (defn drop-client-connection! [eid]
   (when-let [a (get @avatars eid)]
@@ -110,7 +111,7 @@
       (let [[a snapshot] (take-world-snapshot a w)
             [a wpatch] (construct-world-patch a snapshot)]
         (timbre/trace "send to" pid "wpatch" wpatch)
-        (send-message-to-client
+        (send-to-client
          pid
          {:command :wpatch
           :self pid

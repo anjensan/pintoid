@@ -6,7 +6,6 @@
    [compojure.route :refer [resources]]
    [chord.http-kit :refer [wrap-websocket-handler]]
    [hiccup.page :refer [html5 include-js include-css]]
-   [clojure.tools.logging :as log]
    [taoensso.timbre :as timbre]
    ))
 

@@ -4,10 +4,11 @@
    [pintoid.client.graphics.animloop :only [defer-action!]]
    [pintoid.client.utils :only [panic! limit-str]])
   (:require
-   [taoensso.timbre :as timbre :include-macros true]
    [chord.client :refer [ws-ch]]
-   [cljs.core.async :refer [<! >! close! timeout]])
+   [cljs.core.async :refer [<! >! close! timeout]]
+   [weasel.repl :as repl])
   (:require-macros
+   [taoensso.timbre :as timbre]
    [cljs.core.async.macros :refer [go go-loop]]))
 
 
@@ -83,3 +84,10 @@
   (defer-action! update-world-snapshot! m))
 
 
+(defmethod receive-message :repl [m]
+  (let [ws-url (:ws-url m)]
+    (if (repl/alive?)
+      (timbre/warnf "We already have active repl - not able to connect to " ws-url)
+      (do
+        (timbre/infof "Connecting to repl %s..." ws-url)
+        (repl/connect ws-url)))))
