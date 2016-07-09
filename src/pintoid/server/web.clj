@@ -1,13 +1,12 @@
 (ns pintoid.server.web
   (:use [pintoid.server cswiring utils])
   (:require
+   [taoensso.timbre :as timbre]
    [ring.util.response :refer [response redirect]]
    [compojure.core :refer [defroutes GET POST]]
    [compojure.route :refer [resources]]
    [chord.http-kit :refer [wrap-websocket-handler]]
-   [hiccup.page :refer [html5 include-js include-css]]
-   [taoensso.timbre :as timbre]
-   ))
+   [hiccup.page :refer [html5 include-js include-css]]))
 
 
 (defn page-index []
@@ -42,7 +41,7 @@
 (defn game-ws-handler [req]
   (timbre/infof "connection from %s" (:remote-addr req))
   (if (:ws-channel req)
-    (add-new-client-connection req)
+    (new-client-connection req)
     {:status 404 :body "WebSocket only!"}))
 
 

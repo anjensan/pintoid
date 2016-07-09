@@ -1,4 +1,4 @@
-(ns pintoid.repl
+(ns pintoid.dev
   (:require
    [clojure.pprint :as pp]
    [clojure.set :refer [union]]

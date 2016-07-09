@@ -1,9 +1,13 @@
 (ns pintoid.server.game
-  (:use [pintoid.server utils math game-maps ecs]))
+  (:use
+   [pintoid.server utils math game-maps ecs])
+  (:require
+   [mount.core :refer [defstate]]
+   [taoensso.timbre :as timbre]
+   [pintoid.server.ecs :as ecs]))
 
 ;; -- api
 (declare fix-world-state)
-(declare init-game-state)
 (declare game-remove-player)
 (declare game-add-new-player)
 (declare run-world-simulation-tick)
@@ -22,6 +26,8 @@
 (declare sys-change-engine-based-on-ui)
 
 ;; -- internal fns
+(declare init-game-state)
+(declare stop-world-agent)
 (declare kill-entity)
 (declare kill-player)
 (declare is-colliding?)
@@ -31,13 +37,20 @@
 
 ;; -- state
 
-(def last-stable-world (atom nil))
-(def users-input (atom {}))
 (def time-eid (next-entity-id))
-(def world (agent (create-ecs)))
+
+(defstate last-stable-world :start (atom nil))
+(defstate users-input :start (atom {}))
+(defstate world
+  :start (init-game-state (agent (create-ecs)))
+  :stop (stop-world-agent world))
 
 
 ;; -- impl
+
+(defn stop-world-agent [w]
+  (timbre/debug "Stop world agent, world:" w)
+  (send w (constantly ::destroyed)))
 
 (defn fix-world-state []
   (or @last-stable-world @world))
@@ -58,7 +71,7 @@
 (defn game-process-user-input [eid user-input]
   (swap! users-input assoc eid user-input))
 
-(defn init-game-state []
+(defn init-game-state [world]
   (send world sys-init-world-state (rand-nth game-maps)))
 
 ;; --

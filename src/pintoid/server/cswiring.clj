@@ -2,6 +2,7 @@
   (:use
    [pintoid.server game utils ecs math])
   (:require
+   [mount.core :refer [defstate]]
    [taoensso.timbre :as timbre]
    [clojure.data.int-map :as im]
    [clojure.core.async :refer
@@ -10,28 +11,39 @@
    [clojure.set :refer [union]]))
 
 
-(def avatars (ref {}))
+(declare destroy-avatar)
+
+(defstate avatars
+  :start (atom {})
+  :stop (run! destroy-avatar (vals @avatars)))
+
 
 (defn create-avatar [pid req]
-  (timbre/trace "create avatar" pid req)
+  (timbre/tracef "Create avatar for pid %s, req %s" pid req)
   (agent
    {:pid pid
     :host (:remote-addr req)
     :ws-channel (:ws-channel req)}))
 
 
-(defn send-to-client [pid message]
+(defn destroy-avatar [avatar]
+  (timbre/trace "Send destroy function to avatar" avatar)
   (send
-   (get  @avatars pid)
+   avatar
+   (fn [as]
+     (timbre/debug "Destroy avatar" as)
+     (close! (:ws-channel as))
+     ::destroyed)))
+
+
+(defn send-to-client [pid message]
+  (timbre/tracef "Send to %s: %s" pid message)
+  (send
+   (get @avatars pid)
    (fn [avatar]
      (timbre/trace "pid" pid ">>" message)
      (go (>! (:ws-channel avatar) message))
      avatar)))
-
-
-(defn drop-client-connection! [eid]
-  (when-let [a (get @avatars eid)]
-    (send a (fn [a] (close! (:ws-channel a) a)))))
 
 
 (declare handle-client-message)
@@ -42,9 +54,9 @@
     (if-let [{:keys [message error]} (<! ws-channel)]
       (do
         (when error
-          (timbre/warn "eid" eid "!!" error))
+          (timbre/warnf "Client %s: %s" eid error))
         (when message
-          (timbre/trace "eid" eid "<<" message)
+          (timbre/tracef "Receive from %s: %s" eid message)
           (send
            (get @avatars eid)
            (fn [a] (or (handle-client-message eid message a) a))))
@@ -52,25 +64,25 @@
       (on-client-disconnected eid))))
 
 
-(defn add-new-client-connection [req]
+(defn new-client-connection [req]
   (let [eid (next-entity-id)
         ws-channel (:ws-channel req)
-        a (create-avatar eid req)]
-    (dosync
-     (alter avatars assoc eid a)
-     (send a (fn [s]
-               (assoc s :ws-chan-reader
-                      (spawn-wschan-reading-loop eid (:ws-channel s))))))))
+        avatar (create-avatar eid req)]
+    (swap! avatars assoc eid avatar)
+    (send
+     avatar
+     (fn [s]
+       (assoc s :ws-chan-reader
+              (spawn-wschan-reading-loop eid (:ws-channel s)))))))
 
 
 ;; == Handle client commands.
 
-
 (defn on-client-disconnected [eid]
-  (timbre/info "player" eid "disconnected")
-  (dosync
-   (game-remove-player eid)
-   (alter avatars dissoc eid)))
+  (timbre/infof "Player %s disconnected" eid)
+  (game-remove-player eid)
+  (destroy-avatar (get @avatars eid))
+  (swap! avatars dissoc eid))
 
 
 (defmulti handle-client-message
@@ -78,12 +90,12 @@
 
 
 (defmethod handle-client-message :default [pid m a]
-  (timbre/warn "unknown message from" pid ":" m)
+  (timbre/warnf "Unknown message from %s: m" pid m)
   a)
 
 
 (defmethod handle-client-message :join-game [pid m a]
-  (timbre/info "new player" pid)
+  (timbre/infof "New player %s" pid)
   (game-add-new-player pid)
   a)
 
