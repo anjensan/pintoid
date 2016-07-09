@@ -3,7 +3,7 @@
   :description "Multiplayer asteroid-like game"
 
   :dependencies [[org.clojure/clojure "1.8.0"]
-                 [org.clojure/clojurescript "1.9.76"]
+                 [org.clojure/clojurescript "1.9.93"]
                  [org.clojure/core.async "0.2.385"]
                  [org.clojure/data.int-map "0.2.2"]
                  [aero/aero "1.0.0"]
