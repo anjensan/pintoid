@@ -1,22 +1,14 @@
 (ns pintoid.client.graphics.core
-  (:require [pintoid.client.graphics.animation :as a]
-            [pintoid.client.graphics.sprite :as s]))
+  (:require
+   [pintoid.client.graphics.animation :as a]
+   [pintoid.client.graphics.layer :as gl]
+   [pintoid.client.graphics.sprite :as s]))
 
 
 ;; entity id -> sprite object (DisplayObject)
 (def sprites (atom {}))
-
-;; Root sprite.
 (def pixi-stage (js/PIXI.Stage.))
-(def pixi-gamefield (js/PIXI.DisplayObjectContainer.))
 (def pixi-renderer nil)
-
-(def ^:dynamic *root* pixi-gamefield)
-
-(def map-width 5000)
-(def map-height 5000)
-(def canvas-width 1600)
-(def canvas-height 900)
 
 (def player-score-value (js/PIXI.Text. "Score: 0"))
 (def player-death-value (js/PIXI.Text. "Death: 0"))
@@ -31,6 +23,7 @@
   (let [score-pos (.-position player-score-value)
         death-pos (.-position player-death-value)
         style (js-obj "fill" "white" "font" "normal 22px Arial")]
+    ;; TODO: Move to ::layer/hud.
     (set! (.-x score-pos) 3)
     (set! (.-y score-pos) 3)
     (set! (.-x death-pos) 3)
@@ -84,26 +77,10 @@
   (let [text (str "Death: " value)]
     (set! (.-text player-death-value) text)))
 
-(defn init-pixi-renderer []
-  (let [renderer (.autoDetectRenderer js/PIXI canvas-width canvas-height)
-        texture (s/get-texture "/img/back.png")
-        bg-sprite (new js/PIXI.TilingSprite texture map-width map-height)
-        bg-sprite-pos (.-position bg-sprite)]
-    (.addChild pixi-stage pixi-gamefield)
-    (set! (.. pixi-gamefield -position -x) (/ canvas-width 2))
-    (set! (.. pixi-gamefield -position -y) (/ canvas-height 2))
-    (set! (.-x bg-sprite-pos) (- (/ map-width 2)))
-    (set! (.-y bg-sprite-pos) (- (/ map-height 2)))
-    (set! pixi-renderer renderer)
-    (.addChild pixi-gamefield bg-sprite)
-    (.-view pixi-renderer)))
-
-
-(defn move-player-camera! [t1 t2 xy1 xy2]
-  (let [[x1 y1] xy1, [x2 y2] xy2]
-    (a/linear-animate "camera-x" t1 t2 x1 x2 #(set! (.. pixi-gamefield -pivot -x) %))
-    (a/linear-animate "camera-y" t1 t2 y1 y2 #(set! (.. pixi-gamefield -pivot -y) %)))
-  )
+(defn init-pixi-renderer [width height]
+  (set! pixi-renderer (.autoDetectRenderer js/PIXI width height))
+  (.addChild pixi-stage (gl/init-layers-container width height))
+  (.-view pixi-renderer))
 
 
 (defn get-sprite [eid]
@@ -112,8 +89,8 @@
 
 (defn remove-sprite [eid]
   (when-let [obj (get @sprites eid)]
-    (when obj.parent
-      (.removeChild obj.parent obj))
+    (when-let [p (.-parent obj)]
+      (.removeChild p obj))
     (swap! sprites dissoc eid)
     (.destroy obj)))
 
@@ -122,11 +99,13 @@
   (when-let [eid (:eid entity)]
     (when-let [old-obj (get @sprites eid)]
       (.removeChild (.-parent old-obj) old-obj))
-    (let [obj (s/make-sprite (:sprite entity))]
-      (s/set-sprite-properties obj entity)
-      (.addChild *root* obj)
-      (swap! sprites assoc eid obj)
-      obj)))
+    (let [sprite-spec (s/get-sprite-spec (:sprite entity))
+          layer-id (or (:layer entity) (:layer sprite-spec))
+          sprite (s/make-sprite sprite-spec entity)]
+      (gl/layer-add layer-id sprite)
+      (swap! sprites assoc eid sprite)
+      sprite)))
+
 
 (defn render-graphics! []
   (.render pixi-renderer pixi-stage))

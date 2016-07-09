@@ -40,10 +40,9 @@
 (defn- anim-linear-finisher
   [obj xy2]
   (fn []
-    (let [p (.-position obj)
-          [x2 y2] xy2]
-      (set! (.-x p) x2)
-      (set! (.-y p) y2))))
+    (let [[x2 y2] xy2]
+      (set! (.. obj -position -x) x2)
+      (set! (.. obj -position -y) y2))))
 
 
 (defn- anim-linear-rotate-updater [obj t1 t2 angle1 angle2]

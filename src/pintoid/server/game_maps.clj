@@ -20,6 +20,10 @@
             fx (* gravity-g r' m1 r' m2 r')]
         (vs* (v- p2 p1) fx)))))
 
+(def sprite-is-visible-by-player?
+  (fn [w pid eid] (< (dist (w eid :position)
+                           (w pid :position)) 1000)))
+
 
 (def player-proto
   {:player true
@@ -30,6 +34,7 @@
    :angle 0
    :radius 30
    :sprite :racket-red
+   :visible? (constantly true)
    })
 
 
@@ -45,6 +50,7 @@
    :bullet {:lifetime 5000
             :cooldown 200
             :velocity 1.0}
+   :visible? sprite-is-visible-by-player?
    })
 
 (def bullet-alt-proto
@@ -60,6 +66,7 @@
    :bullet {:lifetime 10000
             :cooldown 1200
             :velocity 2.1}
+   :visible? sprite-is-visible-by-player?
    })
 
 (defn star [xy mass radius sprite dangle]
@@ -71,6 +78,7 @@
    :sprite sprite
    :radius radius
    :dangle dangle
+   :visible? sprite-is-visible-by-player?
    })
 
 (defn planet [xy mass radius sprite dangle]
@@ -82,6 +90,7 @@
    :sprite sprite
    :radius radius
    :dangle dangle
+   :visible? sprite-is-visible-by-player?
    })
 
 (defn asteroid [xy mass radius sprite dangle]
@@ -93,6 +102,7 @@
    :sprite sprite
    :radius radius
    :dangle dangle
+   :visible? sprite-is-visible-by-player?
    })
 
 (defn black-hole [xy dangle]
@@ -104,6 +114,7 @@
    :sprite :black-hole
    :radius 1
    :dangle dangle
+   :visible? sprite-is-visible-by-player?
    })
 
 (defn simple-sprite [id image]
@@ -138,6 +149,15 @@
     (simple-sprite :ast6 "ast6.png")
 
     {:assets
+     {:lstars1 {:class :layer
+                :parallax 0.99
+                :zorder 1}
+      :layer/bg {:class :layer
+                 :parallax 0.95
+                 :zorder -10}
+      }}
+
+    {:assets
      {:bullet {:class :sprite
                :type :animator
                :shift :start
@@ -161,6 +181,7 @@
                                    :position [20 -8]}]}}
       :black-hole {:class :sprite
                    :type :animator
+                   :layer :lstars1
                    :a-scale {:kind :sin :period 5000 :min 0.9 :max 1.1 :power 2}
                    :a-rotation {:kind :saw :period 3140 :min 0 :max 630}
                    :child {:type :container

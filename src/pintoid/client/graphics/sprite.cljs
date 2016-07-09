@@ -2,9 +2,10 @@
   (:require
    [cljsjs.pixi]
    [pintoid.client.asset :as as]
+   [pintoid.client.graphics.utils :refer [pi pi2 to-point]]
    [pintoid.client.graphics.animation :as a]
    [pintoid.client.graphics.animloop :as al]
-   [taoensso.timbre :as timbre])
+   [taoensso.timbre :as timbre :include-macros true])
   (:require-macros
    [pintoid.client.macros :refer [goog-base goog-extend]]))
 
@@ -17,6 +18,7 @@
 
 (def textures (atom))
 (def sprite-protos (atom))
+(def animation-counter (atom 0))
 
 
 (defn- create-texture-object [{:keys [id image]}]
@@ -30,7 +32,7 @@
     (swap! textures assoc id t)))
 
 
-(defmethod as/unload-asset :texture [id]
+(defmethod as/unload-asset :texture [id texture]
   (js/PIXI.Texture.removeTextureToCache (name id))
   (swap! textures dissoc id))
 
@@ -49,7 +51,7 @@
   (swap! sprite-protos assoc id sprite))
 
 
-(defmethod as/unload-asset :sprite [id]
+(defmethod as/unload-asset :sprite [id sprite]
   (swap! dissoc sprite-protos id))
 
 
@@ -57,27 +59,17 @@
   (get @sprite-protos id))
 
 
-(defmulti construct-sprite-object :type)
+(defmulti construct-sprite-object
+  (fn [proto props] (:type proto)))
 
 
-(defn make-sprite [spec]
-  (construct-sprite-object
-   (cond
-     (map? spec) spec
-     (keyword? spec) (get @sprite-protos spec))))
+(defn get-sprite-spec [id]
+  (cond
+    (map? id) id
+    (keyword? id) (get @sprite-protos id)))
 
 
-(defmethod construct-sprite-object :default [proto]
-  (construct-sprite-object empty-sprite-proto))
-
-
-(defn- to-point [xy]
-  (if (sequential? xy)
-    (let [[x y] xy] (js/PIXI.Point. x y))
-    (let [a (float xy)] (js/PIXI.Point. a a))))
-
-
-(defn set-sprite-properties [obj props]
+(defn set-sprite-properties! [obj props]
   (when-let [position (get props :position)] (set! (.-position obj) (to-point position)))
   (when-let [scale (get props :scale)] (set! (.-scale obj) (to-point scale)))
   (when-let [pivot (get props :pivot)] (set! (.-pivot obj) (to-point pivot)))
@@ -87,28 +79,50 @@
   (when-let [anchor (get props :anchor)] (set! (.-anchor obj) (to-point anchor))))
 
 
+
+(defmethod construct-sprite-object :default [proto props]
+  (construct-sprite-object empty-sprite-proto nil))
+
+
+(defn set-tiling-sprite-properties! [obj props]
+  (when-let [tile-position (get props :tile-position)]
+    (set! (.-tilePosition obj) (to-point tile-position)))
+  (when-let [tile-scale (get props :tile-scale)]
+    (set! (.-scale obj) (to-point tile-scale))))
+
+
+(defn make-sprite
+  ([spec]
+   (make-sprite spec nil))
+  ([spec props]
+   (construct-sprite-object spec props)))
+
+
+(defmethod construct-sprite-object :default [proto props]
+  (construct-sprite-object empty-sprite-proto props))
+
+
 (defn- construct-and-add-children [obj ch-protos]
   (doseq [cp ch-protos]
     (let [c (make-sprite cp)]
       (.addChild obj c))))
 
 
-(defmethod construct-sprite-object :sprite [proto entity]
+(defmethod construct-sprite-object :sprite [proto props]
   (let [t (get-texture (get proto :texture ::clojure))
         s (js/PIXI.Sprite. t)]
     (construct-and-add-children s (:children proto))
-    (set-sprite-properties s proto)
+    (set-sprite-properties! s proto)
+    (set-sprite-properties! s props)
     s))
 
 
-(defmethod construct-sprite-object :container [proto]
+(defmethod construct-sprite-object :container [proto props]
   (let [s (js/PIXI.Container.)]
     (construct-and-add-children s (:children proto))
-    (set-sprite-properties s proto)
+    (set-sprite-properties! s proto)
     s))
 
-
-(def animation-counter (atom 0))
 
 ;; TODO: Extend PIXI.DisplayObject instead of Container.
 (goog-extend Animator js/PIXI.Container
@@ -132,9 +146,6 @@
     (this-as this
       (.stop this))))
 
-
-(def ^:const pi js/Math.PI)
-(def ^:const pi2 (* 2 pi))
 
 (defn wave-function [{:keys [kind period shift min max power]
                       :or {kind :saw period 1000 shift 0 min 0 max 1 power 1}}]
@@ -187,10 +198,11 @@
           (run! #(% obj tt) anims))))))
 
 
-(defmethod construct-sprite-object :animator [proto]
+(defmethod construct-sprite-object :animator [proto props]
   (let [a (make-animator-fn proto)
         c (make-sprite (:child proto))
         s (Animator. c a)]
-    (set-sprite-properties s proto)
+    (set-sprite-properties! s proto)
+    (set-sprite-properties! s props)
     (.play s)
     s))

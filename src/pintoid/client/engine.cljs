@@ -13,9 +13,11 @@
    [pintoid.client.graphics.animation :as a]
    [pintoid.client.graphics.animloop :as al]
    [pintoid.client.graphics.sprite :as gs]
+   [pintoid.client.graphics.layer :as gl]
    [pintoid.client.graphics.core :as g]
    )
   (:require-macros
+   [taoensso.timbre :as timbre]
    [pintoid.client.macros :refer [foreach!]]))
 
 
@@ -59,16 +61,28 @@
               (a/instant-rotate obj t1 t2 a2))))))))
 
 
+(def camera-x 0)
+(def camera-y 0)
+
 (defn handle-player-state! [w1 w2 wpatch]
   (let [t2 (world-time w2)
         t1 (world-time w1)
         p1 (player-entity w1)
         p2 (player-entity w2)
-        pxy1 (:position p1)
-        pxy2 (:position p2)
+        [x1 y1] (:position p1)
+        [x2 y2] (:position p2)
         deaths (:deaths p2)
         score (:score p2)]
-    (g/move-player-camera! t1 t2 pxy1 pxy2)
+    (a/linear-animate
+     "camera-x" t1 t2 x1 x2
+     (fn [x]
+       (set! camera-x x)
+       (gl/set-viewport! camera-x camera-y 1)))
+    (a/linear-animate
+     "camera-y" t1 t2 y1 y2
+     (fn [y]
+       (set! camera-y y)
+       (gl/set-viewport! camera-x camera-y 1)))
     (al/add-action!
      t2
      (fn []

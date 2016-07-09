@@ -31,7 +31,7 @@
   (send
    avatar
    (fn [as]
-     (timbre/debug "Destroy avatar" as)
+     (timbre/debug "Destroy avatar" (:pid as))
      (close! (:ws-channel as))
      ::destroyed)))
 
@@ -196,7 +196,7 @@
   (let [pid (:pid a)
         visible0 (:visible-eids a)
         player-xy (w pid :position)
-        is-visible? (fn [eid] (< (dist (w eid :position) player-xy) 1000))
+        is-visible? (fn [eid] (when-let [f (w eid :visible?)] (f w pid eid)))
         visible (into (im/dense-int-set) (filter is-visible?) (entity-ids w :position))
         cc (partial convey-component w)
         ]
@@ -204,6 +204,7 @@
      {:type (cc :cid :type, :eids visible)
       :position (cc :cid :position, :map-fn point->vec, :eids visible)
       :angle (cc :cid :angle, :eids visible)
+      :layer (cc :cid :layer, :eids visible)
       :texture (cc :cid :texture, :eids visible)
       :dangle (cc :cid :dangle, :eids visible)
       :sprite (cc :cid :sprite, :eids visible)

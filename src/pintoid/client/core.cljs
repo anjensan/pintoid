@@ -38,7 +38,7 @@
 (defn start-app []
   (init-cs-communication)
   (init-user-input)
-  (let [c (g/init-pixi-renderer)]
+  (let [c (g/init-pixi-renderer 1600 900)]
     (d/append! (sel1 :body) c)
     (g/init-autoscaling c))
   (g/init-pixi-labels)
