@@ -5,14 +5,39 @@
   `(reduce (~(or xf `identity) (fn [_# ~s] ~@body)) nil ~sq))
 
 
-(defmacro goog-base [method & args]
-  `(goog/base (~'js* "this") ~(name method) ~@args))
+(defn- ctor-with-this-arg [[[this & args] & body]]
+  `(fn [~@args]
+     (cljs.core/this-as this#
+      (let [~this this#]
+        ~@body
+        this#))))
 
 
-(defmacro goog-extend [type base-type ctor & methods]
-  `(do
-     (defn ~type ~@ctor)
-     (goog/inherits ~type ~base-type)
-     ~@(for [[mname & mbody] methods]
-         `(set! (.. ~type -prototype ~(symbol (str "-" mname)))
-                (fn ~@mbody)))))
+(defn- fn-with-this-arg [[[this & args] & body]]
+  `(fn [~@args] (cljs.core/this-as ~this ~@body)))
+
+
+(defmacro call-super
+  [class this method & args]
+  (let [m (name method)
+        n (if (re-matches #"\..+" m) (subs m 1) m)
+        mi (symbol (str ".-" n))]
+    `(.apply
+      (~mi (.getPrototypeOf js/Object (.-prototype ~class)))
+      ~this
+      (cljs.core/array ~@args))))
+
+
+(defmacro defjsclass [class-name parent-class & ctor-and-methods]
+  (let [ctor-body? (fn [[x & _]] (or (vector? x) (= 'constructor x)))
+        [[ctor] methods] (split-with ctor-body? ctor-and-methods)
+        ctor-body (if (-> ctor first vector?) ctor (rest ctor))]
+    (assert ctor "No constructor")
+    `(do
+       (def
+         ~(vary-meta class-name assoc :jsdoc ["@constructor"])
+         ~(ctor-with-this-arg ctor-body))
+       (goog/inherits ~class-name ~parent-class)
+       ~@(for [[mname & mbody] methods]
+           `(set! (.. ~class-name -prototype ~(symbol (str "-" mname)))
+                  ~(fn-with-this-arg mbody))))))

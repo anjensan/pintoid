@@ -7,7 +7,7 @@
    [pintoid.client.graphics.animloop :as al]
    [taoensso.timbre :as timbre :include-macros true])
   (:require-macros
-   [pintoid.client.macros :refer [goog-base goog-extend]]))
+   [pintoid.client.macros :refer [defjsclass call-super]]))
 
 (def empty-sprite-proto
   {:class :sprite
@@ -125,26 +125,20 @@
 
 
 ;; TODO: Extend PIXI.DisplayObject instead of Container.
-(goog-extend Animator js/PIXI.Container
-  ([child animator]
-   (this-as this
-     (goog-base this)
-     (set! (.-child this) child)
-     (set! (.-animationid this) (str "ac" (swap! animation-counter inc)))
-     (set! (.-animator this) animator)
-     (.addChild this child)
-     this))
-  (play []
-    (this-as this
-      (al/animate! (.-animationid this)
-                   #((.-animator this) (.-child this) %))))
-  (stop []
-    (this-as this
-      (al/animate! (.-animationid this)
-                   nil)))
-  (destroy [& args]
-    (this-as this
-      (.stop this))))
+(defjsclass Animator js/PIXI.Container
+  (constructor [this child animator]
+   (call-super Animator this .constructor)
+   (set! (.-child this) child)
+   (set! (.-animationid this) (str "ac" (swap! animation-counter inc)))
+   (set! (.-animator this) animator)
+   (.addChild this child))
+  (play [this]
+   (al/animate! (.-animationid this) #((.-animator this) (.-child this) %)))
+  (stop [this]
+   (al/animate! (.-animationid this) nil))
+  (destroy [this]
+   (.stop this)
+   (call-super Animator this .destroy)))
 
 
 (defn wave-function [{:keys [kind period shift min max power]
