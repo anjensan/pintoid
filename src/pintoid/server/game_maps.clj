@@ -152,10 +152,36 @@
      {:lstars1 {:class :layer
                 :parallax 0.99
                 :zorder 1}
-      :layer/bg {:class :layer
-                 :parallax 0.95
-                 :zorder -10}
+      :layer/bg1 {:class :layer
+                  :parallax 0.8
+                  :alpha 0.7
+                  :zorder -20}
+      :layer/bg2 {:class :layer
+                  :parallax 0.95
+                  :alpha 0.7
+                  :zorder -10}
       }}
+
+    {:assets
+     {:stat-sprite/bg {:class :sprite
+                       :type :tiling-sprite
+                       :texture "/img/back.png"
+                       :pivot [2500 2500]
+                       :width 5000
+                       :height 5000}}
+     }
+
+    {:type :bg-sprite
+     :layer :layer/bg1
+     :position (->Vector 0 0)
+     :visible? (constantly true)
+     :sprite :stat-sprite/bg}
+
+    {:type :bg-sprite
+     :layer :layer/bg2
+     :position (->Vector 0 0)
+     :visible? (constantly true)
+     :sprite :stat-sprite/bg}
 
     {:assets
      {:bullet {:class :sprite

@@ -1,7 +1,8 @@
 (ns pintoid.client.asset
+  (:require
+   [taoensso.timbre :as timbre :include-macros true])
   (:require-macros
-   [pintoid.client.macros :refer [foreach!]]
-   [taoensso.timbre :as timbre]))
+   [pintoid.client.macros :refer [foreach!]]))
 
 (def assets (atom))
 

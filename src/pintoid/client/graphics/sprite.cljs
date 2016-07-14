@@ -124,6 +124,19 @@
     s))
 
 
+(defmethod construct-sprite-object :tiling-sprite [proto props]
+  (let [t (get-texture (get proto :texture ::clojure))
+        h (:height proto)
+        w (:width proto)
+        s (js/PIXI.extras.TilingSprite. t w h)]
+    (construct-and-add-children s (:children proto))
+    (set-sprite-properties! s proto)
+    (set-sprite-properties! s props)
+    (set-tiling-sprite-properties! s proto)
+    (set-tiling-sprite-properties! s props)
+    s))
+
+
 ;; TODO: Extend PIXI.DisplayObject instead of Container.
 (defjsclass Animator js/PIXI.Container
   (constructor [this child animator]
