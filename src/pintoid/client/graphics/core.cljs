@@ -2,12 +2,13 @@
   (:require
    [pintoid.client.graphics.animation :as a]
    [pintoid.client.graphics.layer :as gl]
-   [pintoid.client.graphics.sprite :as s]))
+   [pintoid.client.graphics.sprite :as s]
+   [pintoid.client.graphics.tilemap]))
 
 
 ;; entity id -> sprite object (DisplayObject)
 (def sprites (atom {}))
-(def pixi-stage (js/PIXI.Stage.))
+(def pixi-stage nil)
 (def pixi-renderer nil)
 
 (def player-score-value (js/PIXI.Text. "Score: 0"))
@@ -28,8 +29,8 @@
     (set! (.-y score-pos) 3)
     (set! (.-x death-pos) 3)
     (set! (.-y death-pos) 27)
-    (.setStyle player-score-value style)
-    (.setStyle player-death-value style)
+    (set! (.-style player-score-value) style)
+    (set! (.-style player-death-value) style)
     (.addChild pixi-stage player-score-value)
     (.addChild pixi-stage player-death-value)))
 
@@ -73,13 +74,15 @@
   (let [text (str "Score: " value)]
     (set! (.-text player-score-value) text)))
 
+
 (defn update-player-death! [value]
   (let [text (str "Death: " value)]
     (set! (.-text player-death-value) text)))
 
+
 (defn init-pixi-renderer [width height]
-  (set! pixi-renderer (.autoDetectRenderer js/PIXI width height))
-  (.addChild pixi-stage (gl/init-layers-container width height))
+  (set! pixi-renderer (js/PIXI.autoDetectRenderer width height))
+  (set! pixi-stage (gl/init-layers-container width height))
   (.-view pixi-renderer))
 
 

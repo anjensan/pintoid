@@ -10,6 +10,7 @@
 
 (defonce lcontainer (js/PIXI.Container.))
 (defonce layers (atom {}))
+(defonce camera-size (atom [1 1]))
 (defonce camera (atom {}))
 
 
@@ -74,8 +75,17 @@
      (set-viewport-for-layer! lo x y sx sy))))
 
 
+(defn get-sprite-view-rect [sprite]
+  (loop [s sprite]
+    (if-let [vr (.-viewrect s)]
+      vr
+      (when-let [p (.-parent s)] (recur p)))))
+
+
 (defn init-layers-container [width height]
   (set! (.. lcontainer -position -x) (/ width 2))
   (set! (.. lcontainer -position -y) (/ height 2))
+  (set! (.. lcontainer -viewrect) #js [[0 0] [width height]])
+  (reset! camera-size (constantly [width height]))
   (as/add-asset :layer/default {:class :layer})
   lcontainer)

@@ -2,12 +2,14 @@
   (:require
    [cljsjs.pixi]
    [pintoid.client.asset :as as]
-   [pintoid.client.graphics.utils :refer [pi pi2 to-point]]
+   [pintoid.client.graphics.utils :refer
+    [pi pi2 to-point point->vec vec->point minmax]]
    [pintoid.client.graphics.animation :as a]
    [pintoid.client.graphics.animloop :as al]
    [taoensso.timbre :as timbre :include-macros true])
   (:require-macros
    [pintoid.client.macros :refer [defjsclass call-super]]))
+
 
 (def empty-sprite-proto
   {:class :sprite
@@ -15,11 +17,12 @@
    :texture "/img/clojure.png"
    :anchor [0.5 0.5]})
 
-
 (def textures (atom))
 (def sprite-protos (atom))
 (def animation-counter (atom 0))
 
+
+;; == Textures
 
 (defn- create-texture-object [{:keys [id image]}]
   (js/PIXI.Texture.fromImage image))
@@ -47,6 +50,8 @@
   (get-texture id))
 
 
+;; == Sprites - common
+
 (defmethod as/load-asset :sprite [id sprite]
   (swap! sprite-protos assoc id sprite))
 
@@ -69,6 +74,13 @@
     (keyword? id) (get @sprite-protos id)))
 
 
+(defn make-sprite
+  ([spec]
+   (make-sprite spec nil))
+  ([spec props]
+   (construct-sprite-object (get-sprite-spec spec) props)))
+
+
 (defn set-sprite-properties! [obj props]
   (when-let [position (get props :position)] (set! (.-position obj) (to-point position)))
   (when-let [scale (get props :scale)] (set! (.-scale obj) (to-point scale)))
@@ -76,11 +88,12 @@
   (when-let [rotation (get props :rotation)] (set! (.-rotation obj) rotation))
   (when-let [alpha (get props :alpha)] (set! (.-alpha obj) alpha))
   (when-let [visible (get props :visible)] (set! (.-visible obj) visible))
-  (when-let [anchor (get props :anchor)] (set! (.-anchor obj) (to-point anchor))))
-
+  (when-let [anchor (get props :anchor)] (set! (.-anchor obj) (to-point anchor)))
+  obj)
 
 
 (defmethod construct-sprite-object :default [proto props]
+  (timbre/warnf "Unknown sprite: %s %s" proto props)
   (construct-sprite-object empty-sprite-proto nil))
 
 
@@ -88,19 +101,7 @@
   (when-let [tile-position (get props :tile-position)]
     (set! (.-tilePosition obj) (to-point tile-position)))
   (when-let [tile-scale (get props :tile-scale)]
-    (set! (.-scale obj) (to-point tile-scale))))
-
-
-(defn make-sprite
-  ([spec]
-   (make-sprite spec nil))
-  ([spec props]
-   (construct-sprite-object spec props)))
-
-
-(defmethod construct-sprite-object :default [proto props]
-  (construct-sprite-object empty-sprite-proto props))
-
+    (set! (.-tileScale obj) (to-point tile-scale))))
 
 (defn- construct-and-add-children [obj ch-protos]
   (doseq [cp ch-protos]
@@ -136,6 +137,8 @@
     (set-tiling-sprite-properties! s props)
     s))
 
+
+;; == Animator
 
 ;; TODO: Extend PIXI.DisplayObject instead of Container.
 (defjsclass Animator js/PIXI.Container
@@ -206,8 +209,8 @@
 
 
 (defmethod construct-sprite-object :animator [proto props]
-  (let [a (make-animator-fn proto)
-        c (make-sprite (:child proto))
+  (let [a (make-animator-fn proto)      ;; TODO: optimize (reuse functin - depends only on proto (no props))
+        c (make-sprite (:child proto))  ;; TODO: optimize (use proto + clone)
         s (Animator. c a)]
     (set-sprite-properties! s proto)
     (set-sprite-properties! s props)

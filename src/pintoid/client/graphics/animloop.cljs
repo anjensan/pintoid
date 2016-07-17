@@ -69,6 +69,7 @@
 
 
 (defn- run-active-animations [time]
+  ;;(timbre/infof "SAC: %s / %s" (.size simple-active-animations) (.size active-animations))
   (goog.object/forEach
    simple-active-animations
    (fn [an-fn! aid _]

@@ -124,6 +124,16 @@
         :anchor [0.5 0.5]
         :texture (str "/img/" image)}}})
 
+(defn ast-sprite [id image]
+  {:assets
+   {id {:class :sprite
+        :type :animator
+        :a-rotation {:kind :saw :period 31400 :min 0 :max 630}
+        :child {:type :sprite
+                :anchor [0.5 0.5]
+                :texture (str "/img/" image)}}}}
+  )
+
 (defn texture [id image]
   {:assets
    {id {:class :texture
@@ -141,12 +151,12 @@
     (simple-sprite :star3 "star3.png")
     (simple-sprite :planet1 "pink_planet1.png")
     (simple-sprite :planet2 "green_planet1.png")
-    (simple-sprite :ast1 "ast1.png")
-    (simple-sprite :ast2 "ast2.png")
-    (simple-sprite :ast3 "ast3.png")
-    (simple-sprite :ast4 "ast4.png")
-    (simple-sprite :ast5 "ast5.png")
-    (simple-sprite :ast6 "ast6.png")
+    (ast-sprite :ast1 "ast1.png")
+    (ast-sprite :ast2 "ast2.png")
+    (ast-sprite :ast3 "ast3.png")
+    (ast-sprite :ast4 "ast4.png")
+    (ast-sprite :ast5 "ast5.png")
+    (ast-sprite :ast6 "ast6.png")
 
     {:assets
      {:lstars1 {:class :layer
@@ -182,6 +192,31 @@
      :position (->Vector 0 0)
      :visible? (constantly true)
      :sprite :stat-sprite/bg}
+
+    {:class :sprite
+     :type :animator
+     :layer :lstars1
+     :a-scale {:kind :sin :period 5000 :min 0.9 :max 1.1 :power 2}
+     :a-rotation {:kind :saw :period 3140 :min 0 :max 630}
+     :child {:type :container
+             :children [{:type :animator
+                         :a-rotation {:kind :sin :min 0 :max 63 :period 10000}
+                         :child {:type :sprite :texture "/img/black1.png" :anchor [0.5 0.5]}}]}}
+
+    {:type :test-sprite
+     :position (->Vector 0 0)
+     :visible? (constantly true)
+     ;; :layer :layer/bg1
+     :sprite {:class :sprite
+              :type :animator
+              :a-rotation {:kind :sin :period 300000 :min 0 :max 314}
+              :child {:class :sprite
+                      :type :random-tilemap
+                      :position [0 0]
+                      :alpha 0.5
+                      :tile-size [64 64]
+                      :tiles [:ast1 :ast2 :ast3 :ast4 :ast5 :ast6]
+                      }}}
 
     {:assets
      {:bullet {:class :sprite
@@ -220,8 +255,8 @@
     (star (->Vector -2100 -1350) 500 33 :star1 0.1)
     (star (->Vector 1200 500) 2000 20 :star2 0.1)
     (star (->Vector -900 -700) 1000 66 :star3 0.1)
-    (star (->Vector 400 300) 175 70 :star4 0.1)
-    (star (->Vector -1600 1000) 1750 70 :star4 0.1)
+    (star (->Vector 400 300) 175 70 :star2 0.1)
+    (star (->Vector -1600 1000) 1750 70 :star3 0.1)
 
     (planet (->Vector -2440 -900) 150 10 :planet1 0.1)
     (planet (->Vector 10 -100) 100 9 :planet1 0.1)
