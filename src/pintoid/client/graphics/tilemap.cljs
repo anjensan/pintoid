@@ -1,80 +1,51 @@
 (ns pintoid.client.graphics.tilemap
   (:require
    [cljsjs.pixi]
-   [pintoid.client.graphics.sprite :as s]
    [pintoid.client.graphics.layer :as gl]
    [pintoid.client.graphics.utils
     :refer [minmax -inf +inf point->vec vec->point]]
    [pintoid.client.graphics.layer :as gl])
   (:require-macros
    [taoensso.timbre :as timbre]
-   [pintoid.client.macros :refer [defjsclass call-super]]))
-
-
-(defn- rectangle-intersect? [[[ax1 ay1] [ax2 ay2]] [[bx1 by1] [bx2 by2]]]
-  (let [[ax1' ax2'] (minmax ax1 ax2)
-        [ay1' ay2'] (minmax ay1 ay2)
-        [bx1' bx2'] (minmax bx1 bx2)
-        [by1' by2'] (minmax by1 by2)]
-    (and
-     (<= (max ax1' bx1') (min ax2' bx2'))
-     (<= (max ay1' by1') (min ay2' by2')))))
+   [pintoid.client.macros :refer [defjsclass call-super foreach!]]))
 
 
 (defn- bounding-rectangle [points]
-  (let [xs (map first points)
-        ys (map second points)]
+  (let [xs (mapv first points)
+        ys (mapv second points)]
     [[(reduce min xs) (reduce min ys)]
      [(reduce max xs) (reduce max ys)]]))
 
 
-(defn- rectangle+vector [[[x1 y1] [x2 y2]] [x y]]
-  [[(+ x x1) (+ y y1)] [(+ x x2) (+ y y2)]])
-
-
 (defn- advance-bounds [[[x1 y1] [x2 y2]] a]
-  [[(js/Math.floor (- (min x1 x2) a))
-    (js/Math.floor (- (min y1 y2) a))]
-   [(js/Math.ceil (+ (max x1 x2) a))
-    (js/Math.ceil (+ (max y1 y2) a))]])
-
-
-(defn- calculate-view-bounds [view-rect wt tile-advance]
-  (as-> view-rect $
-   (map #(->> % vec->point (.applyInverse wt) point->vec) $)
-   (bounding-rectangle $)
-   (advance-bounds $ tile-advance)))
-
-
-(defn- rect-to-all-coords [[[x1 y1] [x2 y2]]]
-  (for [x [x1 x2] y [y1 y2]]
-    [x y]))
+  [[(js/Math.floor (- x1 a)) (js/Math.floor (- y1 a))]
+   [(js/Math.ceil (+ x2 a)) (js/Math.ceil (+ y2 a))]])
 
 
 (defn- all-rect-inner-ceil-points [view-rect wt tile-bounds tile-advance]
-  (let [[zx zy] (point->vec (.apply wt (vec->point [0 0])))
-        [cx cy] (point->vec (.apply wt (vec->point [1 0])))
-        [rx ry] (point->vec (.apply wt (vec->point [0 1])))
+  (let [[[vrx1 vry1] [vrx2 vry2]] view-rect
+        wtapply #(->> % vec->point (.apply wt) point->vec)
+        [zx zy] (wtapply [0 0])
+        [cx cy] (wtapply [1 0])
+        [rx ry] (wtapply [0 1])
         cdx (- cx zx), cdy (- cy zy)
         rdx (- rx zx), rdy (- ry zy)
         -a (- tile-advance), +a (+ 1 tile-advance)
-        rbounds (bounding-rectangle
-                 (map
-                  (comp point->vec #(.apply wt %) vec->point)
-                  [[-a -a] [-a +a] [+a +a] [+a -a]]))
-        tile-visible? (fn [c r]
-                        (rectangle-intersect?
-                         view-rect
-                         (rectangle+vector
-                          rbounds
-                          [(+ (* c cdx) (* r rdx)) (+ (* c cdy) (* r rdy))])))
-        vrps' (mapv #(->> % vec->point (.applyInverse wt) point->vec)
-                    (rect-to-all-coords view-rect))
+        [[bx1 by1] [bx2 by2]] (bounding-rectangle
+                               (mapv wtapply [[-a -a] [+a -a] [-a +a] [+a +a]]))
+        vrps' (map #(->> % vec->point (.applyInverse wt) point->vec)
+                   [[vrx1 vry1] [vrx2 vry1] [vrx2 vry2] [vrx1 vry2]])
         [[c1 r1] [c2 r2]] (advance-bounds (bounding-rectangle vrps') tile-advance)
         [[c1' r1'] [c2' r2']] tile-bounds]
     (for [c (range (max c1 c1') (inc (min c2 c2')))
           r (range (max r1 r1') (inc (min r2 r2')))
-          :when (tile-visible? c r)]
+          :let [dx (+ zx (* c cdx) (* r rdx) (- zx))
+                dy (+ zy (* c cdy) (* r rdy) (- zy))]
+          :when (and
+                 (<= (+ bx1 dx) vrx2)
+                 (<= (+ by1 dy) vry2)
+                 (>= (+ bx2 dx) vrx1)
+                 (>= (+ by2 dy) vry1))]
       [c r])))
 
 
@@ -105,10 +76,9 @@
 
   (constructor [this [twidth theight] bounds advance create-tile]
     (call-super TilemapSpriteImpl this .constructor)
-    (set! (.-tms-state this)
-          {:tiles {}
-           :vbnds [0 -1 0 -1]
-           :twidth twidth
+    (set! (.-tiles this) {})
+    (set! (.-params this)
+          {:twidth twidth
            :theight theight
            :bounds bounds
            :advance (or advance 0)
@@ -119,8 +89,9 @@
     (.recreateTiles this))
 
   (recreateTiles [this]
-    (let [{:keys [tiles bounds twidth theight vbnds advance create-tile]
-           :as state} (.-tms-state this)
+    (let [{:keys [bounds twidth theight advance create-tile]} (.-params this)
+          tiles (.-tiles this)
+          vrect (gl/get-sprite-view-rect this)
           tx (.. this -worldTransform -tx)
           ty (.. this -worldTransform -ty)
           wt (.. this
@@ -129,27 +100,25 @@
                  (translate (- tx) (- ty))
                  (scale twidth theight)
                  (translate tx ty))
-          vrect (gl/get-sprite-view-rect this)
-          vbnds' (calculate-view-bounds vrect wt advance)]
-      (when (not= vbnds vbnds')
-        (let [cells (all-rect-inner-ceil-points vrect wt bounds advance)
-              tiles' (recreate-tiles-impl
-                      tiles
-                      cells
-                      (fn [[c r :as cr]]
-                        (let [s (create-tile cr)]
-                         (set! (.. s -position -x) (* c twidth))
-                         (set! (.. s -position -y) (* r theight))
-                        s))
-                      (fn [x]
-                        (.destroy x true)))
-              ta (into [] (remove nil?) (vals tiles'))]
-          (run! #(do (set! (.-parent %) this) (.updateTransform %)) ta)
-          (set! (.-children this) (apply array ta))
-          (set! (.-tms-state this) (assoc state :tiles tiles' :vbnds vbnds')))))))
+          cells (all-rect-inner-ceil-points vrect wt bounds advance)
+          tiles' (recreate-tiles-impl
+                  tiles
+                  cells
+                  (fn [[c r :as cr]]
+                    (let [s (create-tile cr)]
+                      (set! (.. s -position -x) (* c twidth))
+                      (set! (.. s -position -y) (* r theight))
+                      s))
+                  (fn [x]
+                    (.destroy x true)))
+          ta (into [] (remove nil?) (vals tiles'))]
+      (when (not= (keys tiles) (keys tiles'))
+        (run! #(do (set! (.-parent %) this) (.updateTransform %)) ta)
+        (set! (.-children this) (apply array ta))
+        (set! (.-tiles this) tiles')))))
 
 
-(defn make-tilemap-sprite
+(defn make-tilemap-sprite-factory
   [create-tile
    {:keys [cache-as-bitmap
            tile-bounds
@@ -159,35 +128,30 @@
     :or {cache-as-bitmap false
          tile-bounds [[-inf -inf] [+inf +inf]]
          tile-advance 0.5
-         tile-size [16 16]
+         tile-size [32 32]
          tile-group [4 4]}
     :as proto}]
   (let [[otw oth] tile-size
         [gw gh :as group-size] tile-group
+        [[tbc1 tbr1] [tbc2 tbr2]] tile-bounds
         subtiles (vec (for [c (range gw), r (range gh)] [c r]))
         [[tb11 tb12] [tb21 tb22]] tile-bounds
         create-group (fn [[gc gr]]
                        (let [cont (js/PIXI.Container.)]
-                         (doseq [[c r] subtiles]
+                         (foreach! [[c r] subtiles]
                            (let [cc (+ (* gc gw) c)
-                                 rr (+ (* gr gh) r)
-                                 s (create-tile [cc rr])]
-                             (.addChild cont s)
-                             (set! (.. s -position -x) (* c otw))
-                             (set! (.. s -position -y) (* r oth))))
+                                 rr (+ (* gr gh) r)]
+                             (when (and (<= tbc1 cc tbc2) (<= tbr1 rr tbr2))
+                               (let [s (create-tile [cc rr])]
+                                 (.addChild cont s)
+                                 (set! (.. s -position -x) (* c otw))
+                                 (set! (.. s -position -y) (* r oth))))))
                          (set! (.-cacheAsBitmap cont) cache-as-bitmap)
                          cont))
-        s (TilemapSpriteImpl.
-           [(* otw gw) (* oth gh)]
-           [[(js/Math.floor (/ tb11 gw)), (js/Math.floor (/ tb12 gh))]
-            [(js/Math.ceil (/ tb21 gw)), (js/Math.ceil (/ tb22 gh))]]
-           (/ tile-advance (min gw gh))
-           create-group)]
-    (s/set-sprite-properties! s proto)))
-
-
-(defmethod s/construct-sprite-object :random-tilemap [proto props]
-  (let [tsprites (:tiles proto)
-        create-tile #(s/make-sprite (nth tsprites (mod (hash %) (count tsprites))))
-        s (make-tilemap-sprite create-tile proto)]
-    (s/set-sprite-properties! s props)))
+        tsize [(* otw gw) (* oth gh)]
+        tbounds [[(js/Math.floor (/ tb11 gw)), (js/Math.floor (/ tb12 gh))]
+         [(js/Math.ceil (/ tb21 gw)), (js/Math.ceil (/ tb22 gh))]]
+        tadvance (/ tile-advance (min gw gh))]
+    (fn [_]
+      (TilemapSpriteImpl.
+       tsize tbounds tadvance create-group))))

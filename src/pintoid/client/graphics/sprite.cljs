@@ -5,10 +5,11 @@
    [pintoid.client.graphics.utils :refer
     [pi pi2 to-point point->vec vec->point minmax]]
    [pintoid.client.graphics.animation :as a]
+   [pintoid.client.graphics.tilemap :as tm]
    [pintoid.client.graphics.animloop :as al]
    [taoensso.timbre :as timbre :include-macros true])
   (:require-macros
-   [pintoid.client.macros :refer [defjsclass call-super]]))
+   [pintoid.client.macros :refer [defjsclass call-super foreach!]]))
 
 
 (def empty-sprite-proto

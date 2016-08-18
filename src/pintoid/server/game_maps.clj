@@ -209,12 +209,14 @@
      ;; :layer :layer/bg1
      :sprite {:class :sprite
               :type :animator
-              :a-rotation {:kind :sin :period 300000 :min 0 :max 314}
+              :a-rotation {:kind :sin :period 300000 :min 10 :max 20}
+              :rotation 4
               :child {:class :sprite
                       :type :random-tilemap
                       :position [0 0]
-                      :alpha 0.5
+                      :alpha 0.3
                       :tile-size [64 64]
+                      :tile-bounds [[-20 -20] [20 20]]
                       :tiles [:ast1 :ast2 :ast3 :ast4 :ast5 :ast6]
                       }}}
 
