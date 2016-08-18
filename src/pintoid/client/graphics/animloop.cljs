@@ -2,7 +2,7 @@
   (:require
    [goog.object]
    [goog.array]
-   [taoensso.timbre :as timbre]))
+   [taoensso.timbre :as timbre :include-macros true]))
 
 
 ;; completely skip outdated animations
@@ -37,9 +37,13 @@
         (goog.array.binaryInsert pending-actions-times tx)))))
 
 
-(defn add-animation!
+(defn animate!
+  ([aid animate-fn!]
+   (if animate-fn!
+     (aset simple-active-animations aid animate-fn!)
+     (js-delete simple-active-animations aid)))
   ([aid t1 t2 animate-fn!]
-     (add-animation! aid t1 t2 animate-fn! nil nil))
+     (animate! aid t1 t2 animate-fn! nil nil))
   ([aid t1 t2 animate-fn! init-fn! finish-fn!]
    (let [av (array t1 t2 animate-fn! finish-fn!)]
      (timbre/trace "add penging animation" aid t1 t2)
@@ -48,12 +52,6 @@
       (fn []
         (when init-fn! (init-fn!))
         (aset active-animations aid av))))))
-
-
-(defn animate! [aid animate-fn!]
-  (if animate-fn!
-    (aset simple-active-animations aid animate-fn!)
-    (js-delete simple-active-animations aid)))
 
 
 (defn- run-scheduled-actions [time]

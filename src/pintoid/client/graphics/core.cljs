@@ -104,7 +104,7 @@
       (.removeChild (.-parent old-obj) old-obj))
     (let [sprite-spec (s/get-sprite-spec (:sprite entity))
           layer-id (or (:layer entity) (:layer sprite-spec))
-          sprite (s/make-sprite sprite-spec entity)]
+          sprite (s/make-sprite (:sprite entity) entity)]
       (gl/layer-add layer-id sprite)
       (swap! sprites assoc eid sprite)
       sprite)))

@@ -2,7 +2,9 @@
 
 
 (defmacro foreach! [[s sq & {xf :xf}] & body]
-  `(reduce (~(or xf `identity) (fn [_# ~s] ~@body)) nil ~sq))
+  `(do
+     (reduce (~(or xf `identity) (fn [_# ~s] ~@body)) nil ~sq)
+     nil))
 
 
 (defn- ctor-with-this-arg [[[this & args] & body]]

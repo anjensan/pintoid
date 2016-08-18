@@ -19,8 +19,7 @@
    :anchor [0.5 0.5]})
 
 (def textures (atom))
-(def sprite-protos (atom))
-(def animation-counter (atom 0))
+(def sprites (atom))
 
 
 ;; == Textures
@@ -53,167 +52,111 @@
 
 ;; == Sprites - common
 
+(defmulti create-sprite-factory
+  (fn [proto] (:type proto)))
+
+
 (defmethod as/load-asset :sprite [id sprite]
-  (swap! sprite-protos assoc id sprite))
+  (swap! sprites assoc id
+         {:proto sprite :factory (create-sprite-factory sprite)}))
 
 
 (defmethod as/unload-asset :sprite [id sprite]
-  (swap! dissoc sprite-protos id))
+  (swap! dissoc sprites id))
 
 
 (defmethod as/get-asset :sprite [class id]
-  (get @sprite-protos id))
+  (get-in @sprites [id :proto]))
 
 
-(defmulti construct-sprite-object
-  (fn [proto props] (:type proto)))
+(defn get-sprite-factory [id]
+  (cond
+    (map? id) (create-sprite-factory id)
+    (keyword? id) (get-in @sprites [id :factory])))
 
 
 (defn get-sprite-spec [id]
   (cond
     (map? id) id
-    (keyword? id) (get @sprite-protos id)))
+    (keyword? id) (get-in @sprites [id :proto])))
 
 
 (defn make-sprite
   ([spec]
    (make-sprite spec nil))
   ([spec props]
-   (construct-sprite-object (get-sprite-spec spec) props)))
+   ((get-sprite-factory spec) props)))
 
 
 (defn set-sprite-properties! [obj props]
-  (when-let [position (get props :position)] (set! (.-position obj) (to-point position)))
-  (when-let [scale (get props :scale)] (set! (.-scale obj) (to-point scale)))
-  (when-let [pivot (get props :pivot)] (set! (.-pivot obj) (to-point pivot)))
-  (when-let [rotation (get props :rotation)] (set! (.-rotation obj) rotation))
-  (when-let [alpha (get props :alpha)] (set! (.-alpha obj) alpha))
-  (when-let [visible (get props :visible)] (set! (.-visible obj) visible))
-  (when-let [anchor (get props :anchor)] (set! (.-anchor obj) (to-point anchor)))
+  (when props
+    (when-let [position (get props :position)] (set! (.-position obj) (to-point position)))
+    (when-let [scale (get props :scale)] (set! (.-scale obj) (to-point scale)))
+    (when-let [pivot (get props :pivot)] (set! (.-pivot obj) (to-point pivot)))
+    (when-let [rotation (get props :rotation)] (set! (.-rotation obj) rotation))
+    (when-let [alpha (get props :alpha)] (set! (.-alpha obj) alpha))
+    (when-let [visible (get props :visible)] (set! (.-visible obj) visible))
+    (when-let [anchor (get props :anchor)] (set! (.-anchor obj) (to-point anchor))))
   obj)
 
 
-(defmethod construct-sprite-object :default [proto props]
-  (timbre/warnf "Unknown sprite: %s %s" proto props)
-  (construct-sprite-object empty-sprite-proto nil))
-
-
 (defn set-tiling-sprite-properties! [obj props]
-  (when-let [tile-position (get props :tile-position)]
-    (set! (.-tilePosition obj) (to-point tile-position)))
-  (when-let [tile-scale (get props :tile-scale)]
-    (set! (.-tileScale obj) (to-point tile-scale))))
-
-(defn- construct-and-add-children [obj ch-protos]
-  (doseq [cp ch-protos]
-    (let [c (make-sprite cp)]
-      (.addChild obj c))))
+  (when props
+    (when-let [tile-position (get props :tile-position)] (set! (.-tilePosition obj) (to-point tile-position)))
+    (when-let [tile-scale (get props :tile-scale)] (set! (.-tileScale obj) (to-point tile-scale))))
+  obj)
 
 
-(defmethod construct-sprite-object :sprite [proto props]
+(defmethod create-sprite-factory :default [proto]
+  (timbre/warnf "Unknown sprite: %s" proto)
+  (create-sprite-factory empty-sprite-proto))
+
+
+(defmethod create-sprite-factory :sprite [proto]
   (let [t (get-texture (get proto :texture ::clojure))
-        s (js/PIXI.Sprite. t)]
-    (construct-and-add-children s (:children proto))
-    (set-sprite-properties! s proto)
-    (set-sprite-properties! s props)
-    s))
+        child-factories (mapv get-sprite-factory (:children proto))]
+    (fn [props]
+      (let [s (js/PIXI.Sprite. t)]
+        (foreach! [sf child-factories] (.addChild s (sf)))
+        (set-sprite-properties! s proto)
+        (set-sprite-properties! s props)))))
 
 
-(defmethod construct-sprite-object :container [proto props]
-  (let [s (js/PIXI.Container.)]
-    (construct-and-add-children s (:children proto))
-    (set-sprite-properties! s proto)
-    s))
+(defmethod create-sprite-factory :container [proto]
+  (let [child-factories (mapv get-sprite-factory (:children proto))]
+    (fn [props]
+      (let [s (js/PIXI.Container.)]
+        (foreach! [sf child-factories] (.addChild s (sf)))
+        (set-sprite-properties! s proto)
+        s))))
 
 
-(defmethod construct-sprite-object :tiling-sprite [proto props]
+(defmethod create-sprite-factory :tiling-sprite [proto]
   (let [t (get-texture (get proto :texture ::clojure))
         h (:height proto)
-        w (:width proto)
-        s (js/PIXI.extras.TilingSprite. t w h)]
-    (construct-and-add-children s (:children proto))
-    (set-sprite-properties! s proto)
-    (set-sprite-properties! s props)
-    (set-tiling-sprite-properties! s proto)
-    (set-tiling-sprite-properties! s props)
-    s))
+        w (:width proto)]
+    (fn [props]
+      (-> (js/PIXI.extras.TilingSprite. t w h)
+        (set-tiling-sprite-properties! proto)
+        (set-tiling-sprite-properties! props)
+        (set-sprite-properties! proto)
+        (set-sprite-properties! props)))))
 
 
-;; == Animator
-
-;; TODO: Extend PIXI.DisplayObject instead of Container.
-(defjsclass Animator js/PIXI.Container
-  (constructor [this child animator]
-   (call-super Animator this .constructor)
-   (set! (.-child this) child)
-   (set! (.-animationid this) (str "ac" (swap! animation-counter inc)))
-   (set! (.-animator this) animator)
-   (.addChild this child))
-  (play [this]
-   (al/animate! (.-animationid this) #((.-animator this) (.-child this) %)))
-  (stop [this]
-   (al/animate! (.-animationid this) nil))
-  (destroy [this]
-   (.stop this)
-   (call-super Animator this .destroy)))
+(defmethod create-sprite-factory :random-tilemap [proto]
+  (let [tiles-factories (mapv get-sprite-factory (:tiles proto))
+        create-sprite #((nth tiles-factories (mod (hash %) (count tiles-factories))))
+        tmfactory (tm/make-tilemap-sprite-factory create-sprite proto)]
+    (fn [props]
+      (-> (tmfactory props)
+          (set-sprite-properties! proto)
+          (set-sprite-properties! props)))))
 
 
-(defn wave-function [{:keys [kind period shift min max power]
-                      :or {kind :saw period 1000 shift 0 min 0 max 1 power 1}}]
-  (let [shift (if (= :random shift) (rand-int period) shift)
-        normx #(-> % (+ shift) (/ period) (mod 1))
-        powx (if (== 1 power)
-               identity
-               #(* (js/Math.sign %)
-                   (js/Math.pow (js/Math.abs %) power)))
-        dx (- max min)
-        mmx #(+ min (* dx %))
-        funx (case kind
-               :saw #(-> %)
-               :sin #(-> % (* pi2) js/Math.sin (+ 1) (* 0.5))
-               :cos #(-> % (* pi2) js/Math.cos (+ 1) (* 0.5))
-               :sqr #(if (< (mod % 1) 0.5) 0 1)
-               :tri #(if (< % 0.5)
-                       (-> % (* 2))
-                       (->> % (* 2) (- 2))))]
-    #(-> % normx funx powx mmx)))
-
-
-(defn make-animator-fn [proto]
-  {:pre [(not (and (:a-scale proto)
-                   (or (:a-scale-x proto)
-                       (:a-scale-y proto))))]}
-  (let [shift (case (:shift proto :random)
-                :random (rand-int 1e10)
-                :start (- (int (js/performance.now)))
-                :none 0
-                (-> proto :shift int))
-        wwf (fn [k setter]
-              (when-let [fs (get proto k)]
-                (let [wf (wave-function fs)]
-                  (fn [obj t] (setter obj (wf t))))))
-        maybe-anims
-        [(wwf :a-rotation #(set! (.-rotation %1) %2))
-         (wwf :a-alpha #(set! (.-aplha %1) %2))
-         (wwf :a-position-x #(set! (.. %1 -position -x) %2))
-         (wwf :a-position-y #(set! (.. %1 -position -y) %2))
-         (wwf :a-scale #(set! (.-scale %1) (js/PIXI.Point. %2 %2)))
-         (wwf :a-scale-x #(set! (.. %1 -scale -x) %2))
-         (wwf :a-scale-y #(set! (.. %1 -scale -y) %2))]
-        anims (vec (remove nil? maybe-anims))]
-    (if (== 1 (count anims))
-      (let [f (first anims)]
-        #(f %1 (+ %2 shift)))
-      (fn [obj t]
-        (let [tt (+ t shift)]
-          (run! #(% obj tt) anims))))))
-
-
-(defmethod construct-sprite-object :animator [proto props]
-  (let [a (make-animator-fn proto)      ;; TODO: optimize (reuse functin - depends only on proto (no props))
-        c (make-sprite (:child proto))  ;; TODO: optimize (use proto + clone)
-        s (Animator. c a)]
-    (set-sprite-properties! s proto)
-    (set-sprite-properties! s props)
-    (.play s)
-    s))
+(defmethod create-sprite-factory :animator [proto]
+  (let [child-factory (get-sprite-factory (:child proto))
+        afactory (a/make-sprite-animator-factory child-factory proto)]
+    (fn [props]
+      (-> (afactory props)
+          (set-sprite-properties! proto)
+          (set-sprite-properties! props)))))
