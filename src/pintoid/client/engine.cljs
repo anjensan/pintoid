@@ -90,42 +90,46 @@
        (g/update-player-death! deaths)))))
 
 
-(defmulti add-entity-sprite (comp keyword :type))
+(defmulti add-entity-sprite (fn [eid e] (:type e)))
+(defmulti remove-entity-sprite (fn [eid e] (:type e)))
 
-(defn handle-addrem-sprite-entities [w1 w2 wpatch]
+(defn handle-add-sprites [w1 w2 wpatch]
   (foreach! [eid (changed-eids wpatch :sprite)]
     (let [entity (entity w2 eid)]
-      (if (:sprite entity)
-        ;; TODO: split into 2 handlers.
-        ;; add new entity
-        ;; TODO: Also we need to specify correct :position etc.
+      (when (:sprite entity)
         (al/add-action!
          (world-time w2)
-         (fn [] (add-entity-sprite entity)))
-        ;; remove entity
-        (when-let [obj (g/get-sprite eid)]
-          (al/add-action!
-           (world-time w2)
-           (fn []
-             (g/remove-sprite eid))))))))
+         #(add-entity-sprite eid entity))))))
 
 
-(defmethod add-entity-sprite :default [entity]
+(defn handle-remove-sprites [w1 w2 wpatch]
+  (foreach! [eid (changed-eids wpatch :sprite), :xf (filter #())]
+    (when-not (:sprite (entity w2 eid))
+      (when-let [obj (g/get-sprite eid)]
+        (al/add-action!
+         (world-time w2)
+         #(remove-entity-sprite eid (entity w1 eid)))))))
+
+
+(defmethod add-entity-sprite :default [eid entity]
   (g/new-sprite entity))
 
 
-(defmethod add-entity-sprite :player [entity]
-  (g/new-sprite
-   (assoc entity
-          :sprite (if (:self-player entity) :racket-red :racket-blue))))
+(defmethod remove-entity-sprite :default [eid entity]
+  (g/remove-sprite eid))
+
+
+(defmethod add-entity-sprite :player [eid entity]
+  (let [sprite (if (:self-player entity) :racket-red :racket-blue)]
+    (g/new-sprite (assoc entity :sprite sprite))))
 
 
 (defn update-world-snapshot! [wpatch]
-  (let [w1 @world
-        w2 (swap! world apply-world-patch wpatch)]
+  (let [w1 @world, [w2 wpatch'] (apply-world-patch w1 wpatch)]
     (handle-addrem-assets! w1 w2 wpatch)
-    (handle-addrem-sprite-entities w1 w2 wpatch)
+    (handle-remove-sprites w1 w2 wpatch)
+    (handle-add-sprites w1 w2 wpatch)
     (handle-sprites-movement! w1 w2 wpatch)
     (handle-sprites-rotation! w1 w2 wpatch)
     (handle-player-state! w1 w2 wpatch)
-    ))
+    (reset! world w2)))

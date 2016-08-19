@@ -43,9 +43,10 @@
 (defn- anim-linear-finisher
   [obj xy2]
   (fn []
-    (let [[x2 y2] xy2]
-      (set! (.. obj -position -x) x2)
-      (set! (.. obj -position -y) y2))))
+    (when-let [p (.-position obj)]
+      (let [[x2 y2] xy2]
+        (set! (.-x p) x2)
+        (set! (.-y p) y2)))))
 
 
 (defn- anim-linear-rotate-updater [obj t1 t2 angle1 angle2]
@@ -163,11 +164,11 @@
         maybe-anims
         [(wwf :a-rotation #(set! (.-rotation %1) %2))
          (wwf :a-alpha #(set! (.-aplha %1) %2))
-         (wwf :a-position-x #(set! (.. %1 -position -x) %2))
-         (wwf :a-position-y #(set! (.. %1 -position -y) %2))
+         (wwf :a-position-x #(when-let [p (.-position %1)] (set! (.-x p) %2)))
+         (wwf :a-position-y #(when-let [p (.-position %1)] (set! (.-y p) %2)))
          (wwf :a-scale #(set! (.-scale %1) (js/PIXI.Point. %2 %2)))
-         (wwf :a-scale-x #(set! (.. %1 -scale -x) %2))
-         (wwf :a-scale-y #(set! (.. %1 -scale -y) %2))]
+         (wwf :a-scale-x #(when-let [s (.-scale %1)] (set! (.-x s) %2)))
+         (wwf :a-scale-y #(when-let [s (.-scale %1)] (set! (.-y s) %2)))]
         anims (vec (remove nil? maybe-anims))]
     (if (== 1 (count anims))
       (let [f (first anims)]
