@@ -3,7 +3,8 @@
    [cljsjs.pixi]
    [pintoid.client.asset :as as]
    [pintoid.client.graphics.utils :refer
-    [pi pi2 to-point point->vec vec->point minmax]]
+    [pi pi2 ->rectangle ->point point->vec
+     ->blendmode vec->point minmax]]
    [pintoid.client.graphics.animation :as a]
    [pintoid.client.graphics.tilemap :as tm]
    [pintoid.client.graphics.animloop :as al]
@@ -12,6 +13,8 @@
    [pintoid.client.macros :refer [defjsclass call-super foreach!]]))
 
 
+(def empty-texture (js/PIXI.Texture.fromImage "/img/clojure.png"))
+(declare empty-sprite-factory)
 (def empty-sprite-proto
   {:class :sprite
    :type :sprite
@@ -24,13 +27,29 @@
 
 ;; == Textures
 
-(defn- create-texture-object [{:keys [id image]}]
-  (js/PIXI.Texture.fromImage image))
+(declare get-texture)
+
+(defn- create-texture-object
+  [{:keys [id image base frame
+           crop trim rotate]}]
+  (if image
+    (do
+      (assert (every? nil? [base frame crop trim rotate]))
+      (js/PIXI.Texture.fromImage image))
+    (do
+      (assert (nil? image))
+      (js/PIXI.Texture.
+       (get-texture base)
+       (->rectangle frame)
+       (->rectangle crop)
+       (->rectangle trim)
+       rotate))))
 
 
 (defmethod as/load-asset :texture [id tinfo]
   ;; TODO: Invalidate/recreate/mark all affected sprites.
   (let [t (create-texture-object tinfo)]
+    (set! (.-zz t) id)
     (js/PIXI.Texture.addTextureToCache (name id) t)
     (swap! textures assoc id t)))
 
@@ -41,9 +60,11 @@
 
 
 (defn- get-texture [t]
-  (if (string? t)
-    (js/PIXI.Texture.fromImage t)
-    (get @textures t)))
+  (cond
+    (string? t) (js/PIXI.Texture.fromImage t)
+    (and (keyword? t) (contains? @textures t)) (@textures t)
+    :else (do (timbre/warnf "Unknown texture %s" t)
+              empty-texture)))
 
 
 (defmethod as/get-asset :texture [class id]
@@ -72,7 +93,11 @@
 (defn get-sprite-factory [id]
   (cond
     (map? id) (create-sprite-factory id)
-    (keyword? id) (get-in @sprites [id :factory])))
+    (and (keyword? id) (contains? @sprites id)) (get-in @sprites [id :factory])
+    :else
+    (do
+      (timbre/warnf "Unknown sprite %s" id)
+      empty-sprite-factory)))
 
 
 (defn get-sprite-spec [id]
@@ -90,20 +115,23 @@
 
 (defn set-sprite-properties! [obj props]
   (when props
-    (when-let [position (get props :position)] (set! (.-position obj) (to-point position)))
-    (when-let [scale (get props :scale)] (set! (.-scale obj) (to-point scale)))
-    (when-let [pivot (get props :pivot)] (set! (.-pivot obj) (to-point pivot)))
+    (when-let [position (get props :position)] (set! (.-position obj) (->point position)))
+    (when-let [scale (get props :scale)] (set! (.-scale obj) (->point scale)))
+    (when-let [pivot (get props :pivot)] (set! (.-pivot obj) (->point pivot)))
     (when-let [rotation (get props :rotation)] (set! (.-rotation obj) rotation))
     (when-let [alpha (get props :alpha)] (set! (.-alpha obj) alpha))
     (when-let [visible (get props :visible)] (set! (.-visible obj) visible))
-    (when-let [anchor (get props :anchor)] (set! (.-anchor obj) (to-point anchor))))
+    (when-let [bm (get props :blend-mode)] (set! (.-blendMode obj) (->blendmode bm)))
+    (when-let [anchor (get props :anchor)] (set! (.-anchor obj) (->point anchor))))
   obj)
 
 
 (defn set-tiling-sprite-properties! [obj props]
   (when props
-    (when-let [tile-position (get props :tile-position)] (set! (.-tilePosition obj) (to-point tile-position)))
-    (when-let [tile-scale (get props :tile-scale)] (set! (.-tileScale obj) (to-point tile-scale))))
+    (when-let [tile-position (get props :tile-position)]
+      (set! (.-tilePosition obj) (->point tile-position)))
+    (when-let [tile-scale (get props :tile-scale)]
+      (set! (.-tileScale obj) (->point tile-scale))))
   obj)
 
 
@@ -145,7 +173,10 @@
 
 (defmethod create-sprite-factory :random-tilemap [proto]
   (let [tiles-factories (mapv get-sprite-factory (:tiles proto))
-        create-sprite #((nth tiles-factories (mod (hash %) (count tiles-factories))))
+        hs (get proto :hash-seed "")
+        create-sprite (fn [[c r]]
+                        ((nth tiles-factories
+                              (mod (hash (str hs "-" c "-" r)) (count tiles-factories)))))
         tmfactory (tm/make-tilemap-sprite-factory create-sprite proto)]
     (fn [props]
       (-> (tmfactory props)

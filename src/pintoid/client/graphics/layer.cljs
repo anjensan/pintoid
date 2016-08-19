@@ -2,7 +2,7 @@
   (:require
    [cljsjs.pixi]
    [pintoid.client.asset :as as]
-   [pintoid.client.graphics.utils :refer [to-point to-pair]]
+   [pintoid.client.graphics.utils :refer [->point ->pair]]
    [pintoid.client.graphics.animation :as a]
    [pintoid.client.graphics.animloop :as al]
    [taoensso.timbre :as timbre]))
@@ -15,15 +15,15 @@
 
 
 (defn set-layer-properties [obj props]
-  (when-let [pivot (get props :pivot)] (set! (.-pivot obj) (to-point pivot)))
+  (when-let [pivot (get props :pivot)] (set! (.-pivot obj) (->point pivot)))
   (when-let [alpha (get props :alpha)] (set! (.-alpha obj) alpha))
   (when-let [visible (get props :visible)] (set! (.-visible obj) visible)))
 
 
 (defn- coerce-layer-properties [layer]
   (assoc layer
-         :parallax (to-pair (:parallax layer 1))
-         :scale-rate (to-pair (:scale-rate layer 1))))
+         :parallax (->pair (:parallax layer 1))
+         :scale-rate (->pair (:scale-rate layer 1))))
 
 
 (defmethod as/load-asset :layer [id layer]
@@ -47,16 +47,25 @@
   (get @layers id))
 
 
+(defn- get-layer-pixi-obj [lid]
+  (let [ls @layers
+        lid (or lid :default)
+        lo (if (contains? ls lid)
+             (get ls lid)
+             (do
+               (timbre/warnf "Unknown layer %s" lid)
+               (get ls :default)))]
+   (get lo :pixi-obj)))
+
+
 (defn layer-add [layer-id obj]
-  (.addChild
-   (get-in @layers [(or layer-id :layer/default) :pixi-obj])
-   obj))
+  (when-let [po (get-layer-pixi-obj layer-id)]
+    (.addChild po obj)))
 
 
 (defn layer-remove [layer-id obj]
-  (.removeChild
-   (get-in @layers [(or layer-id :layer/default) :pixi-obj])
-   obj))
+  (when-let [po (get-layer-pixi-obj layer-id)]
+    (.removeChild po obj)))
 
 
 (defn- set-viewport-for-layer!
@@ -87,5 +96,5 @@
   (set! (.. lcontainer -position -y) (/ height 2))
   (set! (.. lcontainer -viewrect) #js [[0 0] [width height]])
   (reset! camera-size (constantly [width height]))
-  (as/add-asset :layer/default {:class :layer})
+  (as/add-asset :default {:class :layer})
   lcontainer)

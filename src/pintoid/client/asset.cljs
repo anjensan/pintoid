@@ -39,7 +39,7 @@
   (when-let [a (get @assets id)]
     (unload-asset a))
   (let [c (:class asset)]
-    (timbre/info "Load asset" c id)
+    (timbre/info "Load asset" c id asset)
     (swap! assets assoc id asset)
     (when asset
       (load-asset id asset))))

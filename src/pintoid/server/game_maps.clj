@@ -1,8 +1,8 @@
 (ns pintoid.server.game-maps
   (:use pintoid.server.math))
 
-(def world-height 2500)
-(def world-width 2500)
+(def world-height 10000)
+(def world-width 10000)
 
 (def gravity-g 0.005)
 (def engine-forward-force 0.12)
@@ -10,7 +10,7 @@
 (def rotate-speed 0.15)
 
 (def bullet-ahead-time 200)
-(def max-user-view-distance 1500)
+(def max-user-view-distance 2500)
 
 (defn calc-gravity-force [^double m1 ^double m2 p1 p2]
   (let [d (dist p1 p2)]
@@ -22,7 +22,7 @@
 
 (def sprite-is-visible-by-player?
   (fn [w pid eid] (< (dist (w eid :position)
-                           (w pid :position)) 1000)))
+                           (w pid :position)) max-user-view-distance)))
 
 
 (def player-proto
@@ -78,6 +78,7 @@
    :sprite sprite
    :radius radius
    :dangle dangle
+   :layer :layer/lstars1
    :visible? sprite-is-visible-by-player?
    })
 
@@ -139,10 +140,75 @@
    {id {:class :texture
         :image (str "/img/" image)}}})
 
+
 (def game-maps
   [[
     (texture :racket-red "racket_red.png")
     (texture :racket-blue "racket_blue.png")
+
+    {:assets
+     {
+      :layer/starsky1 {:class :layer :parallax 0.50 :zorder -990}
+      :layer/starsky2 {:class :layer :parallax 0.70 :zorder -980}
+      :layer/starsky3 {:class :layer :parallax 0.90 :zorder -970}
+      :layer/lstars1 {:class :layer :parallax 1 :zorder -100}
+      :texture/starsky {:class :texture :image "/img/starsky.jpeg"}}}
+
+    {:assets
+     (reduce
+      conj
+      (for [c (range 8), r (range 4), :let [x (str "starsky-" c "x" r)]]
+        {(keyword "texture" x)
+         {:class :texture :base :texture/starsky
+          :frame {:x (* 512 c) :y (* 512 r) :w 512 :h 512}}}))}
+
+    {:assets
+     (reduce
+      conj
+      (for [c (range 8), r (range 4), :let [x (str "starsky-" c "x" r)]]
+        {(keyword "sprite" x)
+         {:class :sprite :type :sprite :blend-mode :add :texture (keyword "texture" x)}}))}
+
+    {:type :starsky-sprite
+     :position (->Vector 200 135)
+     :visible? (constantly true)
+     :layer :layer/starsky1
+     :sprite {:class :sprite
+              :type :random-tilemap
+              :hash-seed "l2"
+              :tile-size [512 512]
+              :tile-group [1 1]
+              :alpha 0.5
+              :scale 0.5
+              :tiles (vec (for [c (range 8), r (range 4)]
+                            (keyword "sprite" (str "starsky-" c "x" r))))}}
+
+    {:type :starsky-sprite
+     :position (->Vector 100 450)
+     :visible? (constantly true)
+     :layer :layer/starsky2
+     :sprite {:class :sprite
+              :type :random-tilemap
+              :hash-seed "l1"
+              :tile-size [512 512]
+              :tile-group [1 1]
+              :alpha 0.75
+              :scale 0.75
+              :tiles (vec (for [c (range 8), r (range 4)]
+                            (keyword "sprite" (str "starsky-" c "x" r))))}}
+
+    {:type :starsky-sprite
+     :position (->Vector 0 0)
+     :visible? (constantly true)
+     :layer :layer/starsky3
+     :sprite {:class :sprite
+              :type :random-tilemap
+              :hash-seed "l3"
+              :position [0 0]
+              :tile-size [512 512]
+              :tile-group [1 1]
+              :tiles (vec (for [c (range 8), r (range 4)]
+                            (keyword "sprite" (str "starsky-" c "x" r))))}}
 
     (simple-sprite :racket-blue "racket_blue.png")
     (simple-sprite :racket-red "racket_red.png")
@@ -159,73 +225,11 @@
     (ast-sprite :ast6 "ast6.png")
 
     {:assets
-     {:lstars1 {:class :layer
-                :parallax 0.99
-                :zorder 1}
-      :layer/bg1 {:class :layer
-                  :parallax 0.8
-                  :alpha 0.7
-                  :zorder -20}
-      :layer/bg2 {:class :layer
-                  :parallax 0.95
-                  :alpha 0.7
-                  :zorder -10}
-      }}
-
-    {:assets
-     {:stat-sprite/bg {:class :sprite
-                       :type :tiling-sprite
-                       :texture "/img/back.png"
-                       :pivot [2500 2500]
-                       :width 5000
-                       :height 5000}}
-     }
-
-    {:type :bg-sprite
-     :layer :layer/bg1
-     :position (->Vector 0 0)
-     :visible? (constantly true)
-     :sprite :stat-sprite/bg}
-
-    {:type :bg-sprite
-     :layer :layer/bg2
-     :position (->Vector 0 0)
-     :visible? (constantly true)
-     :sprite :stat-sprite/bg}
-
-    {:class :sprite
-     :type :animator
-     :layer :lstars1
-     :a-scale {:kind :sin :period 5000 :min 0.9 :max 1.1 :power 2}
-     :a-rotation {:kind :saw :period 3140 :min 0 :max 630}
-     :child {:type :container
-             :children [{:type :animator
-                         :a-rotation {:kind :sin :min 0 :max 63 :period 10000}
-                         :child {:type :sprite :texture "/img/black1.png" :anchor [0.5 0.5]}}]}}
-
-    {:type :test-sprite
-     :position (->Vector 0 0)
-     :visible? (constantly true)
-     ;; :layer :layer/bg1
-     :sprite {:class :sprite
-              :type :animator
-              :a-rotation {:kind :sin :period 300000 :min 10 :max 20}
-              :rotation 4
-              :child {:class :sprite
-                      :type :random-tilemap
-                      :position [0 0]
-                      :alpha 0.3
-                      :tile-size [64 64]
-                      :tile-bounds [[-20 -20] [20 20]]
-                      :tiles [:ast1 :ast2 :ast3 :ast4 :ast5 :ast6]
-                      }}}
-
-    {:assets
      {:bullet {:class :sprite
                :type :animator
                :shift :start
                :a-rotation {:kind :saw :period 200 :min 0 :max 6.3}
-               :a-scale {:kind :sin :period 500 :min 0.1 :max 0.8}
+               :a-scale {:kind :sin :period 300 :min 0.2 :max 0.4}
                :child {:type :container
                        :children [{:type :sprite
                                    :anchor [0.5 0.5]
@@ -244,7 +248,7 @@
                                    :position [20 -8]}]}}
       :black-hole {:class :sprite
                    :type :animator
-                   :layer :lstars1
+                   :layer :layer/lstars1
                    :a-scale {:kind :sin :period 5000 :min 0.9 :max 1.1 :power 2}
                    :a-rotation {:kind :saw :period 3140 :min 0 :max 630}
                    :child {:type :container

@@ -110,7 +110,8 @@
                       (set! (.. s -position -y) (* r theight))
                       s))
                   (fn [x]
-                    (.destroy x true)))
+                    (.destroy x)
+                    (foreach! [c (.-children x)] (.destroy c))))
           ta (into [] (remove nil?) (vals tiles'))]
       (when (not= (keys tiles) (keys tiles'))
         (run! #(do (set! (.-parent %) this) (.updateTransform %)) ta)
@@ -129,7 +130,7 @@
          tile-bounds [[-inf -inf] [+inf +inf]]
          tile-advance 0.5
          tile-size [32 32]
-         tile-group [4 4]}
+         tile-group [1 1]}
     :as proto}]
   (let [[otw oth] tile-size
         [gw gh :as group-size] tile-group
