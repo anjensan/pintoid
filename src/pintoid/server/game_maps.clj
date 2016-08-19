@@ -177,7 +177,8 @@
               :type :random-tilemap
               :hash-seed "l2"
               :tile-size [512 512]
-              :tile-group [1 1]
+              :tile-group [2 2]
+              :cache-as-bitmap true
               :alpha 0.5
               :scale 0.5
               :tiles (vec (for [c (range 8), r (range 4)]
@@ -191,7 +192,8 @@
               :type :random-tilemap
               :hash-seed "l1"
               :tile-size [512 512]
-              :tile-group [1 1]
+              :tile-group [2 2]
+              :cache-as-bitmap true
               :alpha 0.75
               :scale 0.75
               :tiles (vec (for [c (range 8), r (range 4)]

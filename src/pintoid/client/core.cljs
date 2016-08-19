@@ -32,7 +32,7 @@
     (timbre/tracef "Run draw loop at %d" draw-at)
     (al/run-animations! draw-at)
     (g/render-graphics!)
-    (js/setTimeout al/run-deffered-actions! 0)))
+    (js/setTimeout #(al/run-deffered-actions!) 1)))
 
 
 (defn start-app []

@@ -11,8 +11,8 @@
 
 
 (defn- bounding-rectangle [points]
-  (let [xs (mapv first points)
-        ys (mapv second points)]
+  (let [xs (map first points)
+        ys (map second points)]
     [[(reduce min xs) (reduce min ys)]
      [(reduce max xs) (reduce max ys)]]))
 
@@ -22,54 +22,50 @@
    [(js/Math.ceil (+ x2 a)) (js/Math.ceil (+ y2 a))]])
 
 
-(defn- all-rect-inner-ceil-points [view-rect wt tile-bounds tile-advance]
-  (let [[[vrx1 vry1] [vrx2 vry2]] view-rect
-        wtapply #(->> % vec->point (.apply wt) point->vec)
+(defn- recreate-tiles-impl [view-rect wt bounds advance tiles create-tile! drop-tile!]
+  (let [wtapply #(->> % vec->point (.apply wt) point->vec)
         [zx zy] (wtapply [0 0])
         [cx cy] (wtapply [1 0])
         [rx ry] (wtapply [0 1])
         cdx (- cx zx), cdy (- cy zy)
         rdx (- rx zx), rdy (- ry zy)
-        -a (- tile-advance), +a (+ 1 tile-advance)
+        -a (- advance), +a (+ 1 advance)
         [[bx1 by1] [bx2 by2]] (bounding-rectangle
-                               (mapv wtapply [[-a -a] [+a -a] [-a +a] [+a +a]]))
+                               (map wtapply [[-a -a] [+a -a] [-a +a] [+a +a]]))
+        [[vrx1 vry1] [vrx2 vry2]] view-rect
         vrps' (map #(->> % vec->point (.applyInverse wt) point->vec)
                    [[vrx1 vry1] [vrx2 vry1] [vrx2 vry2] [vrx1 vry2]])
-        [[c1 r1] [c2 r2]] (advance-bounds (bounding-rectangle vrps') tile-advance)
-        [[c1' r1'] [c2' r2']] tile-bounds]
-    (for [c (range (max c1 c1') (inc (min c2 c2')))
-          r (range (max r1 r1') (inc (min r2 r2')))
-          :let [dx (+ zx (* c cdx) (* r rdx) (- zx))
-                dy (+ zy (* c cdy) (* r rdy) (- zy))]
-          :when (and
-                 (<= (+ bx1 dx) vrx2)
-                 (<= (+ by1 dy) vry2)
-                 (>= (+ bx2 dx) vrx1)
-                 (>= (+ by2 dy) vry1))]
-      [c r])))
-
-
-(defn- recreate-tiles-impl [tiles cells create-tile drop-tile!]
-  (let [bset (set cells)]
+        [[c1 r1] [c2 r2]] (advance-bounds (bounding-rectangle vrps') advance)
+        [[c1' r1'] [c2' r2']] bounds
+        maybe-crs (vec
+                   (for [c (range (max c1 c1') (inc (min c2 c2')))
+                         r (range (max r1 r1') (inc (min r2 r2')))]
+                     [c r]))
+        visible? (fn [[c r]]
+                   (let [dx (+ zx (* c cdx) (* r rdx) (- zx))
+                         dy (+ zy (* c cdy) (* r rdy) (- zy))]
+                   (and
+                    (<= (+ bx1 dx) vrx2)
+                    (<= (+ by1 dy) vry2)
+                    (>= (+ bx2 dx) vrx1)
+                    (>= (+ by2 dy) vry1))))
+        ]
     (as-> tiles $
-      (transient $)
-      (transduce
-       (remove bset)
-       (completing
-        (fn [a cr]
-          (when-let [t (get a cr)]
-            (drop-tile! t))
-          (dissoc! a cr)))
+      (reduce
+       (fn [a [cr t]]
+         (if (not (visible? cr))
+           (do (when t (drop-tile! t))
+               (dissoc a cr))
+           a))
        $
-       (keys tiles))
-      (transduce
-       (remove #(contains? tiles %))
-       (completing
-        (fn [a cr]
-          (assoc! a cr (create-tile cr))))
+       tiles)
+      (reduce
+       (fn [a cr]
+         (if (or (contains? tiles cr) (not (visible? cr)))
+           a
+           (assoc a cr (create-tile! cr))))
        $
-       cells)
-      (persistent! $))))
+       maybe-crs))))
 
 
 (defjsclass TilemapSpriteImpl js/PIXI.Container
@@ -100,10 +96,8 @@
                  (translate (- tx) (- ty))
                  (scale twidth theight)
                  (translate tx ty))
-          cells (all-rect-inner-ceil-points vrect wt bounds advance)
           tiles' (recreate-tiles-impl
-                  tiles
-                  cells
+                  vrect wt bounds advance tiles
                   (fn [[c r :as cr]]
                     (let [s (create-tile cr)]
                       (set! (.. s -position -x) (* c twidth))
