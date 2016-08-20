@@ -55,7 +55,6 @@
   (GET "/" [] (response (page-index)))
   (GET "/game" [] (response (page-game)))
   (GET "/ws" [] (wrap-websocket-handler game-ws-handler {:format :transit-json}))
-  (resources "/js" {:root "js"
-                    :mime-types {"js" "text/javascript; charset=utf8"}})
+  (resources "/js" {:root "js" :mime-types {"js" "text/javascript; charset=utf8"}})
   (resources "/img" {:root "img"})
   (resources "/css" {:root "css"}))
