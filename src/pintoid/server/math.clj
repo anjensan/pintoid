@@ -47,7 +47,7 @@
      (reduce v+ (v+ v1 v2 v3) vs)))
 
 (defn v-
-  ([^Vector v] 
+  ([^Vector v]
      (Vector. (- (.-x v)) (- (.-y v))))
   ([^Vector v1 ^Vector v2]
      (Vector. (- (.-x v1) (.-x v2)) (- (.-y v1) (.-y v2))))

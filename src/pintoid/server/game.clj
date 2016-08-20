@@ -72,7 +72,7 @@
   (swap! users-input assoc eid user-input))
 
 (defn init-game-state [world]
-  (send world sys-init-world-state (rand-nth game-maps)))
+  (send world sys-init-world-state (game-map)))
 
 ;; --
 
