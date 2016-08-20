@@ -108,20 +108,16 @@
 
 ;; == Send world patch
 
-(declare take-world-snapshot)
-(declare construct-world-patch)
-
-(defn- map-val
-  ([f] (map (fn [[k v]] [k (f v)])))
-  ([f m] (into (empty m) (map-val f) m)))
-
+(declare make-world-dumper)
 
 (defn- create-and-send-world-patch [a w]
   (let [pid (:pid a)
         at (get-world-time w)]
     (if (w pid :player)
-      (let [[a snapshot] (take-world-snapshot a w)
-            [a wpatch] (construct-world-patch a snapshot)]
+      (let [ss (:ss-state a)
+            wd (make-world-dumper pid w)
+            [ss' dump] (wd ss w)
+            wpatch (into {} (map (fn [[c d]] [c (vec d)])) dump)]
         (timbre/trace "send to" pid "wpatch" wpatch)
         (send-to-client
          pid
@@ -129,7 +125,7 @@
           :self pid
           :time at
           :ecs wpatch})
-        (assoc a :actual-world w))
+        (assoc a :actual-world w :ss-state ss'))
       (do
         (timbre/trace "player" pid "not in game" a (entity w pid))
         a))))
@@ -140,34 +136,6 @@
     (dosync
      (doseq [[pid a] @avatars]
        (send-off a create-and-send-world-patch w)))))
-
-
-(defn- econcat [& cols]
-  (eduction cat cols))
-
-
-(defn- make-component-patch [prev-cm cm]
-  (into
-   []
-   cat
-   [(eduction  ;; added & updated comps
-     (filter (fn [[eid v]] (not= v (get prev-cm eid))))
-     cm)
-    (eduction  ;; removed comps
-     (comp
-      (filter (fn [[eid _]] (nil? (get cm eid))))
-      (map (fn [[eid _]] [eid nil])))
-     prev-cm)]))
-
-
-(defn- construct-world-patch [a snapshot]
-  (let [last-snapshot (:last-snapshot a)]
-    [(assoc a :last-snapshot snapshot)
-     (into {} (map (fn [[cid cm]]
-                     [cid,
-                      (make-component-patch
-                       (get last-snapshot cid) cm)]))
-           snapshot)]))
 
 
 ;; == World snapshot
@@ -181,35 +149,92 @@
   (eduction (map f) c))
 
 
-(defn convey-component
-  [w & {:keys [cid eids map-fn filter-fn]}]
-  (let [ef (map (fn [eid] [eid (w eid cid)]))
-        ef (if filter-fn (comp ef (filter filter-fn)) ef)
-        ef (if map-fn (comp ef (map-val map-fn)) ef)
-        ees (entity-ids w cid)
-        eids (if eids (eids* eids ees) ees)]
-    (into (im/int-map) ef eids)))
+(defn econcat [c1 c2]
+  (eduction cat [c1 c2]))
 
 
+(defn merge-dumps2 [d1 d2]
+  (merge-with #(eduction cat [%1 %2]) d1 d2))
+
+
+(defn combine-dumpers* [dumpers]
+  (fn [state w]
+    (let [sds (map
+               (fn [[c df]]
+                 (let [s (get state c), [s' d] (df s w)] [c s' d]))
+               dumpers)
+          states (into {} (map (fn [[c s d]] [c s])) sds)
+          dumps (reduce merge-dumps2 (map (fn [[c s d]] d) sds))
+          ]
+    [states dumps])))
+
+
+(defmacro combine-dumpers [& dumpers]
+  `(combine-dumpers*
+    ~(zipmap (repeatedly #(keyword (gensym "ecs_dumper"))) dumpers)))
+
+
+(defn map-val
+  ([f] (map (fn [[k v]] [k (f v)])))
+  ([f m] (into (empty m) (map-val f) m)))
+
+
+(defn cdump [& {cid :cid eids :eids mapf :map fkey :fkey fval :fval}]
+  (fn [{cm' :compmap d' :dump :or {d' {}, cm' {}} :as state} w]
+    (let [cm (component-map w cid)]
+      (if (= cm' cm)
+        [state {}]
+        (let [changed? (fn [[eid s]] (not (when-let [s' (d' eid)] (= s s'))))
+              ef (cond-> identity
+                   fkey (comp (filter fkey))
+                   true (comp (map (fn [eid] [eid (cm eid)])))
+                   true (comp (filter changed?))
+                   fval (comp (filter fval)))
+              eids (cond->> (entity-ids w cid) eids (eids* eids))
+              d-add (into {} ef eids)
+              removed? (fn [eid]
+                         (and
+                          (not (contains? d-add eid))
+                          (or
+                           (not (contains? eids eid))
+                           (and fkey (not (fkey eid)))
+                           (and fval (not (fval (find cm eid)))))))
+              d-rem (into [] (comp (map key) (filter removed?)) d')
+              d (as-> d' $ (apply dissoc $ d-rem) (into $ d-add))]
+          [(assoc state :compmap cm :dump d)
+           {cid (econcat
+                 (eduction (map (fn [x] [x nil])) d-rem)
+                 (if mapf (eduction (map-val mapf) d-add) d-add))}])))))
+
+;; == Dumpers
 ;; TODO: Game logic => move outside this ns.
-(defn take-world-snapshot [a w]
-  (let [pid (:pid a)
-        visible0 (:visible-eids a)
-        player-xy (w pid :position)
-        is-visible? (fn [eid] (when-let [f (w eid :visible?)] (f w pid eid)))
-        visible (into (im/dense-int-set) (filter is-visible?) (entity-ids w :position))
-        cc (partial convey-component w)
-        ]
-    [(assoc a :visible-eids visible),
-     {:type (cc :cid :type, :eids visible)
-      :position (cc :cid :position, :map-fn point->vec, :eids visible)
-      :angle (cc :cid :angle, :eids visible)
-      :layer (cc :cid :layer, :eids visible)
-      :texture (cc :cid :texture, :eids visible)
-      :dangle (cc :cid :dangle, :eids visible)
-      :sprite (cc :cid :sprite, :eids visible)
-      :score (cc :cid :score)
-      :deaths (cc :cid :deaths)
-      :self-player {pid true}
-      :assets (cc :cid :assets)
-      }]))
+
+(defn dumper-only-visible-entities [pid w]
+  (let [player-xy (w pid :position)
+        is-visible? #(when-let [f (w % :visible?)] (f w pid %))
+        visible (into (im/dense-int-set) (filter is-visible?) (entity-ids w :position))]
+    (combine-dumpers
+     (cdump :cid :type, :eids visible)
+     (cdump :cid :position, :map point->vec, :eids visible)
+     (cdump :cid :angle, :eids visible)
+     (cdump :cid :layer, :eids visible)
+     (cdump :cid :texture, :eids visible)
+     (cdump :cid :dangle, :eids visible)
+     (cdump :cid :sprite, :eids visible))))
+
+
+(defn dumper-self-player [pid]
+  (fn [sent w]
+    (if sent
+      [true nil]
+      [true {:self-player [[pid true]]}])))
+
+
+(defn make-world-dumper [pid w]
+  (combine-dumpers
+   (dumper-only-visible-entities pid w)
+    (cdump :cid :score)
+    (cdump :cid :deaths)
+    (cdump :cid :assets)
+    (dumper-self-player pid)
+    ))

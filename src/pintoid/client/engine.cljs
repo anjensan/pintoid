@@ -26,7 +26,7 @@
 
 
 (defn handle-addrem-assets! [w1 w2 wpatch]
-  (foreach! [eid (changed-eids wpatch :assets)]
+  (foreach! [eid (sort (changed-eids wpatch :assets))]
     (foreach! [[id asset] (:assets (entity w2 eid))]
       (as/add-asset id asset))))
 

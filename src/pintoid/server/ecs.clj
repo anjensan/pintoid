@@ -22,6 +22,7 @@
 (defprotocol ImmutableECS
   ;; (ecs 1 :x) ~ (component ecs 1 :x)
   (component [ecs entity-id component-id])
+  (component-map [ecs component-id])
   (component-ids [ecs entity-id])
   (entity-ids [ecs component-id])
   )
@@ -179,6 +180,9 @@
   (component [_ entity-id component-id]
     (when-some [cm (cid-eid-comp component-id)]
       (cm entity-id)))
+
+  (component-map [_ component-id]
+    (cid-eid-comp component-id))
 
   (component-ids [_ entity-id]
     (eid-cids entity-id))
