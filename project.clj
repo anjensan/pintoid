@@ -3,12 +3,12 @@
   :description "Multiplayer asteroid-like game"
 
   :dependencies [[org.clojure/clojure "1.8.0"]
-                 [org.clojure/clojurescript "1.9.93"]
+                 [org.clojure/clojurescript "1.9.225"]
                  [org.clojure/core.async "0.2.385"]
-                 [org.clojure/data.int-map "0.2.2"]
+                 [org.clojure/data.int-map "0.2.3"]
                  [aero/aero "1.0.0"]
                  [cljsjs/pixi "3.0.10-0"]
-                 [com.taoensso/timbre "4.5.1"]
+                 [com.taoensso/timbre "4.7.3"]
                  [compojure/compojure "1.5.1"]
                  [hiccup/hiccup "1.0.5"]
                  [jarohen/chord "0.7.0"]
