@@ -22,21 +22,33 @@
 
   :plugins [[lein-cljsbuild "1.1.3"]
             [lein-shell "0.5.0"]
-            [lein-bin "0.3.4"]]
+            [lein-binplus "0.4.2"]]
 
   :main pintoid.main
   :prep-tasks ["clean" "compile" ["cljsbuild" "once"]]
   :release-tasks [["vcs" "assert-committed"]
-                  ["change" "version" "leiningen.release/bump-version" "release"]
+                  ["change" "version"
+                   "leiningen.release/bump-version" "release"]
                   ["vcs" "commit"]
                   ["vcs" "tag"]
                   ["uberjar"]]
+
   :jar-name "pintoid-onlyclj-%s.jar"
   :uberjar-name "pintoid-%s.jar"
-  :bin {:name "../pintoid" :bootclasspath true}
+  :bin {:name "../pintoid"
+        :jvm-opts
+        ["-server"
+         "-Xms64m"
+         "-Xmx1024m"
+         "-XX:+UseConcMarkSweepGC"
+         "-XX:+UseParNewGC"
+         "-XX:+AggressiveOpts"
+         "-XX:MaxGCPauseMillis=10"]}
+
   :resource-paths ["resources" "target/resources"]
   :aliases {"jar" "uberjar"
-            "run-prod" ["do" "uberjar," "shell" "java" "-jar" "target/pintoid-${:version}.jar"]}
+            "run-prod" ["do" "uberjar," "shell" "java" "-jar"
+                        "target/pintoid-${:version}.jar"]}
 
   :cljsbuild
   {:builds
@@ -63,8 +75,8 @@
                      :compiler {:optimizations :advanced
                                 :elide-asserts true}}}}}
 
-   :dev [:dev-cljs {:dependencies [[criterium/criterium "0.4.4"]]}]
-   :prod [:prod-cljs]
+   :repl [:dev-cljs {:dependencies [[criterium/criterium "0.4.4"]]}]
+   :prod [:prod-cljs {}]
    :uberjar [:prod {:aot :all :auto-clean true}]
    }
   )
