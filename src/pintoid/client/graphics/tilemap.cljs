@@ -70,28 +70,41 @@
 
 (defjsclass TilemapSpriteImpl js/PIXI.Container
 
-  (constructor [this [twidth theight] bounds advance create-tile]
+  (constructor [this [twidth theight] bounds tile-advance view-advance create-tile]
     (call-super TilemapSpriteImpl this .constructor)
     (set! (.-tiles this) {})
+    (set! (.-extravr this) (or view-advance 0))
     (set! (.-params this)
           {:twidth twidth
            :theight theight
            :bounds bounds
-           :advance (or advance 0)
+           :advance (or tile-advance 0)
            :create-tile create-tile}))
 
-  (updateTransform [this]
-    (call-super TilemapSpriteImpl this .updateTransform)
-    (.recreateTiles this))
+  ("updateTransform" [this]
+   (call-super TilemapSpriteImpl this "updateTransform")
+   (let [wt (aget this "worldTransform")
+         tx' (aget wt "tx"), ty' (aget wt "ty")
+         [tx ty] (.-oldtxy this)
+         [[vrx1 vry1] [vrx2 vry2] :as vrect] (gl/get-sprite-view-rect this)
+         mt (.-extravr this)
+         mtx (* mt (- vrx2 vrx1))
+         mty (* mt (- vry2 vry1))]
+     (when (or
+          (> (js/Math.abs (- tx tx')) mtx)
+          (> (js/Math.abs (- ty ty')) mty))
+       (set! (.-oldtxy this) [tx' ty'])
+       (.recreateTiles
+        this
+        wt
+        [[(- vrx1 mtx) (- vry1 mty)]
+         [(+ vrx2 mtx) (+ vry2 mty)]]))))
 
-  (recreateTiles [this]
+  (recreateTiles [this wt vrect]
     (let [{:keys [bounds twidth theight advance create-tile]} (.-params this)
           tiles (.-tiles this)
-          vrect (gl/get-sprite-view-rect this)
-          tx (.. this -worldTransform -tx)
-          ty (.. this -worldTransform -ty)
-          wt (.. this
-                 -worldTransform
+          tx (aget wt "tx"), ty (aget wt "ty")
+          wt (.. wt
                  (clone)
                  (translate (- tx) (- ty))
                  (scale twidth theight)
@@ -116,6 +129,7 @@
 (defn make-tilemap-sprite-factory
   [create-tile
    {:keys [cache-as-bitmap
+           view-advance
            tile-bounds
            tile-advance
            tile-size
@@ -123,6 +137,7 @@
     :or {cache-as-bitmap false
          tile-bounds [[-inf -inf] [+inf +inf]]
          tile-advance 0.5
+         view-advance 0.125
          tile-size [32 32]
          tile-group [1 1]}
     :as proto}]
@@ -149,4 +164,4 @@
         tadvance (/ tile-advance (min gw gh))]
     (fn [_]
       (TilemapSpriteImpl.
-       tsize tbounds tadvance create-group))))
+       tsize tbounds tadvance view-advance create-group))))

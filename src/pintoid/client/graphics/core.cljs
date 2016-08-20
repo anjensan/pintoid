@@ -1,5 +1,6 @@
 (ns pintoid.client.graphics.core
   (:require
+   [cljsjs.pixi]
    [pintoid.client.graphics.animation :as a]
    [pintoid.client.graphics.layer :as gl]
    [pintoid.client.graphics.sprite :as s]

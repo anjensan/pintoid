@@ -1,5 +1,6 @@
 (ns pintoid.client.graphics.utils
   (:require
+   [cljsjs.pixi]
    [clojure.string :refer [upper-case]]))
 
 (def ^:const pi js/Math.PI)

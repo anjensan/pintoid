@@ -21,13 +21,18 @@
 
 (defmacro call-super
   [class this method & args]
-  (let [m (name method)
-        n (if (re-matches #"\..+" m) (subs m 1) m)
-        mi (symbol (str ".-" n))]
+  (if (string? method)
     `(.apply
-      (~mi (.getPrototypeOf js/Object (.-prototype ~class)))
+      (aget (.getPrototypeOf js/Object (.-prototype ~class)) ~method)
       ~this
-      (cljs.core/array ~@args))))
+      (cljs.core/array ~@args))
+    (let [m (name method)
+          n (if (re-matches #"\..+" m) (subs m 1) m)
+          mi (symbol (str ".-" n))]
+      `(.apply
+        (~mi (.getPrototypeOf js/Object (.-prototype ~class)))
+        ~this
+        (cljs.core/array ~@args)))))
 
 
 (defmacro defjsclass [class-name parent-class & ctor-and-methods]
@@ -41,5 +46,7 @@
          ~(ctor-with-this-arg ctor-body))
        (goog/inherits ~class-name ~parent-class)
        ~@(for [[mname & mbody] methods]
-           `(set! (.. ~class-name -prototype ~(symbol (str "-" mname)))
-                  ~(fn-with-this-arg mbody))))))
+           (if (string? mname)
+             `(aset (.. ~class-name -prototype) ~(str mname) ~(fn-with-this-arg mbody))
+             `(set! (.. ~class-name -prototype ~(symbol (str "-" mname))) ~(fn-with-this-arg mbody))
+             )))))

@@ -1,5 +1,6 @@
 (ns pintoid.client.graphics.animation
   (:require
+   [cljsjs.pixi]
    [pintoid.client.graphics.animloop :refer [animate!]]
    [pintoid.client.graphics.utils :refer [pi2]])
   (:require-macros

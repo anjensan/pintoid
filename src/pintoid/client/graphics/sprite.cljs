@@ -121,8 +121,11 @@
     (when-let [rotation (get props :rotation)] (set! (.-rotation obj) rotation))
     (when-let [alpha (get props :alpha)] (set! (.-alpha obj) alpha))
     (when-let [visible (get props :visible)] (set! (.-visible obj) visible))
-    (when-let [bm (get props :blend-mode)] (set! (.-blendMode obj) (->blendmode bm)))
-    (when-let [anchor (get props :anchor)] (set! (.-anchor obj) (->point anchor))))
+    (when-let [anchor (get props :anchor)] (set! (.-anchor obj) (->point anchor)))
+    (when-let [bm (get props :blend-mode)]
+      ;; FIXME: Temp workaround - 'blendMode' is not externed in cljsjs.pixi.
+      (aset obj "blendMode" (->blendmode bm)))
+    )
   obj)
 
 
