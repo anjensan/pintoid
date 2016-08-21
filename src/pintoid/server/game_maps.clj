@@ -148,8 +148,16 @@
      :layer/starsky2 {:class :layer :parallax 0.60 :zorder -980}
      :layer/starsky3 {:class :layer :parallax 0.95 :zorder -970}
      :layer/starsky4 {:class :layer :parallax 1.15 :zorder 100}
-     :layer/lstars1 {:class :layer :parallax 1 :zorder -100}
-     :texture/starsky {:class :texture :image "/img/starsky.jpeg"}}}
+     :layer/lstars1 {:class :layer :zorder -100}
+     :layer/hud-scores {:class :layer :zorder 100}
+     :sprite/player-score {:class :sprite :type :text
+                           :anchor [0.5 2.5]
+                           :style {"fill" "white"
+                                   "font" "normal 18px Arial"}}
+     }}
+
+   {:assets
+    {:texture/starsky {:class :texture :image "/img/starsky.jpeg"}}}
 
    {:assets
     (reduce
@@ -170,56 +178,60 @@
     :position (->Vector 200 135)
     :visible? (constantly true)
     :layer :layer/starsky1
-    :sprite {:class :sprite
-             :type :random-tilemap
-             :hash-seed "l2"
-             :tile-size [512 512]
-             :tile-group [2 2]
-             :alpha 0.5
-             :scale 0.5
-             :tiles (vec (for [c (range 8), r (range 4)]
-                           (keyword "sprite" (str "starsky-" c "x" r))))}}
+    :sprite {nil
+             {:class :sprite
+              :type :random-tilemap
+              :hash-seed "l2"
+              :tile-size [512 512]
+              :tile-group [2 2]
+              :alpha 0.5
+              :scale 0.5
+              :tiles (vec (for [c (range 8), r (range 4)]
+                            (keyword "sprite" (str "starsky-" c "x" r))))}}}
 
    {:type :starsky-sprite
     :position (->Vector 100 450)
     :visible? (constantly true)
     :layer :layer/starsky2
-    :sprite {:class :sprite
-             :type :random-tilemap
-             :hash-seed "l1"
-             :tile-size [512 512]
-             :tile-group [2 2]
-             :alpha 0.65
-             :scale 0.75
-             :tiles (vec (for [c (range 8), r (range 4)]
-                           (keyword "sprite" (str "starsky-" c "x" r))))}}
+    :sprite {nil
+             {:class :sprite
+              :type :random-tilemap
+              :hash-seed "l1"
+              :tile-size [512 512]
+              :tile-group [2 2]
+              :alpha 0.65
+              :scale 0.75
+              :tiles (vec (for [c (range 8), r (range 4)]
+                            (keyword "sprite" (str "starsky-" c "x" r))))}}}
 
    {:type :starsky-sprite
     :position (->Vector 0 0)
     :visible? (constantly true)
     :layer :layer/starsky3
-    :sprite {:class :sprite
-             :type :random-tilemap
-             :hash-seed "l3"
-             :tile-size [512 512]
-             :tile-group [2 2]
-             :alpha 0.85
-             :tiles (vec (for [c (range 8), r (range 4)]
-                           (keyword "sprite" (str "starsky-" c "x" r))))}}
+    :sprite {nil
+             {:class :sprite
+              :type :random-tilemap
+              :hash-seed "l3"
+              :tile-size [512 512]
+              :tile-group [2 2]
+              :alpha 0.85
+              :tiles (vec (for [c (range 8), r (range 4)]
+                            (keyword "sprite" (str "starsky-" c "x" r))))}}}
 
    {:type :starsky-sprite
     :position (->Vector 0 0)
     :visible? (constantly true)
     :layer :layer/starsky4
-    :sprite {:class :sprite
-             :type :random-tilemap
-             :hash-seed "l4"
-             :tile-size [512 512]
-             :tile-group [2 2]
-             :alpha 0.05
-             :scale 2
-             :tiles (vec (for [c (range 8), r (range 4)]
-                           (keyword "sprite" (str "starsky-" c "x" r))))}}
+    :sprite {nil
+             {:class :sprite
+              :type :random-tilemap
+              :hash-seed "l4"
+              :tile-size [512 512]
+              :tile-group [2 2]
+              :alpha 0.05
+              :scale 2
+              :tiles (vec (for [c (range 8), r (range 4)]
+                            (keyword "sprite" (str "starsky-" c "x" r))))}}}
 
    (simple-sprite :racket-blue "racket_blue.png")
    (simple-sprite :racket-red "racket_red.png")

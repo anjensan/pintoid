@@ -49,12 +49,12 @@
 
 (defn- get-layer-pixi-obj [lid]
   (let [ls @layers
-        lid (or lid :default)
+        lid (or lid :layer/default)
         lo (if (contains? ls lid)
              (get ls lid)
              (do
                (timbre/warnf "Unknown layer %s" lid)
-               (get ls :default)))]
+               (get ls :layer/default)))]
    (get lo :pixi-obj)))
 
 

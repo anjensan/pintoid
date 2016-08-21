@@ -111,6 +111,18 @@
     ))
 
 
+(defn format-player-score [entity]
+  (str (:score entity)))
+
+
+(defn handle-players-score [w1 w2 wpatch]
+  (foreach! [eid (changed-eids wpatch :score)]
+    (when-let [s (g/get-sprite eid :score-label)]
+      (let [t (format-player-score (entity w2 eid))]
+        (al/add-action!
+          (world-time w2)
+          #(set! (.-text s) t))))))
+
 
 (defn handle-add-sprites [w1 w2 wpatch]
   (foreach! [eid (changed-eids wpatch :sprite)]
@@ -129,8 +141,16 @@
        #(remove-entity-sprite (entity w1 eid))))))
 
 
+(defmethod add-entity-sprite :player [entity]
+  (let [eid (:eid entity)
+        sprite (if (:self-player entity) :racket-red :racket-blue)]
+    (g/new-sprite eid sprite entity)
+    (g/new-sprite eid :score-label :sprite/player-score
+                  (assoc entity :text (format-player-score entity)))))
 
 
+(defmethod select-entity-sprites [:rotate :player] [_ entity]
+  [(g/get-sprite (:eid entity))])
 
 
 (defn update-world-snapshot! [wpatch]
@@ -140,5 +160,6 @@
     (handle-add-sprites w1 w2 wpatch)
     (handle-sprites-movement w1 w2 wpatch)
     (handle-sprites-rotation w1 w2 wpatch)
+    (handle-players-score w1 w2 wpatch)
     (handle-player-camera-pos w1 w2 wpatch)
     (reset! world w2)))
