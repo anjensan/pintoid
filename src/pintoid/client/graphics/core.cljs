@@ -12,28 +12,6 @@
 (def pixi-stage nil)
 (def pixi-renderer nil)
 
-(def player-score-value (js/PIXI.Text. "Score: 0"))
-(def player-death-value (js/PIXI.Text. "Death: 0"))
-
-(declare texture-url)
-(declare get-texture)
-(declare load-all-textures)
-
-;; --
-
-(defn init-pixi-labels []
-  (let [score-pos (.-position player-score-value)
-        death-pos (.-position player-death-value)
-        style (js-obj "fill" "white" "font" "normal 22px Arial")]
-    ;; TODO: Move to ::layer/hud.
-    (set! (.-x score-pos) 3)
-    (set! (.-y score-pos) 3)
-    (set! (.-x death-pos) 3)
-    (set! (.-y death-pos) 27)
-    (set! (.-style player-score-value) style)
-    (set! (.-style player-death-value) style)
-    (.addChild pixi-stage player-score-value)
-    (.addChild pixi-stage player-death-value)))
 
 
 (defn- scale-canvas-to-window [c]
@@ -69,16 +47,6 @@
      (when pixi-renderer
        (scale-canvas-to-window canvas))))
   (scale-canvas-to-window canvas))
-
-
-(defn update-player-score! [value]
-  (let [text (str "Score: " value)]
-    (set! (.-text player-score-value) text)))
-
-
-(defn update-player-death! [value]
-  (let [text (str "Death: " value)]
-    (set! (.-text player-death-value) text)))
 
 
 (defn init-pixi-renderer [width height]

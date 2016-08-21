@@ -70,9 +70,7 @@
         p1 (player-entity w1)
         p2 (player-entity w2)
         [x1 y1] (:position p1)
-        [x2 y2] (:position p2)
-        deaths (:deaths p2)
-        score (:score p2)]
+        [x2 y2] (:position p2)]
     (a/linear-animate
      "camera-x" t1 t2 x1 x2
      (fn [x]
@@ -83,11 +81,7 @@
      (fn [y]
        (set! camera-y y)
        (gl/set-viewport! camera-x camera-y 1)))
-    (al/add-action!
-     t2
-     (fn []
-       (g/update-player-score! score)
-       (g/update-player-death! deaths)))))
+    ))
 
 
 (defmulti add-entity-sprite (fn [eid e] (:type e)))

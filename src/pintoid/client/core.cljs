@@ -41,9 +41,6 @@
   (let [c (g/init-pixi-renderer 3200 1800)]
     (d/append! (sel1 :body) c)
     (g/init-autoscaling c))
-  (g/init-pixi-labels)
-  (g/update-player-death! 0)
-  (g/update-player-score! 0)
   (spawn-user-input-sender get-user-input-state)
   (drawing-loop 0))
 
