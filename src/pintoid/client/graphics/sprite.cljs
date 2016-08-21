@@ -49,7 +49,6 @@
 (defmethod as/load-asset :texture [id tinfo]
   ;; TODO: Invalidate/recreate/mark all affected sprites.
   (let [t (create-texture-object tinfo)]
-    (set! (.-zz t) id)
     (js/PIXI.Texture.addTextureToCache (name id) t)
     (swap! textures assoc id t)))
 
@@ -138,6 +137,15 @@
   obj)
 
 
+(defn set-text-properties! [obj props]
+  (when props
+    (when-let [text (get props :text)]
+      (set! (.-text obj) text))
+    (when-let [style (get props :style)]
+      (set! (.-style obj) (clj->js style))))
+  obj)
+
+
 (defmethod create-sprite-factory :default [proto]
   (timbre/warnf "Unknown sprite: %s" proto)
   (create-sprite-factory empty-sprite-proto))
@@ -194,3 +202,12 @@
       (-> (afactory props)
           (set-sprite-properties! proto)
           (set-sprite-properties! props)))))
+
+
+(defmethod create-sprite-factory :text [proto]
+  (fn [props]
+    (-> (js/PIXI.Text. (:text props ""))
+        (set-sprite-properties! proto)
+        (set-text-properties! proto)
+        (set-sprite-properties! props)
+        (set-text-properties! props))))
