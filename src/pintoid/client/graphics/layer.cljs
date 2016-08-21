@@ -96,5 +96,5 @@
   (set! (.. lcontainer -position -y) (/ height 2))
   (set! (.. lcontainer -viewrect) #js [[0 0] [width height]])
   (reset! camera-size (constantly [width height]))
-  (as/add-asset :default {:class :layer})
+  (as/add-asset :layer/default {:class :layer})
   lcontainer)

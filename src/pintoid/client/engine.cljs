@@ -25,46 +25,73 @@
 (def world (atom (empty-world)))
 
 
-(defn handle-addrem-assets! [w1 w2 wpatch]
+(defmulti add-entity-sprite :type)
+(defmulti remove-entity-sprite :type)
+
+(defmethod add-entity-sprite :default [entity]
+  (let [s (:sprite entity)
+        eid (:eid entity)]
+    (if (map? s)
+      (foreach! [[k v] s] (g/new-sprite eid k v entity))
+      (g/new-sprite eid nil s entity))))
+
+(defmethod remove-entity-sprite :default [entity]
+  (g/remove-sprites-by-eid (:eid entity)))
+
+
+(defmulti select-entity-sprites
+  (fn [purpose entity] [purpose (:type entity)]))
+
+(defmethod select-entity-sprites :default [_ entity]
+  (g/find-sprites-by-eid (:eid entity)))
+
+(defn- foreach-entity-sprite [action entity f]
+  (run! #(when % (f %)) (select-entity-sprites action entity)))
+
+
+
+(defn handle-addrem-assets [w1 w2 wpatch]
   (foreach! [eid (sort (changed-eids wpatch :assets))]
     (foreach! [[id asset] (:assets (entity w2 eid))]
       (as/add-asset id asset))))
 
 
-(defn handle-sprites-movement! [w1 w2 wpatch]
+(defn handle-sprites-movement [w1 w2 wpatch]
   (let [t1 (world-time w1)
         t2 (world-time w2)]
     (foreach! [eid (changed-eids wpatch :position)]
-      (when-let [obj (g/get-sprite eid)]
-        (let [e1 (entity w1 eid)
-              e2 (entity w2 eid)
-              xy1 (:position e1)
-              xy2 (:position e2)]
-          (when (and xy2 (not= xy1 xy2))
-            (if xy1
-              (a/linear-move obj t1 t2 xy1 xy2)
-              (a/instant-move obj t1 t2 xy2))))))))
+      (let [e1 (entity w1 eid)
+            e2 (entity w2 eid)
+            xy1 (:position e1)
+            xy2 (:position e2)]
+        (when (and xy2 (not= xy1 xy2))
+          (foreach-entity-sprite :move e2
+            (fn [obj]
+              (if xy1
+                (a/linear-move obj t1 t2 xy1 xy2)
+                (a/instant-move obj t1 t2 xy2)))))))))
 
 
-(defn handle-sprites-rotation! [w1 w2 wpatch]
+(defn handle-sprites-rotation [w1 w2 wpatch]
   (let [t1 (world-time w1)
         t2 (world-time w2)]
     (foreach! [eid (changed-eids wpatch :angle)]
-      (when-let [obj (g/get-sprite eid)]
-        (let [e1 (entity w1 eid)
-              e2 (entity w2 eid)
-              a1 (:angle e1)
-              a2 (:angle e2)]
-          (when (and a2 (not= a1 a2))
-            (if a1
-              (a/linear-rotate obj t1 t2 a1 a2)
-              (a/instant-rotate obj t1 t2 a2))))))))
+      (let [e1 (entity w1 eid)
+            e2 (entity w2 eid)
+            a1 (:angle e1)
+            a2 (:angle e2)]
+        (when (and a2 (not= a1 a2))
+          (foreach-entity-sprite :rotate e2
+            (fn [obj]
+              (if a1
+                (a/linear-rotate obj t1 t2 a1 a2)
+                (a/instant-rotate obj t1 t2 a2)))))))))
 
 
 (def camera-x 0)
 (def camera-y 0)
 
-(defn handle-player-state! [w1 w2 wpatch]
+(defn handle-player-camera-pos [w1 w2 wpatch]
   (let [t2 (world-time w2)
         t1 (world-time w1)
         p1 (player-entity w1)
@@ -84,8 +111,6 @@
     ))
 
 
-(defmulti add-entity-sprite (fn [eid e] (:type e)))
-(defmulti remove-entity-sprite (fn [eid e] (:type e)))
 
 (defn handle-add-sprites [w1 w2 wpatch]
   (foreach! [eid (changed-eids wpatch :sprite)]
@@ -93,37 +118,27 @@
       (when (:sprite entity)
         (al/add-action!
          (world-time w2)
-         #(add-entity-sprite eid entity))))))
+         #(add-entity-sprite entity))))))
 
 
 (defn handle-remove-sprites [w1 w2 wpatch]
   (foreach! [eid (changed-eids wpatch :sprite), :xf (filter #())]
     (when-not (:sprite (entity w2 eid))
-      (when-let [obj (g/get-sprite eid)]
-        (al/add-action!
-         (world-time w2)
-         #(remove-entity-sprite eid (entity w1 eid)))))))
+      (al/add-action!
+       (world-time w2)
+       #(remove-entity-sprite (entity w1 eid))))))
 
 
-(defmethod add-entity-sprite :default [eid entity]
-  (g/new-sprite entity))
 
 
-(defmethod remove-entity-sprite :default [eid entity]
-  (g/remove-sprite eid))
-
-
-(defmethod add-entity-sprite :player [eid entity]
-  (let [sprite (if (:self-player entity) :racket-red :racket-blue)]
-    (g/new-sprite (assoc entity :sprite sprite))))
 
 
 (defn update-world-snapshot! [wpatch]
   (let [w1 @world, [w2 wpatch'] (apply-world-patch w1 wpatch)]
-    (handle-addrem-assets! w1 w2 wpatch)
+    (handle-addrem-assets w1 w2 wpatch)
     (handle-remove-sprites w1 w2 wpatch)
     (handle-add-sprites w1 w2 wpatch)
-    (handle-sprites-movement! w1 w2 wpatch)
-    (handle-sprites-rotation! w1 w2 wpatch)
-    (handle-player-state! w1 w2 wpatch)
+    (handle-sprites-movement w1 w2 wpatch)
+    (handle-sprites-rotation w1 w2 wpatch)
+    (handle-player-camera-pos w1 w2 wpatch)
     (reset! world w2)))

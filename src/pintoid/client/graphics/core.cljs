@@ -4,15 +4,17 @@
    [pintoid.client.graphics.animation :as a]
    [pintoid.client.graphics.layer :as gl]
    [pintoid.client.graphics.sprite :as s]
-   [pintoid.client.graphics.tilemap]))
+   [pintoid.client.graphics.tilemap])
+  (:require-macros
+   [taoensso.timbre :as timbre]
+   [pintoid.client.macros :refer [foreach!]]))
 
 
-;; entity id -> sprite object (DisplayObject)
 (def sprites (atom {}))
-(def pixi-stage nil)
+(def sprites-nil (atom {}))
+
+(def pixi-layers nil)
 (def pixi-renderer nil)
-
-
 
 (defn- scale-canvas-to-window [c]
   (let [w js/window
@@ -51,33 +53,69 @@
 
 (defn init-pixi-renderer [width height]
   (set! pixi-renderer (js/PIXI.autoDetectRenderer width height))
-  (set! pixi-stage (gl/init-layers-container width height))
+  (set! pixi-layers (gl/init-layers-container width height))
   (.-view pixi-renderer))
 
 
-(defn get-sprite [eid]
-  (get @sprites eid))
+(defn get-sprite
+  ([eid]
+   (get @sprites-nil eid))
+  ([eid sid]
+   (if (nil? sid)
+     (get @sprites-nil eid)
+     (get (get @sprites eid) sid))))
 
 
-(defn remove-sprite [eid]
-  (when-let [obj (get @sprites eid)]
+(defn find-sprites-by-eid [eid]
+  (when-let [s (get @sprites eid)]
+    (vals s)))
+
+
+(defn- destroy-sprite [obj]
+  (when obj
     (when-let [p (.-parent obj)]
       (.removeChild p obj))
-    (swap! sprites dissoc eid)
     (.destroy obj)))
 
 
-(defn new-sprite [entity]
-  (when-let [eid (:eid entity)]
-    (when-let [old-obj (get @sprites eid)]
-      (.removeChild (.-parent old-obj) old-obj))
-    (let [sprite-spec (s/get-sprite-spec (:sprite entity))
-          layer-id (or (:layer entity) (:layer sprite-spec))
-          sprite (s/make-sprite (:sprite entity) entity)]
-      (gl/layer-add layer-id sprite)
-      (swap! sprites assoc eid sprite)
-      sprite)))
+(defn remove-sprites-by-eid [eid]
+  (when-let [m (get @sprites eid)]
+    (doseq [s (vals m)]
+      (destroy-sprite s))
+    (swap! sprites dissoc eid)
+    (swap! sprites-nil dissoc eid)))
+
+
+(defn remove-sprite
+  ([eid]
+   (remove-sprite eid nil))
+  ([eid sid]
+   (let [ss @sprites
+         m (get ss eid)]
+     (when-let [s (get m sid)]
+       (let [m' (dissoc m sid)]
+         (if (empty m')
+           (swap! sprites dissoc eid)
+           (swap! sprites assoc eid m')))
+       (destroy-sprite s)))))
+
+
+(defn new-sprite
+  ([eid sprite props]
+   (new-sprite eid nil sprite props))
+  ([eid sid sprite props]
+   (timbre/trace "Create sprite" sprite "for" [eid sid])
+   (when-let [old-obj (get-sprite eid sid)]
+     (.removeChild (.-parent old-obj) old-obj))
+   (let [sprite-spec (s/get-sprite-spec sprite)
+         layer-id (or (:layer props) (:layer sprite-spec))
+         sprite (s/make-sprite sprite props)]
+     (gl/layer-add layer-id sprite)
+     (swap! sprites assoc-in [eid sid] sprite)
+     (when (nil? sid)
+       (swap! sprites-nil assoc eid sprite))
+     sprite)))
 
 
 (defn render-graphics! []
-  (.render pixi-renderer pixi-stage))
+  (.render pixi-renderer pixi-layers))
