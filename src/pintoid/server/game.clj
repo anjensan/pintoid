@@ -149,9 +149,9 @@
               (some #(not= eid (:owner (w % :bullet))) cw))
          (let [all-bullets-owners (keep #(:owner (w % :bullet)) cw)
                bullets-owners (remove #(= eid %) all-bullets-owners)]
-           (as-> w' w
-             (reduce inc-player-score w' bullets-owners)
-             (kill-player w' eid)))
+           (as-> w' $
+             (reduce inc-player-score $ bullets-owners)
+             (kill-player $ eid)))
 
          ;; everything kills bullet except other bullets & players
          (and (= et :bullet) (not-any? #{:bullet :player} cwt))
@@ -267,8 +267,7 @@
 
 
 (defn inc-player-score [w eid]
-  (if-let [{:keys [score] :as ps} (w eid :player)]
-    (conj w [eid :score (inc (w eid :score 0))])))
+  (conj w [eid :score (inc (w eid :score 0))]))
 
 
 (defn kill-player [w eid]
@@ -276,7 +275,7 @@
     (-> w
         (conj [eid :position xy'])
         (conj [eid :velocity nil])
-        (conj [eid :deaths (inc (w eid :deaths 0))]))))
+        (conj [eid :score (dec (w eid :score 0))]))))
 
 
 (defn entity-out-of-gamefield? [w eid]

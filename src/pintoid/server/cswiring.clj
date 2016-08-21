@@ -218,8 +218,6 @@
      (cdump :cid :position, :map point->vec, :eids visible)
      (cdump :cid :angle, :eids visible)
      (cdump :cid :layer, :eids visible)
-     (cdump :cid :texture, :eids visible)
-     (cdump :cid :dangle, :eids visible)
      (cdump :cid :sprite, :eids visible))))
 
 
@@ -234,7 +232,6 @@
   (combine-dumpers
    (dumper-only-visible-entities pid w)
     (cdump :cid :score)
-    (cdump :cid :deaths)
     (cdump :cid :assets)
     (dumper-self-player pid)
     ))

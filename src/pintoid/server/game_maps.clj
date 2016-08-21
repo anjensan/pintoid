@@ -69,7 +69,7 @@
    :visible? sprite-is-visible-by-player?
    })
 
-(defn star [xy mass radius sprite dangle]
+(defn star [xy mass radius sprite]
   {
    :type :star
    :position xy
@@ -77,12 +77,11 @@
    :phys-act true
    :sprite sprite
    :radius radius
-   :dangle dangle
    :layer :layer/lstars1
    :visible? sprite-is-visible-by-player?
    })
 
-(defn planet [xy mass radius sprite dangle]
+(defn planet [xy mass radius sprite]
   {
    :type :planet
    :position xy
@@ -90,11 +89,10 @@
    :phys-act true
    :sprite sprite
    :radius radius
-   :dangle dangle
    :visible? sprite-is-visible-by-player?
    })
 
-(defn asteroid [xy mass radius sprite dangle]
+(defn asteroid [xy mass radius sprite]
   {
    :type :ast
    :position xy
@@ -102,11 +100,10 @@
    :phys-move true
    :sprite sprite
    :radius radius
-   :dangle dangle
    :visible? sprite-is-visible-by-player?
    })
 
-(defn black-hole [xy dangle]
+(defn black-hole [xy]
   {
    :type :black
    :position xy
@@ -114,7 +111,6 @@
    :phys-act true
    :sprite :black-hole
    :radius 1
-   :dangle dangle
    :visible? sprite-is-visible-by-player?
    })
 
@@ -272,27 +268,27 @@
                                       :child {:type :sprite :texture "/img/black1.png" :anchor [0.5 0.5]}}]}}
      }}
 
-   (black-hole (->Vector 0 0) 0.2)
-   (star (->Vector -2100 -1350) 500 33 :star1 0.1)
-   (star (->Vector 1200 500) 2000 20 :star2 0.1)
-   (star (->Vector -900 -700) 1000 66 :star3 0.1)
-   (star (->Vector 400 300) 175 70 :star2 0.1)
-   (star (->Vector -1600 1000) 1750 70 :star3 0.1)
+   (black-hole (->Vector 0 0))
+   (star (->Vector -2100 -1350) 500 33 :star1)
+   (star (->Vector 1200 500) 2000 20 :star2)
+   (star (->Vector -900 -700) 1000 66 :star3)
+   (star (->Vector 400 300) 175 70 :star2)
+   (star (->Vector -1600 1000) 1750 70 :star3)
 
-   (planet (->Vector -2440 -900) 150 10 :planet1 0.1)
-   (planet (->Vector 10 -100) 100 9 :planet1 0.1)
-   (planet (->Vector 900 -2140) 200 11 :planet2 0.1)
-   (planet (->Vector -900 -2240) 200 11 :planet1 0.1)
+   (planet (->Vector -2440 -900) 150 10 :planet1)
+   (planet (->Vector 10 -100) 100 9 :planet1)
+   (planet (->Vector 900 -2140) 200 11 :planet2)
+   (planet (->Vector -900 -2240) 200 11 :planet1)
 
-   (asteroid (->Vector -1220 -1232) 50 3 :ast1 0.1)
-   (asteroid (->Vector -200 -300) 50 3 :ast2 0.1)
-   (asteroid (->Vector -920 -700) 70 3 :ast3 0.1)
-   (asteroid (->Vector 1900 1500) 80 3 :ast4 0.1)
-   (asteroid (->Vector 2100 -1110) 80 3 :ast1 0.1)
-   (asteroid (->Vector -1920 -1232) 50 3 :ast1 0.1)
-   (asteroid (->Vector -200 -300) 50 3 :ast2 0.1)
-   (asteroid (->Vector -320 -710) 70 3 :ast3 0.1)
-   (asteroid (->Vector 100 -1000) 80 3 :ast4 0.1)
-   (asteroid (->Vector 110 -310) 80 3 :ast1 0.1)
+   (asteroid (->Vector -1220 -1232) 50 3 :ast1)
+   (asteroid (->Vector -200 -300) 50 3 :ast2)
+   (asteroid (->Vector -920 -700) 70 3 :ast3)
+   (asteroid (->Vector 1900 1500) 80 3 :ast4)
+   (asteroid (->Vector 2100 -1110) 80 3 :ast1)
+   (asteroid (->Vector -1920 -1232) 50 3 :ast1)
+   (asteroid (->Vector -200 -300) 50 3 :ast2)
+   (asteroid (->Vector -320 -710) 70 3 :ast3)
+   (asteroid (->Vector 100 -1000) 80 3 :ast4)
+   (asteroid (->Vector 110 -310) 80 3 :ast1)
 
    ])
