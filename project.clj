@@ -56,6 +56,7 @@
            :compiler {:output-to "target/resources/js/pintoid.js"
                       :language-in :ecmascript5
                       :language-out :ecmascript5
+                      :optimizations :whitespace
                       :main pintoid.client.core}}}}
 
   :profiles
@@ -76,6 +77,7 @@
                                 :elide-asserts true}}}}}
 
    :repl [:dev-cljs {:dependencies [[criterium/criterium "0.4.4"]]}]
+   :dev [:dev-cljs]
    :prod [:prod-cljs {}]
    :uberjar [:prod {:aot :all :auto-clean true}]
    }
