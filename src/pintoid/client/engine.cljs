@@ -67,7 +67,7 @@
         (when (and xy2 (not= xy1 xy2))
           (foreach-entity-sprite :move e2
             (fn [obj]
-              (if xy1
+              (if (and xy1 (= (:position-tts e1) (:position-tts e2)))
                 (a/linear-move obj t1 t2 xy1 xy2)
                 (a/instant-move obj t1 t2 xy2)))))))))
 

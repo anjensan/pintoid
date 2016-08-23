@@ -216,6 +216,7 @@
     (combine-dumpers
      (cdump :cid :type, :eids visible)
      (cdump :cid :position, :map point->vec, :eids visible)
+     (cdump :cid :position-tts, :eids visible)
      (cdump :cid :angle, :eids visible)
      (cdump :cid :layer, :eids visible)
      (cdump :cid :sprite, :eids visible))))

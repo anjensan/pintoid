@@ -41,6 +41,7 @@
 
 (defstate last-stable-world :start (atom nil))
 (defstate users-input :start (atom {}))
+(defstate teleport-counter :start (atom 0))
 (defstate world
   :start (init-game-state (agent (create-ecs)))
   :stop (stop-world-agent world))
@@ -274,6 +275,7 @@
   (let [xy' (search-new-player-pos w eid)]
     (-> w
         (conj [eid :position xy'])
+        (conj [eid :position-tts (swap! teleport-counter inc)])
         (conj [eid :velocity nil])
         (conj [eid :score (dec (w eid :score 0))]))))
 
