@@ -143,7 +143,7 @@
 
 (defmethod add-entity-sprite :player [entity]
   (let [eid (:eid entity)
-        sprite (if (:self-player entity) :racket-red :racket-blue)]
+        sprite (if (:self-player entity) :sprite/racket-red :sprite/racket-blue)]
     (g/new-sprite eid sprite entity)
     (g/new-sprite eid :score-label :sprite/player-score
                   (assoc entity :text (format-player-score entity)))))

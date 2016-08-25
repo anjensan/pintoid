@@ -1,10 +1,12 @@
 (ns pintoid.server.game
   (:use
-   [pintoid.server utils math game-maps ecs])
+   [pintoid.server utils math ecs game-maps])
   (:require
    [mount.core :refer [defstate]]
    [taoensso.timbre :as timbre]
-   [pintoid.server.ecs :as ecs]))
+   [pintoid.server.ecs :as ecs]
+   [pintoid.server.game-maps :as gm]
+   ))
 
 ;; -- api
 (declare fix-world-state)
@@ -67,13 +69,13 @@
    world
    (fn [w]
      (let [xy (search-new-player-pos w eid)]
-       (add-entity w eid (merge player-proto {:player true :position xy}))))))
+       (add-entity w eid (assoc gm/player :player true, :position xy))))))
 
 (defn game-process-user-input [eid user-input]
   (swap! users-input assoc eid user-input))
 
 (defn init-game-state [world]
-  (send world sys-init-world-state (game-map)))
+  (send world sys-init-world-state (gm/game)))
 
 ;; --
 
@@ -189,7 +191,7 @@
       (let [xy (w eid :position)
             m (w eid :mass 1)
            fxy (reduce
-                #(v+ %1 (calc-gravity-force m (w %2 :mass) xy (w %2 :position)))
+                #(v+ %1 (gm/calc-gravity-force m (w %2 :mass) xy (w %2 :position)))
                 (w eid :self-fxy vector-0)
                 (eids$ w [:- [:* :phys-act :position :mass] [eid]]))]
         [eid :fxy fxy])))
@@ -210,17 +212,17 @@
      (or
       (let [ui (w eid :user-input)]
         (when (or (:fire? ui) (:alt-fire? ui))
-          (let [b-proto (if (:fire? ui) bullet-proto bullet-alt-proto)
-                bullet (:bullet b-proto)
-                b-cooldown (:cooldown bullet)
+          (let [b-proto (if (:fire? ui) bullet bullet-alt)
+                b (:bullet b-proto)
+                b-cooldown (:cooldown b)
                 last-fire-at (w eid :last-fire-at)]
             (when (or (nil? last-fire-at) (< (+ last-fire-at b-cooldown) now))
               (let [xy (w eid :position)
                     vxy (w eid :velocity vector-0)
                     angle (w eid :angle)
-                    b-vxy (v+ vxy (vas angle (:velocity bullet)))
+                    b-vxy (v+ vxy (vas angle (:velocity b)))
                     b-xy xy
-                    b-lifetime (:lifetime bullet)]
+                    b-lifetime (:lifetime b)]
                 (-> w'
                     (put-component eid :last-fire-at now)
                     (add-new-entity

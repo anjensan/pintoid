@@ -13,7 +13,9 @@
    [pintoid.client.macros :refer [defjsclass call-super foreach!]]))
 
 
-(def empty-texture (js/PIXI.Texture.fromImage "/img/clojure.png"))
+(def empty-texture
+  (js/PIXI.Texture.fromImage "/img/clojure.png"))
+
 (declare empty-sprite-factory)
 (def empty-sprite-proto
   {:class :sprite
@@ -62,8 +64,7 @@
   (cond
     (string? t) (js/PIXI.Texture.fromImage t)
     (and (keyword? t) (contains? @textures t)) (@textures t)
-    :else (do (timbre/warnf "Unknown texture %s" t)
-              empty-texture)))
+    :else (do (timbre/warnf "Unknown texture %s" t) empty-texture)))
 
 
 (defmethod as/get-asset :texture [class id]
@@ -128,6 +129,13 @@
   obj)
 
 
+(defn dissoc-sprite-props [props]
+  (dissoc
+   props
+   :position :scale :pivot :rotation
+   :alpha :visible :anchor :blend-mode))
+
+
 (defn set-tiling-sprite-properties! [obj props]
   (when props
     (when-let [tile-position (get props :tile-position)]
@@ -146,32 +154,49 @@
   obj)
 
 
+(defn- get-child-factories-seq [child]
+  (cond
+    (nil? child) nil
+    (vector? child) (mapv get-sprite-factory child)
+    (map? child) (create-sprite-factory child)
+    (keyword? child) (get-sprite-factory child)))
+
+
 (defmethod create-sprite-factory :default [proto]
   (timbre/warnf "Unknown sprite: %s" proto)
   (create-sprite-factory empty-sprite-proto))
 
 
+(defmethod create-sprite-factory nil [proto]
+  (create-sprite-factory (assoc proto :type :sprite)))
+
+
 (defmethod create-sprite-factory :sprite [proto]
-  (let [t (get-texture (get proto :texture ::clojure))
-        child-factories (mapv get-sprite-factory (:children proto))]
+  (let [t (get-texture (get proto :texture :unknown))
+        child-factories (get-child-factories-seq (:child proto))]
     (fn [props]
       (let [s (js/PIXI.Sprite. t)]
-        (foreach! [sf child-factories] (.addChild s (sf)))
+        (when child-factories
+          (let [pp (dissoc-sprite-props props)]
+            (foreach! [sf child-factories] (.addChild s (sf pp)))))
         (set-sprite-properties! s proto)
         (set-sprite-properties! s props)))))
 
 
 (defmethod create-sprite-factory :container [proto]
-  (let [child-factories (mapv get-sprite-factory (:children proto))]
+  (let [child-factories (get-child-factories-seq (:child proto))]
     (fn [props]
       (let [s (js/PIXI.Container.)]
-        (foreach! [sf child-factories] (.addChild s (sf)))
+        (when child-factories
+          (let [pp (dissoc-sprite-props props)]
+            (foreach! [sf child-factories] (.addChild s (sf pp)))))
         (set-sprite-properties! s proto)
+        (set-sprite-properties! s props)
         s))))
 
 
 (defmethod create-sprite-factory :tiling-sprite [proto]
-  (let [t (get-texture (get proto :texture ::clojure))
+  (let [t (get-texture (get proto :texture :unknown))
         h (:height proto)
         w (:width proto)]
     (fn [props]
@@ -184,10 +209,10 @@
 
 (defmethod create-sprite-factory :random-tilemap [proto]
   (let [tiles-factories (mapv get-sprite-factory (:tiles proto))
-        hs (get proto :hash-seed "")
+        hs (hash (get proto :hash-seed 0))
         create-sprite (fn [[c r]]
                         ((nth tiles-factories
-                              (mod (hash (str hs "-" c "-" r)) (count tiles-factories)))))
+                              (mod (-> hs (hash-combine c) (hash-combine r)) (count tiles-factories)))))
         tmfactory (tm/make-tilemap-sprite-factory create-sprite proto)]
     (fn [props]
       (-> (tmfactory props)
@@ -196,10 +221,16 @@
 
 
 (defmethod create-sprite-factory :animator [proto]
-  (let [child-factory (get-sprite-factory (:child proto))
+  (let [child (:child proto)
+        child-factory
+        (cond
+          (vector? child) (create-sprite-factory {:type :container :child child})
+          (map? child) (create-sprite-factory child)
+          (or (keyword? child) (string? child)) (get-sprite-factory child)
+          :else empty-sprite-factory)
         afactory (a/make-sprite-animator-factory child-factory proto)]
     (fn [props]
-      (-> (afactory props)
+      (-> (afactory (dissoc-sprite-props props))
           (set-sprite-properties! proto)
           (set-sprite-properties! props)))))
 
@@ -211,3 +242,6 @@
         (set-text-properties! proto)
         (set-sprite-properties! props)
         (set-text-properties! props))))
+
+(def empty-sprite-factory
+  (create-sprite-factory empty-sprite-proto))
