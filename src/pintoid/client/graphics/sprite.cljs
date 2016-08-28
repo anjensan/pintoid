@@ -113,45 +113,59 @@
    ((get-sprite-factory spec) props)))
 
 
-(defn set-sprite-properties! [obj props]
-  (when props
-    (when-let [position (get props :position)] (set! (.-position obj) (->point position)))
-    (when-let [scale (get props :scale)] (set! (.-scale obj) (->point scale)))
-    (when-let [pivot (get props :pivot)] (set! (.-pivot obj) (->point pivot)))
-    (when-let [rotation (get props :rotation)] (set! (.-rotation obj) rotation))
-    (when-let [alpha (get props :alpha)] (set! (.-alpha obj) alpha))
-    (when-let [visible (get props :visible)] (set! (.-visible obj) visible))
-    (when-let [anchor (get props :anchor)] (set! (.-anchor obj) (->point anchor)))
-    (when-let [bm (get props :blend-mode)]
+(defn make-common-props-setter [props]
+  (let [{:keys [position scale pivot rotation alpha visible
+                anchor blend-mode mask cache-as-bitmap]} props
+        mask-of (when mask (get-sprite-factory mask))
+        blend-mode (->blendmode blend-mode)
+        position (->point position)
+        scale (->point scale)
+        pivot (->point pivot)
+        anchor (->point anchor)]
+    (fn [obj]
+      (when position (set! (.-position obj) position))
+      (when scale (set! (.-scale obj) scale))
+      (when pivot (set! (.-pivot obj) pivot))
+      (when rotation (set! (.-rotation obj) rotation))
+      (when alpha (set! (.-alpha obj) alpha))
+      (when visible (set! (.-visible obj) visible))
+      (when anchor (set! (.-anchor obj) anchor))
       ;; FIXME: Temp workaround - 'blendMode' is not externed in cljsjs.pixi.
-      (aset obj "blendMode" (->blendmode bm)))
-    )
-  obj)
+      (when blend-mode (aset obj "blendMode" blend-mode))
+      (when mask (set! (.-mask obj) (mask-of)))
+      (when cache-as-bitmap (set! (.-cacheAsBitmap obj) cache-as-bitmap))
+      obj
+      )))
 
 
-(defn dissoc-sprite-props [props]
+(defn dissoc-common-props [props]
   (dissoc
    props
-   :position :scale :pivot :rotation
-   :alpha :visible :anchor :blend-mode))
+   ;; TODO: Review props - inherited or not.
+   :position :scale :pivot :rotation :alpha
+   :visible :anchor :mask :cache-as-bitmap
+   ))
 
 
-(defn set-tiling-sprite-properties! [obj props]
-  (when props
-    (when-let [tile-position (get props :tile-position)]
-      (set! (.-tilePosition obj) (->point tile-position)))
-    (when-let [tile-scale (get props :tile-scale)]
-      (set! (.-tileScale obj) (->point tile-scale))))
-  obj)
+(defn make-tiling-sprite-props-setter [props]
+  (let [{:keys [tile-position tile-scale]} props
+        tile-position (->point tile-position)
+        tile-scale (->point tile-scale)]
+    (fn [obj]
+      (when tile-position (set! (.-tilePosition obj) tile-position))
+      (when tile-scale (set! (.-tileScale obj) tile-scale))
+      obj
+      )))
 
 
-(defn set-text-properties! [obj props]
-  (when props
-    (when-let [text (get props :text)]
-      (set! (.-text obj) text))
-    (when-let [style (get props :style)]
-      (set! (.-style obj) (clj->js style))))
-  obj)
+(defn make-text-props-setter [props]
+  (let [{:keys [text style]} props
+        style (when style (clj->js style))]
+    (fn [obj]
+      (when text (set! (.-text obj) text))
+      (when style (set! (.-style obj) style))
+      obj
+      )))
 
 
 (defn- get-child-factories-seq [child]
@@ -173,55 +187,65 @@
 
 (defmethod create-sprite-factory :sprite [proto]
   (let [t (get-texture (get proto :texture :unknown))
+        sps (make-common-props-setter proto)
         child-factories (get-child-factories-seq (:child proto))]
     (fn [props]
       (let [s (js/PIXI.Sprite. t)]
         (when child-factories
-          (let [pp (dissoc-sprite-props props)]
+          (let [pp (dissoc-common-props props)]
             (foreach! [sf child-factories] (.addChild s (sf pp)))))
-        (set-sprite-properties! s proto)
-        (set-sprite-properties! s props)))))
+        (sps s)
+        ((make-common-props-setter props) s)
+        s))))
 
 
 (defmethod create-sprite-factory :container [proto]
-  (let [child-factories (get-child-factories-seq (:child proto))]
+  (let [child-factories (get-child-factories-seq (:child proto))
+        sps (make-common-props-setter proto)]
     (fn [props]
       (let [s (js/PIXI.Container.)]
         (when child-factories
-          (let [pp (dissoc-sprite-props props)]
+          (let [pp (dissoc-common-props props)]
             (foreach! [sf child-factories] (.addChild s (sf pp)))))
-        (set-sprite-properties! s proto)
-        (set-sprite-properties! s props)
+        (sps s)
+        ((make-common-props-setter props) s)
         s))))
 
 
 (defmethod create-sprite-factory :tiling-sprite [proto]
   (let [t (get-texture (get proto :texture :unknown))
         h (:height proto)
-        w (:width proto)]
+        w (:width proto)
+        sps (make-common-props-setter proto)
+        tsps (make-tiling-sprite-props-setter proto)]
     (fn [props]
       (-> (js/PIXI.extras.TilingSprite. t w h)
-        (set-tiling-sprite-properties! proto)
-        (set-tiling-sprite-properties! props)
-        (set-sprite-properties! proto)
-        (set-sprite-properties! props)))))
+          (tsps)
+          (sps)
+          ((make-tiling-sprite-props-setter props))
+          ((make-common-props-setter props))
+          ))))
 
 
 (defmethod create-sprite-factory :random-tilemap [proto]
   (let [tiles-factories (mapv get-sprite-factory (:tiles proto))
+        sps (make-common-props-setter proto)
         hs (hash (get proto :hash-seed 0))
         create-sprite (fn [[c r]]
                         ((nth tiles-factories
-                              (mod (-> hs (hash-combine c) (hash-combine r)) (count tiles-factories)))))
+                              (mod (-> hs (hash-combine c) (hash-combine r))
+                                   (count tiles-factories)))))
         tmfactory (tm/make-tilemap-sprite-factory create-sprite proto)]
     (fn [props]
       (-> (tmfactory props)
-          (set-sprite-properties! proto)
-          (set-sprite-properties! props)))))
+          (sps)
+          ((make-common-props-setter props))
+          ))))
 
 
 (defmethod create-sprite-factory :animator [proto]
-  (let [child (:child proto)
+  (let [sps (make-common-props-setter proto)
+        child (:child proto)
         child-factory
         (cond
           (vector? child) (create-sprite-factory {:type :container :child child})
@@ -230,18 +254,24 @@
           :else empty-sprite-factory)
         afactory (a/make-sprite-animator-factory child-factory proto)]
     (fn [props]
-      (-> (afactory (dissoc-sprite-props props))
-          (set-sprite-properties! proto)
-          (set-sprite-properties! props)))))
+      (-> (afactory (dissoc-common-props props))
+          (sps)
+          ((make-common-props-setter props))
+          ))))
 
 
 (defmethod create-sprite-factory :text [proto]
-  (fn [props]
-    (-> (js/PIXI.Text. (:text props ""))
-        (set-sprite-properties! proto)
-        (set-text-properties! proto)
-        (set-sprite-properties! props)
-        (set-text-properties! props))))
+  (let [sps (make-common-props-setter proto)
+        tps (make-text-props-setter proto)]
+    (fn [props]
+      (-> (js/PIXI.Text. (:text props ""))
+          (sps)
+          (tps)
+          ((make-common-props-setter props))
+          ((make-text-props-setter props))
+          ))))
+
+
 
 (def empty-sprite-factory
   (create-sprite-factory empty-sprite-proto))

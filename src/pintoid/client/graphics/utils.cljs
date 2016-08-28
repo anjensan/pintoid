@@ -38,9 +38,10 @@
 
 
 (defn ->point [xy]
-  (if (sequential? xy)
-    (let [[x y] xy] (js/PIXI.Point. x y))
-    (let [a (float xy)] (js/PIXI.Point. a a))))
+  (cond
+    (nil? xy) nil
+    (sequential? xy) (let [[x y] xy] (js/PIXI.Point. x y))
+    :else (let [a (float xy)] (js/PIXI.Point. a a))))
 
 
 (defn ->blendmode [bm]
