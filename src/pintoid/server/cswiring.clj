@@ -1,6 +1,7 @@
 (ns pintoid.server.cswiring
   (:use
-   [pintoid.server game utils ecs math])
+   pintoid.server.game.core
+   [pintoid.server utils ecs math])
   (:require
    [mount.core :refer [defstate]]
    [taoensso.timbre :as timbre]
@@ -110,9 +111,8 @@
 
 (declare make-world-dumper)
 
-(defn- create-and-send-world-patch [a w]
-  (let [pid (:pid a)
-        at (get-world-time w)]
+(defn- create-and-send-world-patch [a at w]
+  (let [pid (:pid a)]
     (if (w pid :player)
       (let [ss (:ss-state a)
             wd (make-world-dumper pid w)
@@ -132,10 +132,10 @@
 
 
 (defn send-snapshots-to-all-clients []
-  (let [w (fix-world-state)]
+  (let [[at w] (get-world)]
     (dosync
      (doseq [[pid a] @avatars]
-       (send-off a create-and-send-world-patch w)))))
+       (send-off a create-and-send-world-patch at w)))))
 
 
 ;; == World snapshot

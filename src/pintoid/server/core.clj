@@ -1,6 +1,7 @@
 (ns pintoid.server.core
   (:use
-   [pintoid.server cswiring game web])
+   [pintoid.server.game.core]
+   [pintoid.server cswiring web])
   (:require
    [mount.core :as mount :refer [defstate]]
    [aero.core :as aero]
@@ -64,7 +65,7 @@
            (do-retfst
             {:game (sched-at-fixed-rate
                     scheduler
-                    #'run-world-simulation-tick
+                    #'game-world-tick
                     gtick)
              :client (sched-at-fixed-rate
                       scheduler
