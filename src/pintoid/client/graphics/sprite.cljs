@@ -272,6 +272,18 @@
           ))))
 
 
+(defmethod create-sprite-factory :graphics [proto]
+  (let [sps (make-common-props-setter proto)
+        dos (mapv (juxt (comp name first)
+                        (comp to-array rest))
+                  (:do proto))]
+    (fn [props]
+      (let [s (js/PIXI.Graphics.)]
+        (sps s)
+        ((make-common-props-setter props) s)
+        (run! (fn [[m a]] (.apply (aget s m) s a)) dos)
+        s))))
+
 
 (def empty-sprite-factory
   (create-sprite-factory empty-sprite-proto))

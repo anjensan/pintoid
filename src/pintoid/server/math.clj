@@ -82,7 +82,7 @@
 (defn vas [^double a ^double s]
   (if (zero? s)
     #pintoid.server.math.Vector[0 0]
-    (Vector.  
+    (Vector.
      (* (Math/cos a) s)
      (* (Math/sin a) s))))
 

@@ -52,7 +52,7 @@
 
 
 (defn init-pixi-renderer [width height]
-  (set! pixi-renderer (js/PIXI.autoDetectRenderer width height))
+  (set! pixi-renderer (js/PIXI.autoDetectRenderer width height #js {:antialias true}))
   (set! pixi-layers (gl/init-layers-container width height))
   (.-view pixi-renderer))
 

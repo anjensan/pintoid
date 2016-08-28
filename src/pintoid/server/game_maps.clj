@@ -1,13 +1,12 @@
 (ns pintoid.server.game-maps
   (:use pintoid.server.math))
 
-(def world-height 10000)
-(def world-width 10000)
+(def world-radius 4000)
 
-(def gravity-g 0.005)
-(def engine-forward-force 0.12)
-(def engine-reverse-force 0.05)
-(def rotate-speed 0.15)
+(def gravity-g 0.015)
+(def engine-forward-force 0.08)
+(def engine-reverse-force 0.02)
+(def rotate-speed 0.21)
 
 (def max-user-view-distance 2500)
 
@@ -46,7 +45,7 @@
    :position ?
    :fxy (v 0 0)
    :phys-move true
-   :mass 100
+   :mass 200
    :angle 0
    :radius 30
    :sprite :sprite/racket-red
@@ -60,7 +59,7 @@
    :fxy (v 0 0)
    :position (v 0 0)
    :phys-move true
-   :mass 50
+   :mass 100
    :angle 0
    :radius 20
    :bullet {:lifetime 5000
@@ -76,7 +75,7 @@
    :position (v 0 0)
    :phys-move true
    :phys-act true
-   :mass 2000
+   :mass 8000
    :angle 0
    :radius 10
    :bullet {:lifetime 10000 :cooldown 1200 :velocity 2.1}
@@ -117,7 +116,7 @@
 (def blackhole
   {:type :black
    :position ?
-   :mass 5000
+   :mass 10000
    :phys-act true
    :sprite :sprite/black-hole
    :radius 2
@@ -194,15 +193,25 @@
           :tiles (vec (for [c (range 8), r (range 4)]
                         (keyword "sprite" (str "starsky-" c "x" r))))))
       {:type :starsky-sprite
-       :position (v (* 10000 a) (* 1000 i))
+       :position (v (* 97 a) (* -97 i))
        :visible? (constantly true)
        :layer (keyword "layer" (str "starsky" i))
        :sprite x}])
 
+   {:type :static-circle
+    :position (v 0 0)
+    :visible? (constantly true)
+    :sprite {
+             nil {:type :graphics
+                  :do [
+                       ['lineStyle 5 0x998899 0.6]
+                       ['drawCircle 0 0 world-radius]
+                       ['endFill]
+                       ]}}}
    ])
 
 
-(defn commmon-assets []
+(defn common-assets []
   [
    ;; Layers
    (assets :layer/lstars1 (layer :zorder 80))
@@ -267,15 +276,15 @@
 
 (defn game-entities []
   [(assoc blackhole :position (v 0 0))
-   (assoc star :position (v -2100 -1350), :mass 500, :radius 33, :sprite :sprite/star1)
-   (assoc star :position (v 1200 500), :mass 2000, :radius 20, :sprite :sprite/star2)
-   (assoc star :position (v -900 -700), :mass 1000, :radius 66, :sprite :sprite/star3)
-   (assoc star :position (v 400 300), :mass 175, :radius 70, :sprite :sprite/star2)
+   (assoc star :position (v -2100 -1350), :mass 1500, :radius 33, :sprite :sprite/star1)
+   (assoc star :position (v 1200 500), :mass 5000, :radius 20, :sprite :sprite/star2)
+   (assoc star :position (v -900 -700), :mass 2000, :radius 66, :sprite :sprite/star3)
+   (assoc star :position (v 400 300), :mass 1500, :radius 70, :sprite :sprite/star2)
    (assoc star :position (v -1600 1000), :mass 1750, :radius 70, :sprite :sprite/star3)
-   (assoc planet :position (v -2440 -900), :mass 150, :radius 10, :sprite :sprite/planet1)
-   (assoc planet :position (v 10 -100), :mass 100, :radius 9, :sprite :sprite/planet1)
-   (assoc planet :position (v 900 -2140), :mass 200, :radius 11, :sprite :sprite/planet2)
-   (assoc planet :position (v -900 -2240), :mass 200, :radius 11, :sprite :sprite/planet1)
+   (assoc planet :position (v -2440 -900), :mass 850, :radius 10, :sprite :sprite/planet1)
+   (assoc planet :position (v 100 -900), :mass 900, :radius 9, :sprite :sprite/planet1)
+   (assoc planet :position (v 900 -2140), :mass 900, :radius 11, :sprite :sprite/planet2)
+   (assoc planet :position (v -900 -2240), :mass 300, :radius 11, :sprite :sprite/planet1)
    (assoc asteroid :position (v -1220 -1232), :mass 50, :radius 3, :sprite :sprite/ast1)
    (assoc asteroid :position (v -200 -300), :mass 50, :radius 3, :sprite :sprite/ast2)
    (assoc asteroid :position (v -920 -700), :mass 70, :radius 3, :sprite :sprite/ast3)
@@ -289,7 +298,7 @@
 
 (defn game []
   (-> []
-      (concat (commmon-assets))
+      (concat (common-assets))
       (concat (stars-sky))
       (concat (game-entities))
       (flatten)

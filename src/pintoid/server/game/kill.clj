@@ -52,10 +52,7 @@
 (defn- entity-out-of-gamefield? [w eid]
   (when-let [xy (w eid :position)]
     (let [[x y] ((juxt :x :y) xy)]
-      (not
-       (and
-        (<= (- gm/world-width) x gm/world-width)
-        (<= (- gm/world-height) y gm/world-height))))))
+      (> (dist xy vector-0) gm/world-radius))))
 
 
 (defn sys-kill-entities-out-of-gamefield [w]
