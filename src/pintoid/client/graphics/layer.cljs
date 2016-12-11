@@ -14,7 +14,7 @@
 (defonce camera (atom {}))
 
 
-(defn set-layer-properties [obj props]
+(defn- set-layer-properties [obj props]
   (when-let [pivot (get props :pivot)] (set! (.-pivot obj) (->point pivot)))
   (when-let [alpha (get props :alpha)] (set! (.-alpha obj) alpha))
   (when-let [visible (get props :visible)] (set! (.-visible obj) visible)))
@@ -34,17 +34,15 @@
     (swap! layers assoc id (assoc layer :pixi-obj lo))
     (.addChild lcontainer lo)
     (.sort (.. lcontainer -children)
-           #(compare (.-zorder %1) (.-zorder %2)))))
+           #(compare (.-zorder %1) (.-zorder %2)))
+    ;; FIXME: return layer obj
+    ()))
 
 
-(defmethod as/unload-asset :layer [id layer]
+(defmethod as/unload-asset :layer [id proto layer]
   (when-let [lo (get-in @layers [id :pixi-obj])]
     (.removeChild lcontainer lo)
     (swap! layers dissoc id)))
-
-
-(defmethod as/get-asset :layer [class id]
-  (get @layers id))
 
 
 (defn- get-layer-pixi-obj [lid]
@@ -96,5 +94,5 @@
   (set! (.. lcontainer -position -y) (/ height 2))
   (set! (.. lcontainer -viewrect) #js [[0 0] [width height]])
   (reset! camera-size (constantly [width height]))
-  (as/add-asset :layer/default {:class :layer})
+  (as/add-assets {:layer/default {:class :layer}})
   lcontainer)

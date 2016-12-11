@@ -1,6 +1,7 @@
 (ns pintoid.client.engine
   (:use [pintoid.client.ceh :only
          [entity
+          all-entities
           world-time
           changed-eids
           empty-world
@@ -12,7 +13,6 @@
    [pintoid.client.asset :as as]
    [pintoid.client.graphics.animation :as a]
    [pintoid.client.graphics.animloop :as al]
-   [pintoid.client.graphics.sprite :as gs]
    [pintoid.client.graphics.layer :as gl]
    [pintoid.client.graphics.core :as g]
    )
@@ -23,10 +23,11 @@
 
 ;; world state
 (def world (atom (empty-world)))
-
+(def used-assets (atom {}))
 
 (defmulti add-entity-sprite :type)
 (defmulti remove-entity-sprite :type)
+
 
 (defmethod add-entity-sprite :default [entity]
   (let [s (:sprite entity)
@@ -49,11 +50,27 @@
   (run! #(when % (f %)) (select-entity-sprites action entity)))
 
 
-
 (defn handle-addrem-assets [w1 w2 wpatch]
-  (foreach! [eid (sort (changed-eids wpatch :assets))]
-    (foreach! [[id asset] (:assets (entity w2 eid))]
-      (as/add-asset id asset))))
+  (when-let [eids (seq (sort (changed-eids wpatch :assets)))]
+    (let [all-ass (into {} (map :assets (all-entities w2)))
+          changed-aids (set (mapcat #(concat
+                                      (->> % (entity w1) :assets keys)
+                                      (->> % (entity w2) :assets keys))
+                                eids))
+          ass (into {} (map (fn [x] [x (all-ass x)])) changed-aids)
+          updated-assets (as/add-assets ass)]
+      (foreach! [[eid deps] @used-assets]
+        (when (some updated-assets deps)
+          (let [e1 (entity w1 eid)
+                e2 (entity w2 eid)]
+            (al/add-action!
+              (world-time w2)
+              (fn []
+                (timbre/info "Recreate sprite" eid)
+                (remove-entity-sprite e1)
+                (let [[_ deps] (as/track-used-assets add-entity-sprite e2)]
+                  (swap! used-assets assoc eid deps)))))))
+      (timbre/info "Assets reloaded"))))
 
 
 (defn handle-sprites-movement [w1 w2 wpatch]
@@ -130,15 +147,19 @@
       (when (:sprite entity)
         (al/add-action!
          (world-time w2)
-         #(add-entity-sprite entity))))))
+         (fn []
+           (let [[_ deps] (as/track-used-assets add-entity-sprite entity)]
+             (swap! used-assets assoc eid deps))))))))
 
 
 (defn handle-remove-sprites [w1 w2 wpatch]
-  (foreach! [eid (changed-eids wpatch :sprite), :xf (filter #())]
+  (foreach! [eid (changed-eids wpatch :sprite)]
     (when-not (:sprite (entity w2 eid))
       (al/add-action!
        (world-time w2)
-       #(remove-entity-sprite (entity w1 eid))))))
+       (fn []
+         (swap! used-assets dissoc eid)
+         (remove-entity-sprite (entity w1 eid)))))))
 
 
 (defmethod add-entity-sprite :player [entity]
@@ -155,8 +176,8 @@
 
 (defn update-world-snapshot! [wpatch]
   (let [w1 @world, [w2 wpatch'] (apply-world-patch w1 wpatch)]
-    (handle-addrem-assets w1 w2 wpatch)
     (handle-remove-sprites w1 w2 wpatch)
+    (handle-addrem-assets w1 w2 wpatch)
     (handle-add-sprites w1 w2 wpatch)
     (handle-sprites-movement w1 w2 wpatch)
     (handle-sprites-rotation w1 w2 wpatch)

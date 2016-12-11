@@ -23,17 +23,11 @@
    :texture "/img/clojure.png"
    :anchor [0.5 0.5]})
 
-(def textures (atom))
-(def sprites (atom))
-
-
-;; == Textures
 
 (declare get-texture)
 
 (defn- create-texture-object
-  [{:keys [id image base frame
-           crop trim rotate]}]
+  [{:keys [image base frame crop trim rotate]}]
   (if image
     (do
       (assert (every? nil? [base frame crop trim rotate]))
@@ -48,27 +42,26 @@
        rotate))))
 
 
-(defmethod as/load-asset :texture [id tinfo]
-  ;; TODO: Invalidate/recreate/mark all affected sprites.
-  (let [t (create-texture-object tinfo)]
-    (js/PIXI.Texture.addTextureToCache (name id) t)
-    (swap! textures assoc id t)))
+(defmethod as/load-asset :texture [id proto]
+  (let [t (create-texture-object proto)]
+    (js/PIXI.Texture.addTextureToCache (str id) t)
+    t))
 
 
-(defmethod as/unload-asset :texture [id texture]
-  (js/PIXI.Texture.removeTextureToCache (name id))
-  (swap! textures dissoc id))
+(defmethod as/unload-asset :texture [id proto texture]
+  (js/PIXI.Texture.removeTextureFromCache (str id))
+  (.destroy texture))
 
 
 (defn- get-texture [t]
   (cond
     (string? t) (js/PIXI.Texture.fromImage t)
-    (and (keyword? t) (contains? @textures t)) (@textures t)
-    :else (do (timbre/warnf "Unknown texture %s" t) empty-texture)))
-
-
-(defmethod as/get-asset :texture [class id]
-  (get-texture id))
+    (keyword? t) (if-let [x (as/asset :texture t)]
+                   x
+                   (do (timbre/warnf "Unknown texture %s" t) empty-texture))
+    :else (do
+            (timbre/errorf "Invalid texture id %s" t)
+            empty-texture)))
 
 
 ;; == Sprites - common
@@ -77,33 +70,27 @@
   (fn [proto] (:type proto)))
 
 
-(defmethod as/load-asset :sprite [id sprite]
-  (swap! sprites assoc id
-         {:proto sprite :factory (create-sprite-factory sprite)}))
-
-
-(defmethod as/unload-asset :sprite [id sprite]
-  (swap! dissoc sprites id))
-
-
-(defmethod as/get-asset :sprite [class id]
-  (get-in @sprites [id :proto]))
+(defmethod as/load-asset :sprite [_ sprite]
+  {:proto sprite :factory (create-sprite-factory sprite)})
 
 
 (defn get-sprite-factory [id]
   (cond
+    (keyword? id) (if-let [x (as/asset :sprite id)]
+                    (:factory x)
+                    (do
+                      (timbre/warnf "Unknown sprite %s" id)
+                      empty-sprite-factory))
     (map? id) (create-sprite-factory id)
-    (and (keyword? id) (contains? @sprites id)) (get-in @sprites [id :factory])
-    :else
-    (do
-      (timbre/warnf "Unknown sprite %s" id)
-      empty-sprite-factory)))
+    :else (do
+            (timbre/warnf "Invalid sprite id %s" id)
+            empty-sprite-factory)))
 
 
 (defn get-sprite-spec [id]
   (cond
-    (map? id) id
-    (keyword? id) (get-in @sprites [id :proto])))
+    (keyword? id) (:proto (as/asset :sprite id))
+    (map? id) id))
 
 
 (defn make-sprite

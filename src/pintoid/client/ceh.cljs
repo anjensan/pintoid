@@ -17,6 +17,10 @@
   (get (.-entities w) eid))
 
 
+(defn all-entities [w]
+  (vals (.-entities w)))
+
+
 (defn world-time [w]
   (.-time w))
 
