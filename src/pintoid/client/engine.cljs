@@ -63,7 +63,7 @@
         (when (some updated-assets deps)
           (let [e1 (entity w1 eid)
                 e2 (entity w2 eid)]
-            (al/add-action!
+            (al/action!
               (world-time w2)
               (fn []
                 (timbre/info "Recreate sprite" eid)
@@ -80,13 +80,19 @@
       (let [e1 (entity w1 eid)
             e2 (entity w2 eid)
             xy1 (:position e1)
-            xy2 (:position e2)]
+            xy2 (:position e2)
+            tts1 (:position-tts e1)
+            tts2 (:position-tts e2)]
         (when (and xy2 (not= xy1 xy2))
-          (foreach-entity-sprite :move e2
-            (fn [obj]
-              (if (and xy1 (= (:position-tts e1) (:position-tts e2)))
-                (a/linear-move obj t1 t2 xy1 xy2)
-                (a/instant-move obj t1 t2 xy2)))))))))
+          (al/action!
+           t1
+           (fn []
+             (foreach-entity-sprite
+              :move e2
+              (fn [obj]
+                (if (and xy1 (= tts1 tts2))
+                  (a/linear-move obj t1 t2 xy1 xy2)
+                  (a/instant-move obj t1 t2 xy2)))))))))))
 
 
 (defn handle-sprites-rotation [w1 w2 wpatch]
@@ -98,11 +104,15 @@
             a1 (:angle e1)
             a2 (:angle e2)]
         (when (and a2 (not= a1 a2))
-          (foreach-entity-sprite :rotate e2
-            (fn [obj]
-              (if a1
-                (a/linear-rotate obj t1 t2 a1 a2)
-                (a/instant-rotate obj t1 t2 a2)))))))))
+          (al/action!
+           t1
+           (fn []
+             (foreach-entity-sprite
+              :rotate e2
+              (fn [obj]
+                (if a1
+                  (a/linear-rotate obj t1 t2 a1 a2)
+                  (a/instant-rotate obj t1 t2 a2)))))))))))
 
 
 (def camera-x 0)
@@ -136,7 +146,7 @@
   (foreach! [eid (changed-eids wpatch :score)]
     (when-let [s (g/get-sprite eid :score-label)]
       (let [t (format-player-score (entity w2 eid))]
-        (al/add-action!
+        (al/action!
           (world-time w2)
           #(set! (.-text s) t))))))
 
@@ -145,7 +155,7 @@
   (foreach! [eid (changed-eids wpatch :sprite)]
     (let [entity (entity w2 eid)]
       (when (:sprite entity)
-        (al/add-action!
+        (al/action!
          (world-time w2)
          (fn []
            (let [[_ deps] (as/track-used-assets add-entity-sprite entity)]
@@ -155,7 +165,7 @@
 (defn handle-remove-sprites [w1 w2 wpatch]
   (foreach! [eid (changed-eids wpatch :sprite)]
     (when-not (:sprite (entity w2 eid))
-      (al/add-action!
+      (al/action!
        (world-time w2)
        (fn []
          (swap! used-assets dissoc eid)

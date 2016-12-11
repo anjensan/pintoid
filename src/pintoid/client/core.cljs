@@ -31,8 +31,7 @@
         draw-at (- server-timestamp animation-interpolation-lag)]
     (timbre/tracef "Run draw loop at %d" draw-at)
     (al/run-animations! draw-at)
-    (g/render-graphics!)
-    (js/setTimeout #(al/run-deffered-actions!) 1)))
+    (g/render-graphics!)))
 
 
 (defn start-app []

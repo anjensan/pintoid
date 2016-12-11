@@ -1,7 +1,6 @@
 (ns pintoid.client.cswiring
   (:use
    [pintoid.client.engine :only [update-world-snapshot!]]
-   [pintoid.client.graphics.animloop :only [defer-action!]]
    [pintoid.client.utils :only [panic! limit-str]])
   (:require
    [chord.client :refer [ws-ch]]
@@ -81,7 +80,7 @@
   (set! client-server-time-diff
         (- (+ (:time m) (/ client-server-ping 2))
            (js/performance.now)))
-  (defer-action! update-world-snapshot! m))
+  (update-world-snapshot! m))
 
 
 (defmethod receive-message :repl [m]
