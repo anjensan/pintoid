@@ -20,9 +20,9 @@
                  [cljsbuild/cljsbuild "1.1.5"]
                  [weasel/weasel "0.7.0"]]
 
-  :plugins [[lein-cljsbuild "1.1.3"]
+  :plugins [[lein-cljsbuild "1.1.5"]
             [lein-shell "0.5.0"]
-            [lein-binplus "0.4.2"]]
+            [lein-binplus "0.6.2"]]
 
   :main pintoid.main
   :prep-tasks ["clean" "compile" ["cljsbuild" "once"]]
