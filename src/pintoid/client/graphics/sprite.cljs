@@ -110,17 +110,18 @@
         pivot (->point pivot)
         anchor (->point anchor)]
     (fn [obj]
-      (when position (set! (.-position obj) position))
+      (when position (.copy (.-position obj) position))
       (when scale (set! (.-scale obj) scale))
       (when pivot (set! (.-pivot obj) pivot))
       (when rotation (set! (.-rotation obj) rotation))
-      (when alpha (set! (.-alpha obj) alpha))
       (when visible (set! (.-visible obj) visible))
-      (when anchor (set! (.-anchor obj) anchor))
-      ;; FIXME: Temp workaround - 'blendMode' is not externed in cljsjs.pixi.
-      (when blend-mode (aset obj "blendMode" blend-mode))
+      (when alpha (set! (.-alpha obj) alpha))
+      ;; FIXME: Temp workaround - 'blendMode' is not externed in cljsjs.pixi
+      ;; (when (and blend-mode (not (zero? blend-mode))) (set! (.-blendMode obj) blend-mode))
+      (when (and blend-mode (not (zero? blend-mode))) (aset obj "blendMode" blend-mode))
       (when mask (set! (.-mask obj) (mask-of)))
       (when cache-as-bitmap (set! (.-cacheAsBitmap obj) cache-as-bitmap))
+      (when anchor (when-let [a (.-anchor obj)] (.copy a anchor)))
       obj
       )))
 
