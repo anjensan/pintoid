@@ -177,11 +177,11 @@
       (keyword "texture" x) (texture :base :texture/starsky
                                      :frame {:x (* 512 c) :y (* 512 r) :w 512 :h 512})
       (keyword "sprite" x) (sprite
-                            :blend-mode :add
+                            :blend-mode :screen
                             :texture (keyword "texture" x))))
 
    (for [[i [a s]] (map vector (range)
-                        [[0.5 0.5] [0.65 0.75] [0.85 1] [0.10 1.8]])
+                        [[0.7 0.5] [0.85 0.75] [0.95 1] [0.30 1.8]])
          :let [x (keyword "sprite" (str "starsky-layer-sprite-" i))]]
      [(assets
        x (random-tilemap
@@ -215,11 +215,6 @@
   [
    ;; Layers
    (assets :layer/lstars1 (layer :zorder 80))
-
-   ;; Textures
-   (assets
-    :texture/racket-red (texture :image "/img/racket_red.png")
-    :texture/racket-blue (texture :image "/img/racket_blue.png"))
 
    ;; Hud
    (assets
