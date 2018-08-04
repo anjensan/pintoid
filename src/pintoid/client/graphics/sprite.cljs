@@ -44,12 +44,12 @@
 
 (defmethod as/load-asset :texture [id proto]
   (let [t (create-texture-object proto)]
-    (js/PIXI.Texture.addTextureToCache (str id) t)
+    (js/PIXI.Texture.addToCache t (str id))
     t))
 
 
 (defmethod as/unload-asset :texture [id proto texture]
-  (js/PIXI.Texture.removeTextureFromCache (str id))
+  (js/PIXI.Texture.removeFromCache (str id))
   (.destroy texture))
 
 

@@ -2,27 +2,27 @@
 
   :description "Multiplayer asteroid-like game"
 
-  :dependencies [[org.clojure/clojure "1.8.0"]
-                 [org.clojure/clojurescript "1.9.521"]
-                 [org.clojure/core.async "0.3.442"]
+  :dependencies [[org.clojure/clojure "1.10.0-alpha6"]
+                 [org.clojure/clojurescript "1.10.339"]
+                 [org.clojure/core.async "0.4.474"]
                  [org.clojure/data.int-map "0.2.4"]
-                 [aero/aero "1.1.2"]
-                 [cljsjs/pixi "4.4.3-0"]
+                 [aero/aero "1.1.3"]
+                 [cljsjs/pixi "4.7.0-0"]
                  [com.taoensso/timbre "4.10.0"]
-                 [compojure/compojure "1.5.2"]
-                 [hiccup/hiccup "1.0.5"]
+                 [compojure/compojure "1.6.1"]
+                 [hiccup/hiccup "2.0.0-alpha1"]
                  [jarohen/chord "0.8.1"]
-                 [mount/mount "0.1.11"]
+                 [mount/mount "0.1.12"]
                  [prismatic/dommy "1.1.0"]
-                 [ring/ring-core "1.5.1"]
+                 [ring/ring-core "1.7.0-RC1"]
                  [org.clojure/tools.nrepl "0.2.13"]
-                 [com.cemerick/piggieback "0.2.1"]
-                 [cljsbuild/cljsbuild "1.1.5"]
+                 [com.cemerick/piggieback "0.2.2"]
+                 [cljsbuild/cljsbuild "1.1.7"]
                  [weasel/weasel "0.7.0"]]
 
-  :plugins [[lein-cljsbuild "1.1.5"]
+  :plugins [[lein-cljsbuild "1.1.7"]
             [lein-shell "0.5.0"]
-            [lein-binplus "0.6.2"]]
+            [lein-binplus "0.6.4"]]
 
   :main pintoid.main
   :prep-tasks ["clean" "compile" ["cljsbuild" "once"]]
@@ -43,12 +43,16 @@
          "-XX:+UseConcMarkSweepGC"
          "-XX:+UseParNewGC"
          "-XX:+AggressiveOpts"
-         "-XX:MaxGCPauseMillis=10"]}
+         "-XX:MaxGCPauseMillis=10"
+         "--add-modules" "java.xml.bind"
+         ]}
 
   :resource-paths ["resources" "target/resources"]
   :aliases {"jar" "uberjar"
             "run-prod" ["do" "uberjar," "shell" "java" "-jar"
                         "target/pintoid-${:version}.jar"]}
+
+  :jvm-opts ["--add-modules" "java.xml.bind"]
 
   :cljsbuild
   {:builds
