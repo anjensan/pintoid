@@ -40,8 +40,6 @@
         ["-server"
          "-Xms64m"
          "-Xmx1024m"
-         "-XX:+UseConcMarkSweepGC"
-         "-XX:+UseParNewGC"
          "-XX:+AggressiveOpts"
          "-XX:MaxGCPauseMillis=10"
          "--add-modules" "java.xml.bind"
