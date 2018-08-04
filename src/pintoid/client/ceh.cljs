@@ -70,7 +70,7 @@
   (let [es1 (.-entities w)
         es2 (merge-entities-map-and-comps es1 (:ecs wpatch))]
     [(-World.
-      (or (:time wpatch) (world-time w))
+      (or (:game-time wpatch) (world-time w))
       (or (:self wpatch) (.-player-eid w))
       es2)
      (assoc

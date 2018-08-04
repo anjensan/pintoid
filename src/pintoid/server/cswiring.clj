@@ -121,9 +121,10 @@
         (timbre/trace "send to" pid "wpatch" wpatch)
         (send-to-client
          pid
-         {:command :wpatch
+         {:server-time (System/currentTimeMillis)
+          :command :wpatch
           :self pid
-          :time at
+          :game-time at
           :ecs wpatch})
         (assoc a :actual-world w :ss-state ss'))
       (do
