@@ -6,128 +6,164 @@
    [mount.core :refer [defstate]]
    [taoensso.timbre :as timbre]
    [clojure.data.int-map :as im]
-   [clojure.core.async :refer
-    [<! >! <!! >!! put! close! thread go chan go-loop]]
-   [cheshire.core :as json]
-   [clojure.set :refer [union]]))
+   [clojure.core.async :refer [<! >! close! go go-loop timeout chan alt!]]))
 
+(def client-destroy-timeout 10000)
 
-(declare destroy-avatar)
+(declare cleanup-avatars)
 
 (defstate avatars
-  :start (atom {})
-  :stop (run! destroy-avatar (vals @avatars)))
+  :start (agent {})
+  :stop (cleanup-avatars))
 
 
-(defn create-avatar [pid req]
-  (timbre/tracef "Create avatar for pid %s, req %s" pid req)
-  (agent
-   {:pid pid
-    :host (:remote-addr req)
-    :ws-channel (:ws-channel req)}))
+(defn- alter-avatar [pid f & rs]
+  (let [a (get @avatars pid)]
+    (if a
+      (apply send a f rs)
+      (timbre/debugf "Unknown pid %s, skip %s" pid f))))
 
-(defn destroy-avatar [avatar]
-  (timbre/trace "Send destroy function to avatar" avatar)
-  (send
-   avatar
-   (fn [as]
-     (timbre/debug "Destroy avatar" (:pid as))
-     (close! (:ws-channel as))
-     ::destroyed)))
+(defn generate-player-pid []
+  (next-entity-id :player))
+
+(defn- create-empty-avatar [pid]
+  (agent {:pid pid}))
+
+(defn- populate-avatar-with-req [a req]
+  (timbre/tracef "Update avatar %s with data from req %s" a req)
+  (send a assoc
+         :host (:remote-addr req)
+         :name (get-in req [:session :name])))
+
+(defn create-player-avatar [pid req]
+  (send avatars
+        (fn [as]
+          (let [a (or (get as pid)
+                      (create-empty-avatar pid))]
+            (populate-avatar-with-req a req)
+            (assoc as pid a)))))
+
+
+(defn- avatar-close-ws-chans [a]
+  (when-let [wc (:ws-channel a)] (close! wc))
+  (when-let [cr (:ws-reader a)] (close! cr))
+  (dissoc a :ws-channel :ws-reader))
+
+(defn- avatar-destroy [{pid :pid :as a}]
+  (timbre/debugf "Destroy avatar for %s" pid)
+  (when (contains? @avatars pid)
+    (timbre/warnf "Avatar %s has not been removed from 'avatars'!"))
+  (avatar-close-ws-chans a)
+  (game-remove-player pid)
+  ::destroyed)
+
+(defn- cleanup-avatars [as]
+  (send avatars #(doseq [[_ a] %] (send a avatar-destroy))) {})
+
+(defn destroy-player-avatar [pid]
+  (send avatars
+        (fn [as]
+          (when-let [a (get as pid)]
+            (send a avatar-destroy)
+            (dissoc as pid)))))
 
 (defn send-to-client [pid message]
-  (timbre/tracef "Send to %s: %s" pid message)
-  (send
-   (get @avatars pid)
-   (fn [avatar]
-     (timbre/trace "pid" pid ">>" message)
-     (go (>! (:ws-channel avatar) message))
-     avatar)))
-
+  (alter-avatar pid
+   (fn [a]
+     (when-let [c (:ws-channel a)]
+       (timbre/tracef "To client %s: %s" pid message)
+       (go (>! (:ws-channel a) message)))
+     a)))
 
 (defmulti handle-client-message
-  (fn [a eid message] (:command message)))
+  (fn [a pid message] (:command message)))
 
 (defmethod handle-client-message :default [a pid m]
-  (timbre/warnf "Unknown message from %s: m" pid m)
+  (timbre/warnf "Unknown message from %s" pid)
   a)
 
 (defmethod handle-client-message :join-game [a pid m]
-  (timbre/infof "New player %s" pid)
+  (timbre/infof "Player %s joined the game" pid)
   (game-add-new-player pid)
   a)
 
 (defmethod handle-client-message :user-input [a pid m]
-  (timbre/trace "user input player" m)
+  (timbre/tracef "User %s send input %s" pid m)
   (game-process-user-input pid (:data m))
   (assoc a :user-input (:data m)))
 
+(defn handle-client-chan-error [a pid err]
+  (timbre/warnf "Client %s: %s" pid err)
+  a)
 
-(defn on-client-disconnected [eid]
-  (timbre/infof "Player %s disconnected" eid)
-  (game-remove-player eid)
-  (destroy-avatar (get @avatars eid))
-  (swap! avatars dissoc eid))
+(defn handle-client-disconnect [a pid]
+  (timbre/infof "Client %s disconnected" pid)
+  (let [cd (chan)
+        t (timeout client-destroy-timeout)]
+    (go
+      (alt!
+        t (destroy-player-avatar pid)
+        cd :none))
+    (-> a
+        (avatar-close-ws-chans)
+        (assoc :cancel-destroy #(close! cd)))))
 
-
-(defn- spawn-wschan-reading-loop [eid ws-channel]
+(defn- spawn-wschan-reading-loop [pid ws-channel]
   (go-loop []
-    (if-let [{:keys [message error]} (<! ws-channel)]
-      (do
-        (when error
-          (timbre/warnf "Client %s: %s" eid error))
-        (when message
-          (timbre/tracef "Receive from %s: %s" eid message)
-          (send (get @avatars eid) handle-client-message eid message))
-        (recur))
-      (on-client-disconnected eid))))
+    (let [{:keys [message error] :as raw} (<! ws-channel)]
+      (cond
+        (nil? raw) (alter-avatar pid handle-client-disconnect pid)
+        error      (alter-avatar pid handle-client-chan-error pid error)
+        message    (do
+                     (timbre/tracef "From client %s: %s" pid message)
+                     (alter-avatar pid handle-client-message pid message)
+                     (recur))))))
 
-(defn new-client-connection [req]
-  (let [eid (next-entity-id)
-        ws-channel (:ws-channel req)
-        avatar (create-avatar eid req)]
-    (swap! avatars assoc eid avatar)
-    (send
-     avatar
-     (fn [s]
-       (assoc s :ws-chan-reader
-              (spawn-wschan-reading-loop eid (:ws-channel s)))))))
+(defn attach-ws-connection [pid wsc]
+  (timbre/debugf "Attach new websocket to avatar %s" pid)
+  (alter-avatar
+   pid
+   (fn [a]
+     (when-let [cd (:cancel-destroy a)] (cd))
+     (-> a
+         (avatar-close-ws-chans)
+         (assoc
+          :dumpstate nil  ;; reset all dumpers
+          :cancel-destroy nil
+          :ws-channel wsc
+          :ws-reader (spawn-wschan-reading-loop pid wsc))))))
 
 
 ;; == Send world patch
 
 (declare make-world-dumper)
 
-(defn- create-and-send-world-patch [a at w]
-  (let [pid (:pid a)]
-    (if (w pid :player)
-      (let [ss (:ss-state a)
-            wd (make-world-dumper pid w)
-            [ss' dump] (wd ss w)
-            wpatch (into {} (map (fn [[c d]] [c (vec d)])) dump)]
-        (timbre/tracef "send to %s wpatch %s" pid wpatch)
-        (send-to-client
-         pid
-         {:server-time (System/currentTimeMillis)
-          :game-time at
-          :command :wpatch
-          :self pid
-          :ecs wpatch})
-        (assoc a
-               :actual-world w
-               :ss-state ss'))
-      (do
-        (timbre/tracef "player %s not in game" (entity w pid))
-        a))))
+(defn- create-and-send-world-patch [a pid at w]
+  (if (and (w pid :player) (:ws-channel a))
+    (let [ss (:dumpstate a)
+          wd (make-world-dumper pid w)
+          [ss' dump] (wd ss w)
+          wpatch (into {} (map (fn [[c d]] [c (vec d)])) dump)]
+      (timbre/tracef "send to %s wpatch %s" pid wpatch)
+      (send-to-client
+       pid
+       {:server-time (System/currentTimeMillis)
+        :game-time at
+        :command :wpatch
+        :self pid
+        :ecs wpatch})
+      (assoc a
+             :actual-world w
+             :dumpstate ss'))
+    (do
+      (timbre/tracef "player %s not in game" (entity w pid))
+      a)))
 
 (defn send-snapshots-to-all-clients []
   (let [[at w] (get-world)]
     (dosync
      (doseq [[pid a] @avatars]
-       (send-off a create-and-send-world-patch at w)))))
-
-
-;; == Dumpers
+       (send-off a create-and-send-world-patch pid at w)))))
 
 (defn combine-dumpers* [dumpers]
   (fn [state w]

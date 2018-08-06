@@ -31,7 +31,7 @@
 
 (defn page-game [req]
   (timbre/tracef "Page game req: %s" req)
-  (if-not (get-in req [:session :pid])
+  (if-not (contains? @csw/avatars (get-in req [:session :pid]))
     (redirect "/" :temporary-redirect)
     (response
      (html5
