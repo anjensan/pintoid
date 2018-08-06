@@ -8,19 +8,22 @@
                  [org.clojure/data.int-map "0.2.4"]
                  [org.clojure/data.xml "0.2.0-alpha5"]
                  [aero/aero "1.1.3"]
+                 [cljsbuild/cljsbuild "1.1.7"]
                  [cljsjs/pixi "4.7.0-0"]
+                 [com.cemerick/piggieback "0.2.2"]
+                 [com.cognitect/transit-clj "0.8.309"]
+                 [com.cognitect/transit-cljs "0.8.256"]
                  [com.taoensso/timbre "4.10.0"]
                  [compojure/compojure "1.6.1"]
                  [hiccup/hiccup "2.0.0-alpha1"]
+                 [http-kit/http-kit "2.3.0"]
                  [jarohen/chord "0.8.1"]
-                 [com.cognitect/transit-cljs "0.8.256"]
                  [mount/mount "0.1.12"]
+                 [org.clojure/tools.nrepl "0.2.13"]
                  [prismatic/dommy "1.1.0"]
                  [ring/ring-core "1.7.0-RC1"]
-                 [org.clojure/tools.nrepl "0.2.13"]
-                 [com.cemerick/piggieback "0.2.2"]
-                 [cljsbuild/cljsbuild "1.1.7"]
-                 [weasel/weasel "0.7.0"]]
+                 [weasel/weasel "0.7.0"]
+                 ]
 
   :plugins [[lein-cljsbuild "1.1.7"]
             [lein-shell "0.5.0"]
@@ -44,15 +47,12 @@
          "-Xmx1024m"
          "-XX:+AggressiveOpts"
          "-XX:MaxGCPauseMillis=10"
-         "--add-modules" "java.xml.bind"
          ]}
 
   :resource-paths ["resources" "target/resources"]
   :aliases {"jar" "uberjar"
             "run-prod" ["do" "uberjar," "shell" "java" "-jar"
                         "target/pintoid-${:version}.jar"]}
-
-  :jvm-opts ["--add-modules" "java.xml.bind"]
 
   :cljsbuild
   {:builds
