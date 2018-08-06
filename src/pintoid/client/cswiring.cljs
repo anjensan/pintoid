@@ -19,7 +19,7 @@
 (def ^:private ^:const timediff-preserve 20)
 
 (def ^:private server-ws-channel nil)
-(def ^:private websocket-url (let [wl js/window.location] (str "ws://" (.-host wl) "/ws")))
+(def ^:private websocket-url (let [wl js/window.location] (str "ws://" (.-host wl) "/game-sock")))
 
 (declare receive-server-messages)
 (declare on-channel-connected)
