@@ -1,12 +1,11 @@
-(ns pintoid.server.vec2
-  (:use clojure.template))
+(ns pintoid.server.vec2)
 
 (set! *unchecked-math* true)
 (set! *warn-on-reflection* true)
 
 (defrecord Vec2 [^double x ^double y]
   Object
-  (toString [_] (str [x y])))
+  (toString [_] (str "V" [x y])))
 
 (def ^:const zero (Vec2. 0 0))
 (def ^:const one  (Vec2. 1 1))
@@ -14,41 +13,40 @@
 (definline ^:private sqr [x]
   `(let [x# ~x] (* x# x#)))
 
-(defn vec2 [a b]
-  (Vec2. (double a) (double b)))
+(defn vec2
+  ([[a b]] (vec2 a b))
+  ([a b] (Vec2. a b)))
 
 (defn v+
   ([] zero)
-  ([^Vec2 v1] v1)
+  ([v1] v1)
   ([^Vec2 v1 ^Vec2 v2] (Vec2. (+ (.-x v1) (.-x v2)) (+ (.-y v1) (.-y v2))))
-  ([^Vec2 v1 ^Vec2 v2 ^Vec2 v3] (v+ (v+ v1 v2) v3))
-  ([^Vec2 v1 ^Vec2 v2 ^Vec2 v3 & vs] (reduce v+ (v+ v1 v2 v3) vs)))
+  ([v1 v2 v3] (-> v1 (v+ v2) (v+ v3)))
+  ([v1 v2 v3 v4] (-> v1 (v+ v2) (v+ v3) (v+ v4)))
+  ([v1 v2 v3 v4 & vs] (reduce v+ (v+ v1 v2 v3 v4) vs)))
 
 (defn v-
   ([^Vec2 v1] (Vec2. (- (.-x v1)) (- (.-y v1))))
   ([^Vec2 v1 ^Vec2 v2] (Vec2. (- (.-x v1) (.-x v2)) (- (.-y v1) (.-y v2))))
-  ([^Vec2 v1 ^Vec2 v2 ^Vec2 v3] (v- (v- v1 v2) v3))
-  ([^Vec2 v1 ^Vec2 v2 ^Vec2 v3 & vs] (reduce v- (v- v1 v2 v3) vs)))
+  ([v1 v2 v3] (-> v1 (v- v2) (v- v3)))
+  ([v1 v2 v3 v4] (-> v1 (v- v2) (v- v3) (v- v4)))
+  ([v1 v2 v3 v4 & vs] (reduce v- (v- v1 v2 v3 v4) vs)))
+
+(defn scale [^Vec2 v ^double c]
+  (Vec2. (* c (.-x v)) (* c (.-y v))))
 
 (defn dot [^Vec2 v1 ^Vec2 v2]
   (+ (* (.-x v1) (.-x v2))
      (* (.-y v1) (.-y v2))))
 
 (defn mag [^Vec2 v]
-  (Math/sqrt
-   (+ (Math/pow (.-x v) 2)
-      (Math/pow (.-y v) 2))))
+  (Math/sqrt (+ (sqr (.-x v))
+                (sqr (.-y v)))))
 
 (defn norm [^Vec2 v]
   (let [m (mag v)]
     (Vec2. (/ (.-x v) m)
-              (/ (.-y v) m))))
-
-(defn scale
-  ([] one)
-  ([^Vec2 v ^double c] (Vec2. (* c (.-x v)) (* c (.-y v))))
-  ([^Vec2 v ^double c1 ^double c2] (scale v (* c1 c2)))
-  ([^Vec2 v ^double c1 ^double c2 ^double c3] (scale v (reduce * (* c1 c2 c3)))))
+           (/ (.-y v) m))))
 
 (defn dist [^Vec2 v1 ^Vec2 v2]
   (mag (v- v2 v1)))
@@ -70,11 +68,11 @@
     (Vec2. nx ny)))
 
 (defn from-polar
-  ([[a s]] (from-polar a s))
-  ([^double a ^double s]
-   (if (zero? s)
+  ([[a m]] (from-polar a m))
+  ([^double a ^double m]
+   (if (zero? m)
      zero
-     (Vec2. (* (Math/cos a) s) (* (Math/sin a) s)))))
+     (Vec2. (* (Math/cos a) m) (* (Math/sin a) m)))))
 
 (defn to-polar [^Vec2 v]
   [(mag v) (angle v)])

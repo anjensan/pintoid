@@ -1,13 +1,14 @@
 (ns pintoid.server.game.player
   (:use
-   [pintoid.server utils math ecs])
+   [pintoid.server utils ecs])
   (:require
+   [pintoid.server.vec2 :as v2]
    [taoensso.timbre :as timbre]
    [pintoid.server.game-maps :as gm]))
 
 
 (defn search-new-player-pos [w eid]
-  (->Vector (rand-int 2000) (rand-int 2000)))
+  (v2/vec2 (rand-int 2000) (rand-int 2000)))
 
 
 (defn inc-player-score [w eid]
@@ -27,7 +28,7 @@
                angle' (+ angle (* rd gm/rotate-speed))
                ed (:engine-dir ui)
                ef (case ed -1 (- gm/engine-reverse-force) 1 gm/engine-forward-force 0)
-               fxy (vas angle' ef)]
+               fxy (v2/from-polar angle' ef)]
            [[eid :self-fxy fxy]
             [eid :angle angle']])))
       (eids$ w [:* :player :user-input])))))
@@ -45,9 +46,9 @@
                 last-fire-at (w eid :last-fire-at)]
             (when (or (nil? last-fire-at) (< (+ last-fire-at b-cooldown) now))
               (let [xy (w eid :position)
-                    vxy (w eid :velocity vector-0)
+                    vxy (w eid :velocity v2/zero)
                     angle (w eid :angle)
-                    b-vxy (v+ vxy (vas angle (:velocity b)))
+                    b-vxy (v2/v+ vxy (v2/from-polar angle (:velocity b)))
                     b-xy xy
                     b-lifetime (:lifetime b)]
                 (-> w'

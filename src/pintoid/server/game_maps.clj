@@ -1,5 +1,5 @@
 (ns pintoid.server.game-maps
-  (:use pintoid.server.math))
+  (:require [pintoid.server.vec2 :as v2]))
 
 (def world-radius 4000)
 
@@ -11,15 +11,15 @@
 (def max-user-view-distance 2500)
 
 (defn calc-gravity-force [^double m1 ^double m2 p1 p2]
-  (let [d (dist p1 p2)]
+  (let [d (v2/dist p1 p2)]
     (if (zero? d)
-      (->Vector 0 0)  ; FIXME: remove this?
+      (v2/vec2 0 0)  ; FIXME: remove this?
       (let [r' (/ d)
             fx (* gravity-g r' m1 r' m2 r')]
-        (vs* (v- p2 p1) fx)))))
+        (v2/scale (v2/v- p2 p1) fx)))))
 
 (defn visible-by-player? [w pid eid]
-  (< (dist (w eid :position)
+  (< (v2/dist (w eid :position)
            (w pid :position)) max-user-view-distance))
 
 (def ^{:doc "Required attribute"} ? :?)
@@ -32,18 +32,13 @@
   es)
 
 
-(defn v
-  ([[x y]] (->Vector x y))
-  ([x y] (->Vector x y)))
-
-
 ;; Game entities prototypes
 
 (def player
   {:player true
    :type :player
    :position ?
-   :fxy (v 0 0)
+   :fxy (v2/vec2 0 0)
    :phys-move true
    :mass 200
    :angle 0
@@ -56,8 +51,8 @@
 (def bullet
   {:type :bullet
    :sprite :sprite/bullet
-   :fxy (v 0 0)
-   :position (v 0 0)
+   :fxy (v2/vec2 0 0)
+   :position (v2/vec2 0 0)
    :phys-move true
    :mass 100
    :angle 0
@@ -71,8 +66,8 @@
 (def bullet-alt
   {:type :bullet
    :sprite :sprite/ast6
-   :fxy (v 0 0)
-   :position (v 0 0)
+   :fxy (v2/vec2 0 0)
+   :position (v2/vec2 0 0)
    :phys-move true
    :phys-act true
    :mass 8000
@@ -194,13 +189,13 @@
           :tiles (vec (for [c (range 8), r (range 4)]
                         (keyword "sprite" (str "starsky-" c "x" r))))))
       {:type :starsky-sprite
-       :position (v (* 911 i) (* 1999 i))
+       :position (v2/vec2 (* 911 i) (* 1999 i))
        :visible? (constantly true)
        :layer (keyword "layer" (str "starsky" i))
        :sprite x}])
 
    {:type :static-circle
-    :position (v 0 0)
+    :position (v2/vec2 0 0)
     :visible? (constantly true)
     :sprite {
              nil {:type :graphics
@@ -271,24 +266,24 @@
 
 
 (defn game-entities []
-  [(assoc blackhole :position (v 0 0))
-   (assoc star :position (v -2100 -1350), :mass 1500, :radius 33, :sprite :sprite/star1)
-   (assoc star :position (v 1200 500), :mass 5000, :radius 20, :sprite :sprite/star2)
-   (assoc star :position (v -900 -700), :mass 2000, :radius 66, :sprite :sprite/star3)
-   (assoc star :position (v 400 300), :mass 1500, :radius 70, :sprite :sprite/star2)
-   (assoc star :position (v -1600 1000), :mass 1750, :radius 70, :sprite :sprite/star3)
-   (assoc planet :position (v -2440 -900), :mass 850, :radius 10, :sprite :sprite/planet1)
-   (assoc planet :position (v 100 -900), :mass 900, :radius 9, :sprite :sprite/planet1)
-   (assoc planet :position (v 900 -2140), :mass 900, :radius 11, :sprite :sprite/planet2)
-   (assoc planet :position (v -900 -2240), :mass 300, :radius 11, :sprite :sprite/planet1)
-   (assoc asteroid :position (v -1220 -1232), :mass 50, :radius 3, :sprite :sprite/ast1)
-   (assoc asteroid :position (v -200 -300), :mass 50, :radius 3, :sprite :sprite/ast2)
-   (assoc asteroid :position (v -920 -700), :mass 70, :radius 3, :sprite :sprite/ast3)
-   (assoc asteroid :position (v 1900 1500), :mass 80, :radius 3, :sprite :sprite/ast4)
-   (assoc asteroid :position (v 2100 -1110), :mass 80, :radius 3, :sprite :sprite/ast1)
-   (assoc asteroid :position (v -1920 -1232), :mass 50, :radius 3, :sprite :sprite/ast1)
-   (assoc asteroid :position (v -200 -300), :mass 50, :radius 3, :sprite :sprite/ast2)
-   (assoc asteroid :position (v -320 -710), :mass 70, :radius 3, :sprite :sprite/ast3)
+  [(assoc blackhole :position (v2/vec2 0 0))
+   (assoc star :position (v2/vec2 -2100 -1350), :mass 1500, :radius 33, :sprite :sprite/star1)
+   (assoc star :position (v2/vec2 1200 500), :mass 5000, :radius 20, :sprite :sprite/star2)
+   (assoc star :position (v2/vec2 -900 -700), :mass 2000, :radius 66, :sprite :sprite/star3)
+   (assoc star :position (v2/vec2 400 300), :mass 1500, :radius 70, :sprite :sprite/star2)
+   (assoc star :position (v2/vec2 -1600 1000), :mass 1750, :radius 70, :sprite :sprite/star3)
+   (assoc planet :position (v2/vec2 -2440 -900), :mass 850, :radius 10, :sprite :sprite/planet1)
+   (assoc planet :position (v2/vec2 100 -900), :mass 900, :radius 9, :sprite :sprite/planet1)
+   (assoc planet :position (v2/vec2 900 -2140), :mass 900, :radius 11, :sprite :sprite/planet2)
+   (assoc planet :position (v2/vec2 -900 -2240), :mass 300, :radius 11, :sprite :sprite/planet1)
+   (assoc asteroid :position (v2/vec2 -1220 -1232), :mass 50, :radius 3, :sprite :sprite/ast1)
+   (assoc asteroid :position (v2/vec2 -200 -300), :mass 50, :radius 3, :sprite :sprite/ast2)
+   (assoc asteroid :position (v2/vec2 -920 -700), :mass 70, :radius 3, :sprite :sprite/ast3)
+   (assoc asteroid :position (v2/vec2 1900 1500), :mass 80, :radius 3, :sprite :sprite/ast4)
+   (assoc asteroid :position (v2/vec2 2100 -1110), :mass 80, :radius 3, :sprite :sprite/ast1)
+   (assoc asteroid :position (v2/vec2 -1920 -1232), :mass 50, :radius 3, :sprite :sprite/ast1)
+   (assoc asteroid :position (v2/vec2 -200 -300), :mass 50, :radius 3, :sprite :sprite/ast2)
+   (assoc asteroid :position (v2/vec2 -320 -710), :mass 70, :radius 3, :sprite :sprite/ast3)
    ])
 
 

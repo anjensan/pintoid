@@ -1,7 +1,7 @@
 (ns pintoid.server.cswiring
   (:use
    pintoid.server.game.core
-   [pintoid.server utils ecs math])
+   [pintoid.server utils ecs])
   (:require
    [mount.core :refer [defstate]]
    [taoensso.timbre :as timbre]

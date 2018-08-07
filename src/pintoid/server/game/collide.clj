@@ -1,7 +1,8 @@
 (ns pintoid.server.game.collide
   (:use
-   [pintoid.server utils math ecs game-maps])
+   [pintoid.server utils ecs game-maps])
   (:require
+   [pintoid.server.vec2 :as v2]
    [taoensso.timbre :as timbre]
    [pintoid.server.game-maps :as gm]))
 
@@ -13,7 +14,7 @@
                  r2 (w e2 :radius)
                  p1 (w e1 :position)
                  p2 (w e2 :position)]
-      (< (dist p1 p2) (+ r1 r2)))))
+      (< (v2/dist p1 p2) (+ r1 r2)))))
 
 
 (defn sys-collide-entities [w]

@@ -1,7 +1,7 @@
 (ns pintoid.server.game.core
   (:use
    [pintoid.server.game physics collide kill player]
-   [pintoid.server utils math ecs game-maps])
+   [pintoid.server utils ecs game-maps])
   (:require
    [mount.core :refer [defstate]]
    [taoensso.timbre :as timbre]

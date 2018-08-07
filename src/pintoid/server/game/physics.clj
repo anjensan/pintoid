@@ -1,7 +1,8 @@
 (ns pintoid.server.game.physics
   (:use
-   [pintoid.server utils math ecs game-maps])
+   [pintoid.server utils ecs game-maps])
   (:require
+   [pintoid.server.vec2 :as v2]
    [taoensso.timbre :as timbre]
    [pintoid.server.game-maps :as gm]))
 
@@ -12,13 +13,13 @@
    (mapcat
     (fn [eid]
       (let [xy (w eid :position)
-            fxy (w eid :fxy vector-0)
+            fxy (w eid :fxy v2/zero)
             m (w eid :mass 1)
-            vxy (w eid :velocity vector-0)
-            axy (vs* fxy (/ m))
-            vxy' (v+ vxy (vs* axy dt))
+            vxy (w eid :velocity v2/zero)
+            axy (v2/scale fxy (/ m))
+            vxy' (v2/v+ vxy (v2/scale axy dt))
             dt2 (/ dt 2)
-            xy' (v+ xy (vs* vxy dt2) (vs* vxy' dt2))]
+            xy' (v2/v+ xy (v2/scale vxy dt2) (v2/scale vxy' dt2))]
         [[eid :velocity vxy']
          [eid :position xy']])))
     (eids$ w [:* :position :phys-move [:+ :velocity :fxy]])))
@@ -32,8 +33,8 @@
       (let [xy (w eid :position)
             m (w eid :mass 1)
            fxy (reduce
-                #(v+ %1 (gm/calc-gravity-force m (w %2 :mass) xy (w %2 :position)))
-                (w eid :self-fxy vector-0)
+                #(v2/v+ %1 (gm/calc-gravity-force m (w %2 :mass) xy (w %2 :position)))
+                (w eid :self-fxy v2/zero)
                 (eids$ w [:- [:* :phys-act :position :mass] [eid]]))]
         [eid :fxy fxy])))
    (eids$ w [:* :position :mass :phys-move])))

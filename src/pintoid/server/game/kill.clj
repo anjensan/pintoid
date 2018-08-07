@@ -1,8 +1,9 @@
 (ns pintoid.server.game.kill
   (:use
    [pintoid.server.game player]
-   [pintoid.server utils math ecs])
+   [pintoid.server utils ecs])
   (:require
+   [pintoid.server.vec2 :as v2]
    [taoensso.timbre :as timbre]
    [pintoid.server.game-maps :as gm]))
 
@@ -52,7 +53,7 @@
 (defn- entity-out-of-gamefield? [w eid]
   (when-let [xy (w eid :position)]
     (let [[x y] ((juxt :x :y) xy)]
-      (> (dist xy vector-0) gm/world-radius))))
+      (> (v2/mag xy) gm/world-radius))))
 
 
 (defn sys-kill-entities-out-of-gamefield [w]
