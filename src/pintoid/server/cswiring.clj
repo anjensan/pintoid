@@ -16,7 +16,6 @@
   :start (agent {})
   :stop (cleanup-avatars))
 
-
 (defn- alter-avatar [pid f & rs]
   (let [a (get @avatars pid)]
     (if a
@@ -55,7 +54,7 @@
     (timbre/warnf "Avatar %s has not been removed from 'avatars'!"))
   (avatar-close-ws-chans a)
   (game-remove-player pid)
-  ::destroyed)
+  {:pid pid :state ::destroyed})
 
 (defn- cleanup-avatars [as]
   (send avatars #(doseq [[_ a] %] (send a avatar-destroy))) {})
@@ -76,48 +75,46 @@
      a)))
 
 (defmulti handle-client-message
-  (fn [a pid message] (:command message)))
+  (fn [a message] (:command message)))
 
-(defmethod handle-client-message :default [a pid m]
-  (timbre/warnf "Unknown message from %s" pid)
+(defmethod handle-client-message :default [a m]
+  (timbre/warnf "Unknown message from %s" (:pid a))
   a)
 
-(defmethod handle-client-message :join-game [a pid m]
-  (timbre/infof "Player %s joined the game" pid)
-  (game-add-new-player pid)
+(defmethod handle-client-message :join-game [a m]
+  (timbre/infof "Player %s joined the game" (:pid a))
+  (game-add-new-player (:pid a))
   a)
 
-(defmethod handle-client-message :user-input [a pid m]
-  (timbre/tracef "User %s send input %s" pid m)
-  (game-process-user-input pid (:data m))
+(defmethod handle-client-message :user-input [a m]
+  (timbre/tracef "User %s send input %s" (:pid a) m)
+  (game-process-user-input (:pid a) (:data m))
   (assoc a :user-input (:data m)))
 
-(defn handle-client-chan-error [a pid err]
-  (timbre/warnf "Client %s: %s" pid err)
+(defn handle-client-chan-error [a err]
+  (timbre/warnf "Client %s: %s" (:pid a) err)
   a)
 
-(defn handle-client-disconnect [a pid]
-  (timbre/infof "Client %s disconnected" pid)
-  (let [cd (chan)
-        t (timeout client-destroy-timeout)]
-    (go
-      (alt!
-        t (destroy-player-avatar pid)
-        cd :none))
-    (-> a
-        (avatar-close-ws-chans)
-        (assoc :cancel-destroy #(close! cd)))))
+(defn handle-client-disconnected [a]
+  (timbre/infof "Client %s disconnected" (:pid a))
+  a)
+
+(defn- avatar-destroy-when-disconnected [{wsc :ws-channel :as a}]
+  (if wsc a (avatar-destroy a)))
 
 (defn- spawn-wschan-reading-loop [pid ws-channel]
-  (go-loop []
-    (let [{:keys [message error] :as raw} (<! ws-channel)]
-      (cond
-        (nil? raw) (alter-avatar pid handle-client-disconnect pid)
-        error      (alter-avatar pid handle-client-chan-error pid error)
-        message    (do
-                     (timbre/tracef "From client %s: %s" pid message)
-                     (alter-avatar pid handle-client-message pid message)
-                     (recur))))))
+  (go
+    (loop []
+      (let [{:keys [message error] :as raw} (<! ws-channel)]
+        (cond
+          error      (alter-avatar pid handle-client-chan-error error)
+          message    (do
+                      (timbre/tracef "From client %s: %s" pid message)
+                      (alter-avatar pid handle-client-message message)
+                      (recur)))))
+    (alter-avatar pid handle-client-disconnected pid)
+    (<! (timeout client-destroy-timeout))
+    (alter-avatar pid avatar-destroy-when-disconnected)))
 
 (defn attach-ws-connection [pid wsc]
   (timbre/debugf "Attach new websocket to avatar %s" pid)
