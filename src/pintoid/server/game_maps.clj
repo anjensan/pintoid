@@ -187,13 +187,14 @@
        x (random-tilemap
           :hash-seed (str "seed" i)
           :tile-size [512 512]
-          :tile-group [2 2]
+          :tile-advance 2
+          :tile-group [4 4]
           :alpha a
           :scale s
           :tiles (vec (for [c (range 8), r (range 4)]
                         (keyword "sprite" (str "starsky-" c "x" r))))))
       {:type :starsky-sprite
-       :position (v (* 97 a) (* -97 i))
+       :position (v (* 911 i) (* 1999 i))
        :visible? (constantly true)
        :layer (keyword "layer" (str "starsky" i))
        :sprite x}])
