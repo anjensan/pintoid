@@ -104,7 +104,7 @@
 
 (defn create-ecs
   ([]
-   (->PersistentECSImpl {} {} {} nil))
+   (->PersistentECSImpl {} {} nil))
   ([eid-cid-comp-list]
    (into
     (reduce
@@ -145,7 +145,6 @@
 
 (deftype PersistentECSImpl
     [cid-eid-comp
-     cid-eids
      eid-cids
      the-meta]
 
@@ -171,11 +170,6 @@
          #(assoc! %1 %2 (dissoc (%1 %2) entity-id))
          (transient cid-eid-comp)
          cids))
-       (persistent!
-        (reduce
-         #(assoc! %1 %2 (disj (%1 %2) entity-id))
-         (transient cid-eids)
-         cids))
        (dissoc eid-cids entity-id)
        the-meta)
       this))
@@ -185,7 +179,6 @@
       this
       (PersistentECSImpl.
        cid-eid-comp
-       cid-eids
        (assoc eid-cids entity-id (or (eid-cids entity-id) (sorted-set)))
        the-meta)))
 
@@ -196,11 +189,6 @@
        (fn [cec [k v]] (assoc! cec k (assoc (cec k) entity-id v)))
        (transient cid-eid-comp)
        cid-comp-map))
-     (persistent!
-      (reduce
-       #(assoc! %1 %2 (conj (or (%1 %2) (eids)) entity-id))
-       (transient cid-eids)
-       (map first cid-comp-map)))
      (assoc eid-cids entity-id
             (into (or (eid-cids entity-id) (sorted-set)) (map first cid-comp-map)))
      the-meta))
@@ -215,7 +203,6 @@
         (not (or old-is-nil new-is-nil))
         (PersistentECSImpl.
          (assoc cid-eid-comp component-id (assoc eid-comp entity-id comp))
-         cid-eids
          eid-cids
          the-meta)
 
@@ -223,7 +210,6 @@
         (and (not old-is-nil) new-is-nil)
         (PersistentECSImpl.
          (assoc-dissoc-coll cid-eid-comp component-id (dissoc eid-comp entity-id))
-         (assoc cid-eids component-id (disj (cid-eids component-id) entity-id))
          (assoc eid-cids entity-id (disj (eid-cids entity-id) component-id))
          the-meta)
 
@@ -231,7 +217,6 @@
         (and old-is-nil (not new-is-nil) (eid-cids entity-id))
         (PersistentECSImpl.
          (assoc cid-eid-comp component-id (assoc (or eid-comp {}) entity-id comp))
-         (assoc cid-eids component-id (conj (or (cid-eids component-id) (eids)) entity-id))
          (assoc eid-cids entity-id (conj (eid-cids entity-id) component-id))
          the-meta)
 
@@ -247,7 +232,7 @@
     (.put-component this entity-id component-id comp))
 
   (empty [_]
-    (PersistentECSImpl. {} {} {} the-meta))
+    (PersistentECSImpl. {} {} the-meta))
 
   (seq [this]
     (seq
@@ -278,14 +263,13 @@
     the-meta)
 
   (withMeta [_ meta]
-    (PersistentECSImpl. cid-eid-comp cid-eids eid-cids meta))
+    (PersistentECSImpl. cid-eid-comp eid-cids meta))
 
   clojure.lang.IEditableCollection
 
   (asTransient [_]
     (->TransientECSImpl
      (transient cid-eid-comp)
-     cid-eids
      eid-cids))
 
   )
@@ -293,7 +277,6 @@
 
 (deftype TransientECSImpl
     [^:unsynchronized-mutable cid-eid-comp
-     ^:unsynchronized-mutable cid-eids
      ^:unsynchronized-mutable eid-cids]
 
   ImmutableECS
@@ -319,12 +302,7 @@
             (set! eid-cids
                   (assoc!
                    (maybe-transient eid-cids) entity-id
-                   (conj (or (eid-cids entity-id) (sorted-set)) component-id)))
-            (set! cid-eids
-                  (assoc!
-                   (maybe-transient cid-eids) component-id
-                   (conj (or (cid-eids component-id) (eids)) entity-id))))
-
+                   (conj (or (eid-cids entity-id) (sorted-set)) component-id))))
           (let [new-eid-comp (assoc! (maybe-transient (or eid-comp {})) entity-id comp)]
             (when-not (identical? eid-comp new-eid-comp)
               (set! cid-eid-comp (assoc! cid-eid-comp component-id new-eid-comp)))))
@@ -335,10 +313,6 @@
                 (assoc-dissoc-coll!
                  cid-eid-comp component-id
                  (dissoc! (maybe-transient eid-comp) entity-id)))
-          (set! cid-eids
-                (assoc!
-                 (maybe-transient cid-eids) component-id
-                 (disj (cid-eids component-id) entity-id)))
           (set! eid-cids
                 (assoc!
                  (maybe-transient eid-cids) entity-id
@@ -354,7 +328,6 @@
   (persistent [_]
     (->PersistentECSImpl
      (persistent-map-rec1! cid-eid-comp)
-     (maybe-persistent! cid-eids)
      (maybe-persistent! eid-cids)
      nil))
 
