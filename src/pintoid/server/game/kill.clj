@@ -47,7 +47,7 @@
 
          :else w')))
    w
-   (eids$ w :collide-with)))
+   (entities w :collide-with)))
 
 
 (defn- entity-out-of-gamefield? [w eid]
@@ -61,7 +61,7 @@
    (filter #(entity-out-of-gamefield? w %))
    (completing kill-entity)
    w
-   (eids$ w :position)))
+   (entities w :position)))
 
 
 (defn sys-kill-outdated-entities [w now]
@@ -69,7 +69,7 @@
    (filter #(<= (w % :sched-kill-at) now))
    (completing kill-entity)
    w
-   (eids$ w :sched-kill-at)))
+   (entities w :sched-kill-at)))
 
 
 (defn kill-entity-at [w eid at]

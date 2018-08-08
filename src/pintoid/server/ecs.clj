@@ -12,19 +12,11 @@
 (declare make-stateful-system)
 (declare quantize-time)
 
-;; sets of entity-ids
-(declare eids)
-(declare eids+)
-(declare eids*)
-(declare eids-)
-(declare eids$)
-
 (defprotocol ImmutableECS
   ;; (ecs 1 :x) ~ (component ecs 1 :x)
   (component [ecs entity-id component-id])
   (component-map [ecs component-id])
   (component-ids [ecs entity-id])
-  (entity-ids [ecs component-id])
   )
 
 (defprotocol PersistentECS
@@ -38,8 +30,6 @@
   ;; (conj! ecs [1 :x ()]) ~ (put-component! ecs 1 :x ())
   (put-component! [ecs component-id entity-id comp]))
 
-
-;; -- entity-ids
 
 (def ^:private entity-id-counter (atom 16r400))
 
@@ -129,21 +119,12 @@
 (defn drop-component! [ecs entity-id component-id]
   (put-component! ecs entity-id component-id nil))
 
-(defn entity [ecs entity-id]
+(defn grab-entity [ecs entity-id]
   (when-some [cids (component-ids ecs entity-id)]
     (into {} (map (fn [ck] [ck (ecs entity-id ck)]) cids))))
 
 (defn add-new-entity [w cid-comp-map]
   (add-entity w (next-entity-id (:type cid-comp-map)) cid-comp-map))
-
-(defn eids+ [& es]
-  (reduce im/union (map eids es)))
-
-(defn eids* [& es]
-  (reduce im/intersection (map eids es)))
-
-(defn eids- [x & es]
-  (reduce im/difference (eids x) (map eids es)))
 
 (defn eids
   ([]
@@ -153,19 +134,12 @@
      xs
      (im/dense-int-set (seq xs)))))
 
-(defn eids$ [ces eids-query]
-  (cond
-    (keyword? eids-query) (entity-ids ces eids-query)
-    (empty? eids-query) (eids)
-    (vector? eids-query)
-    (let [[f & r :as fr] eids-query
-          fm #(eids$ ces %)]
-      (condp #(%1 %2) f
-        #{:* '*} (apply eids* (map fm r))
-        #{:+ '+} (apply eids+ (map fm r))
-        #{:- '-} (apply eids- (map fm r))
-        (eids fr)))
-    :else (eids eids-query)))
+(defn entities [w & cs]
+  (let [[mc & rcs] (sort-by #(count (component-map w %)) cs)]
+    ;; TODO: Use 'deftype + reduce-kv' instead of 'eduction'
+    (eduction
+     (reduce comp (map key) (map #(filter (component-map w %)) rcs))
+     (component-map w mc))))
 
 ;; -- implementation
 
@@ -186,9 +160,6 @@
 
   (component-ids [_ entity-id]
     (eid-cids entity-id))
-
-  (entity-ids [_ component-id]
-    (cid-eids component-id))
 
   PersistentECS
 
@@ -333,9 +304,6 @@
 
   (component-ids [_ entity-id]
     (eid-cids entity-id))
-
-  (entity-ids [_ component-id]
-    (cid-eids component-id))
 
   TransientECS
 

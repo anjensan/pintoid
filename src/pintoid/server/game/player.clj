@@ -31,7 +31,7 @@
                fxy (v2/from-polar angle' ef)]
            [[eid :self-fxy fxy]
             [eid :angle angle']])))
-      (eids$ w [:* :player :user-input])))))
+      (entities w :player :user-input)))))
 
 
 (defn sys-spawn-bullets [w now]
@@ -62,7 +62,7 @@
                         :angle angle))))))))
       w'))
    w
-   (eids$ w [:* :player :user-input])))
+   (entities w :player :user-input)))
 
 
 (defn remove-player [w eid]

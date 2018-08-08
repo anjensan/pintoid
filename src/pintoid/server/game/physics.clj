@@ -22,7 +22,7 @@
             xy' (v2/v+ xy (v2/scale vxy dt2) (v2/scale vxy' dt2))]
         [[eid :velocity vxy']
          [eid :position xy']])))
-    (eids$ w [:* :position :phys-move [:+ :velocity :fxy]])))
+    (entities w :position :phys-move)))
 
 
 (defn sys-physics-update-vxy [w dt]
@@ -33,11 +33,14 @@
       (let [xy (w eid :position)
             m (w eid :mass 1)
            fxy (reduce
-                #(v2/v+ %1 (gm/calc-gravity-force m (w %2 :mass) xy (w %2 :position)))
+                (fn [w' x]
+                  (if (== x eid)
+                    w'
+                    (v2/v+ w' (gm/calc-gravity-force m (w x :mass) xy (w x :position)))))
                 (w eid :self-fxy v2/zero)
-                (eids$ w [:- [:* :phys-act :position :mass] [eid]]))]
+                (entities w :phys-act :position :mass))]
         [eid :fxy fxy])))
-   (eids$ w [:* :position :mass :phys-move])))
+   (entities w :position :mass :phys-move)))
 
 
 (def sys-simulate-physics

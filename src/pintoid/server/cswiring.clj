@@ -153,7 +153,7 @@
              :actual-world w
              :dumpstate ss'))
     (do
-      (timbre/tracef "player %s not in game" (entity w pid))
+      (timbre/tracef "player %s not in game" pid)
       a)))
 
 (defn send-snapshots-to-all-clients []
@@ -198,7 +198,7 @@
                    true (comp (map (fn [eid] [eid (cm eid)])))
                    true (comp (filter changed?))
                    fval (comp (filter fval)))
-              eids (cond->> (entity-ids w cid) eids (eids* eids))
+              eids (cond->> (entities w cid) eids (into (set eids)))
               d-add (into {} ef eids)
               removed? (fn [eid]
                          (and
@@ -219,7 +219,7 @@
 (defn dumper-only-visible-entities [pid w]
   (let [player-xy (w pid :position)
         is-visible? #(when-let [f (w % :visible?)] (f w pid %))
-        visible (into (im/dense-int-set) (filter is-visible?) (entity-ids w :position))]
+        visible (into #{} (filter is-visible?) (entities w :position))]
     (combine-dumpers
      (dumper :cid :type, :eids visible)
      (dumper :cid :position, :convert (juxt :x :y), :eids visible)

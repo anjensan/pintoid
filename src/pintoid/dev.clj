@@ -24,7 +24,7 @@
   ([q f]
    (let [w @world]
      (->>
-      (for [eid (ecs/eids$ w q)]
+      (for [eid (ecs/entities w q)]
         (assoc (ecs/entity w eid) :eid eid))
       (filter f)))))
 
@@ -48,7 +48,7 @@
 
 
 (defn- find-asset-world [w aid]
-  (->> (ecs/eids$ w :assets)
+  (->> (ecs/entities w :assets)
        (map #(get (w % :assets) aid))
        (keep identity)
        (last)))
@@ -58,7 +58,7 @@
 
 
 (defn- find-dev-asset-ids-world [w aid]
-  (->> (ecs/eids$ w [:* :assets ::dev-asset])
+  (->> (ecs/entities w [:* :assets ::dev-asset])
        (filter #(contains? (w % :assets) aid))))
 
 
