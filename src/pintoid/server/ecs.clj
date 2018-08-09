@@ -1,4 +1,5 @@
 (ns pintoid.server.ecs
+  (:use [pintoid.server.utils])
   (:require [clojure.data.int-map :as im]))
 
 ;; -- API
@@ -38,18 +39,6 @@
   ([entity-kind] (swap! entity-id-counter inc)))
 
 
-;; -- declarations
-
-(declare maybe-transient)
-(declare maybe-persistent!)
-(declare persistent-map-rec1!)
-(declare assoc-dissoc)
-(declare assoc-dissoc-coll)
-(declare assoc-dissoc-coll!)
-(declare ->PersistentECSImpl)
-(declare ->TransientECSImpl)
-
-
 ;; -- systems
 
 (defn make-timed-system
@@ -72,7 +61,6 @@
                (reduce #(apply sys-state-fn %1 %2 rs) ecs dt-s))
              (add-entity sid {:system {:last-time target-time}
                               :type :system})))))))
-
 
 (defn make-async-system
   ([system-fn-fn]
@@ -101,6 +89,9 @@
                                :type :system}))))))
 
 ;; -- misc
+
+(declare ->PersistentECSImpl)
+(declare ->TransientECSImpl)
 
 (defn create-ecs
   ([]
@@ -140,8 +131,6 @@
     (eduction
      (reduce comp (map key) (map #(filter (component-map w %)) rcs))
      (component-map w mc))))
-
-;; -- implementation
 
 (deftype PersistentECSImpl
     [cid-eid-comp
@@ -247,9 +236,6 @@
 
   clojure.lang.IFn
 
-  (invoke [this [entity-id component-id]]
-    (.component this entity-id component-id))
-
   (invoke [this entity-id component-id]
     (.component this entity-id component-id))
 
@@ -271,9 +257,18 @@
     (->TransientECSImpl
      (transient cid-eid-comp)
      eid-cids))
-
   )
 
+
+(defn- persistent-map-rec1! [tm]
+  (if-not (transient? tm)
+    tm
+    (let [pm (persistent! tm)]
+      (persistent!
+       (reduce-kv
+        (fn [a k v] (if (transient? v) (assoc! a k (persistent! v)) a))
+        (transient pm)
+        pm)))))
 
 (deftype TransientECSImpl
     [^:unsynchronized-mutable cid-eid-comp
@@ -333,9 +328,6 @@
 
   clojure.lang.IFn
 
-  (invoke [this [entity-id component-id]]
-    (.component this entity-id component-id))
-
   (invoke [this entity-id component-id]
     (.component this entity-id component-id))
 
@@ -344,42 +336,6 @@
       (if (nil? r) default r)))
 
   )
-
-;; private utils
-
-(definline ^:private maybe-transient [c]
-  `(let [c# ~c]
-     (if (instance? clojure.lang.ITransientCollection c#)
-       c#
-       (transient c#))))
-
-(definline ^:private maybe-persistent! [c]
-  `(let [c# ~c]
-     (if (instance? clojure.lang.ITransientCollection c#)
-       (persistent! c#)
-       c#)))
-
-(defn- persistent-map-rec1! [tm]
-  (if (instance? clojure.lang.ITransientCollection tm)
-    (let [pm (persistent! tm)]
-      (persistent!
-       (reduce-kv
-        #(if (instance? clojure.lang.ITransientCollection %3)
-           (assoc! %1 %2 (persistent! %3))
-           %1)
-        (transient pm)
-        pm)))
-    tm))
-
-(defn- assoc-dissoc-coll [c k v]
-  (if (zero? (count v))
-    (dissoc c k)
-    (assoc c k v)))
-
-(defn- assoc-dissoc-coll! [c k v]
-  (if (zero? (count v))
-    (dissoc! c k)
-    (assoc! c k v)))
 
 (defn- convert-seq-to-integrals
   [xs]

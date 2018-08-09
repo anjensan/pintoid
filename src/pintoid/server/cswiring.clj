@@ -112,7 +112,7 @@
                       (timbre/tracef "From client %s: %s" pid message)
                       (alter-avatar pid handle-client-message message)
                       (recur)))))
-    (alter-avatar pid handle-client-disconnected pid)
+    (alter-avatar pid handle-client-disconnected)
     (<! (timeout client-destroy-timeout))
     (alter-avatar pid avatar-destroy-when-disconnected)))
 
