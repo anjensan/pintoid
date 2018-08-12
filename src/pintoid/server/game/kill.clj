@@ -21,7 +21,7 @@
   (if (w eid :player)
     ;; FIXME: use multimethods or protocols here
     (kill-player w eid)
-    (drop-entity w eid)))
+    (remove-entity w eid)))
 
 
 (defn sys-kill-collided-entities [w]

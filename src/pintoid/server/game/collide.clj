@@ -23,7 +23,7 @@
         coll-eids (entities w :radius :position)]
     (reduce
      (fn [w eid]
-       (put-component
+       (put-comp
         w eid :collide-with
         (seq (filter #(is-colliding? w eid %) coll-eids))))
      w

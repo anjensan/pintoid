@@ -24,7 +24,7 @@
           (send world (constantly ::destroyed))))
 
 
-(def ^:private time-eid (next-entity-id))
+(def ^:private time-eid (next-entity))
 
 (defn- world-time [w]
   (w time-eid ::time))

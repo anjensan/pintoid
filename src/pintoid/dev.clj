@@ -16,7 +16,7 @@
     {:pid eid :host (:host ava)}))
 
 (defn get-entity [eid]
-  (assoc (ecs/entity @world eid) :eid eid))
+  (assoc (ecs/get-full-entity @world eid) :eid eid))
 
 (defn get-entities
   ([q]
@@ -25,7 +25,7 @@
    (let [w @world]
      (->>
       (for [eid (ecs/entities w q)]
-        (assoc (ecs/entity w eid) :eid eid))
+        (assoc (ecs/get-full-entity w eid) :eid eid))
       (filter f)))))
 
 
@@ -63,7 +63,7 @@
 
 
 (defn reset-asset! [aid]
-  (send world #(reduce ecs/drop-entity % (find-dev-asset-ids-world % aid)))
+  (send world #(reduce ecs/remove-entity % (find-dev-asset-ids-world % aid)))
   (await world)
   (asset aid))
 

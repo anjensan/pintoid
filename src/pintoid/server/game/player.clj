@@ -1,6 +1,6 @@
 (ns pintoid.server.game.player
   (:use
-   [pintoid.server utils ecs])
+   [pintoid.server utils ecs sys])
   (:require
    [pintoid.server.vec2 :as v2]
    [taoensso.timbre :as timbre]
@@ -16,7 +16,7 @@
 
 
 (def sys-change-engine-based-on-ui
-  (make-timed-system
+  (timed-system
    (fn [w dt]
      (into
       w
@@ -52,7 +52,7 @@
                     b-xy xy
                     b-lifetime (:lifetime b)]
                 (-> w'
-                    (put-component eid :last-fire-at now)
+                    (put-comp eid :last-fire-at now)
                     (add-new-entity
                       (assoc b-proto
                         :position b-xy
@@ -66,7 +66,7 @@
 
 
 (defn remove-player [w eid]
-  (drop-entity w eid))
+  (remove-entity w eid))
 
 
 (defn add-new-player [w eid]

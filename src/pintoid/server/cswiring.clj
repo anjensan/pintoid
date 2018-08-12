@@ -23,7 +23,7 @@
       (timbre/debugf "Unknown pid %s, skip %s" pid f))))
 
 (defn generate-player-pid []
-  (next-entity-id :player))
+  (next-entity :player))
 
 (defn- create-empty-avatar [pid]
   (agent {:pid pid}))
@@ -189,7 +189,7 @@
       :convert convert component values
   "
   (fn [{cm' :compmap d' :dump :or {d' {}} :as state} w]
-    (let [cm (component-map w cid)]
+    (let [cm (get-comp-map w cid)]
       (if (= cm' cm)
         [state {}]
         (let [changed? (fn [[eid s]] (not (when-let [s' (d' eid)] (= s s'))))
