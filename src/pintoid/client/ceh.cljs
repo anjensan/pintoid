@@ -29,9 +29,10 @@
 (defn player-entity [w]
   (entity w (.-selfid w)))
 
-
-(defn changed-eids [wpatch component]
-  (eduction (map #(nth % 0))
+(defn changed-eids [old-world wpatch component]
+  (eduction (comp
+             (filter (fn [[e c]] (not= (get (entity old-world e) component) c)))
+             (map #(nth % 0)))
             (get-in wpatch [:ecs component])))
 
 

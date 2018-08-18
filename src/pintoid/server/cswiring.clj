@@ -1,11 +1,12 @@
 (ns pintoid.server.cswiring
   (:use
+   clojure.algo.monads
    pintoid.server.game.core
    [pintoid.server utils ecs])
   (:require
+   [clojure.data.int-map :as im]
    [mount.core :refer [defstate]]
    [taoensso.timbre :as timbre]
-   [clojure.data.int-map :as im]
    [clojure.core.async :refer [<! >! close! go go-loop timeout chan alt!]]))
 
 (def client-destroy-timeout 10000)
@@ -97,7 +98,7 @@
 
 (defn handle-client-disconnected [a]
   (timbre/infof "Client %s disconnected" (:pid a))
-  a)
+  (dissoc a :ws-channel))
 
 (defn- avatar-destroy-when-disconnected [{wsc :ws-channel :as a}]
   (if wsc a (avatar-destroy a)))
@@ -116,6 +117,8 @@
     (<! (timeout client-destroy-timeout))
     (alter-avatar pid avatar-destroy-when-disconnected)))
 
+(declare dump-the-world)
+
 (defn attach-ws-connection [pid wsc]
   (timbre/debugf "Attach new websocket to avatar %s" pid)
   (alter-avatar
@@ -125,7 +128,7 @@
      (-> a
          (avatar-close-ws-chans)
          (assoc
-          :dumpstate nil  ;; reset all dumpers
+          :dumpstate nil  ;; reset all df-map
           :cancel-destroy nil
           :ws-channel wsc
           :ws-reader (spawn-wschan-reading-loop pid wsc))))))
@@ -133,14 +136,11 @@
 
 ;; == Send world patch
 
-(declare make-world-dumper)
-
 (defn- create-and-send-world-patch [a pid at w]
   (if (and (w pid :player) (:ws-channel a))
     (let [ss (:dumpstate a)
-          wd (make-world-dumper pid w)
-          [ss' dump] (wd ss w)
-          wpatch (into {} (map (fn [[c d]] [c (vec d)])) dump)]
+          [d ss'] ((dump-the-world w pid) ss)
+          wpatch (into {} (comp (map-val vec) (remove (comp empty? second))) d)]
       (timbre/tracef "send to %s wpatch %s" pid wpatch)
       (send-to-client
        pid
@@ -162,82 +162,85 @@
      (doseq [[pid a] @avatars]
        (send-off a create-and-send-world-patch pid at w)))))
 
-(defn combine-dumpers* [dumpers]
-  (fn [state w]
-    (let [sds (map
-               (fn [[c df]]
-                 (let [s (get state c)
-                       [s' d] (df s w)]
-                   [{c s'} d]))
-               dumpers)
-          states (into {} (map first sds))
-          dumps  (apply merge-with #(eduction cat [%1 %2]) (map second sds))]
-    [states dumps])))
 
-(defmacro combine-dumpers [& dumpers]
-  "Combine several dumpers into one."
-  `(combine-dumpers*
-    ~(zipmap (repeatedly #(keyword (gensym "ecs_dumper"))) dumpers)))
+;; Dumpers
 
-(defn dumper [& {cid :cid eids :eids mapf :convert feid :feid fval :filter}]
-  "Returns dumper function [state world] => [new-state {:cid1 [...], :cid2 [...]}]
-   Arguments:
-      :cid  component name (mandatory)
-      :eids bitset of entity ids
-      :feid filter eids
-      :filter filter pairs [eid value]
-      :convert convert component values
-  "
-  (fn [{cm' :compmap d' :dump :or {d' {}} :as state} w]
-    (let [cm (get-comp-map w cid)]
-      (if (= cm' cm)
-        [state {}]
-        (let [changed? (fn [[eid s]] (not (when-let [s' (d' eid)] (= s s'))))
-              ef (cond-> identity
-                   feid (comp (filter feid))
-                   true (comp (map (fn [eid] [eid (cm eid)])))
-                   true (comp (filter changed?))
-                   fval (comp (filter fval)))
-              eids (cond->> (entities w cid) eids (into (set eids)))
-              d-add (into {} ef eids)
-              removed? (fn [eid]
-                         (and
-                          (not (contains? d-add eid))
-                          (or
-                           (not (contains? eids eid))
-                           (and feid (not (feid eid)))
-                           (and fval (not (fval (find cm eid)))))))
-              d-rem (into [] (comp (map key) (filter removed?)) d')
-              d (as-> d' $ (apply dissoc $ d-rem) (into $ d-add))]
-          [(assoc state :compmap cm :dump d)
-           {cid (eduction
-                 cat [(eduction (map (fn [x] [x nil])) d-rem)
-                      (if mapf
-                        (eduction (map (fn [[k v]] [k (mapf v)])) d-add)
-                        d-add)])}])))))
+(with-monad (maybe-t state-m ::empty-dump)
 
-(defn dumper-only-visible-entities [pid w]
-  (let [player-xy (w pid :position)
-        is-visible? #(when-let [f (w % :visible?)] (f w pid %))
-        visible (into #{} (filter is-visible?) (entities w :position))]
-    (combine-dumpers
-     (dumper :cid :type, :eids visible)
-     (dumper :cid :position, :convert (juxt :x :y), :eids visible)
-     (dumper :cid :position-tts, :eids visible)
-     (dumper :cid :angle, :eids visible)
-     (dumper :cid :layer, :eids visible)
-     (dumper :cid :sprite, :eids visible))))
+  (defn d-map [f dm]
+    (domonad [d dm] (eduction (map-val f) d)))
 
-(defn dumper-self-player [pid]
-  (fn [sent w]
-    (if sent
-      [true nil]
-      [true {:self-player [[pid true]]}])))
+  (defn d-filter [p dm]
+    (domonad [d dm] (eduction (filter p) d)))
 
-(defn make-world-dumper [pid w]
-  (combine-dumpers
-   (dumper-only-visible-entities pid w)
-   (dumper :cid :score)
-   (dumper :cid :assets)
-   (dumper-self-player pid)
-   ))
+  (defn d-diff [dm]
+    (domonad [new ((m-lift 1 to-int-map) dm)
+              old (set-val ::d-diff-old new)]
+      (edcat
+        (eduction (comp (remove #(contains? new %)) (map #(vector % nil))) (keys old))
+        (eduction (remove (fn [[k v]] (= v (get old k)))) new))))
+
+  (defn d-when-not-identical [dm]
+    (domonad [new dm, old (set-val ::d-changed-old new)]
+      (if (identical? old new) ::empty-dump new)))
+  )
+
+
+(with-monad state-m
+
+  (defn dumps-map [& [k m & r :as rr]]
+    (if-not (seq rr)
+      (m-result {})
+      (domonad [v (with-state-field k m)
+                z (apply dumps-map r)]
+        (if-not (= v ::empty-dump)
+          (assoc z k v)
+          z))))
+
+  (defn dump
+    [w c & {filter :filter
+            map :map
+            diff :diff
+            icheck :ident-check
+            :or {diff true, icheck true}}]
+    (cond->> (m-result (get-comp-map w c))
+      icheck (d-when-not-identical)
+      filter (d-filter filter)
+      diff   (d-diff)
+      map    (d-map map)))
+  )
+
+
+;; === Logic
+
+(defn roundf [^double x ^double f]
+  (-> x (* f) (Math/round) (double) (/ f)))
+
+(defn serialize-vec2 [xy]
+  (when xy
+    [(roundf (:x xy) 100)
+     (roundf (:y xy) 100)]))
+
+(defn make-visibility-filter [w pid]
+  (let [v? #(when-let [f (w % :visible?)] (f w pid %))
+        eids (into #{} (filter v?) (entities w :position))]
+    (fn [[eid _]] (contains? eids eid))))
+
+(defn dump-self-player [pid]
+  (domonad state-m [sent (set-val :sent true)]
+    (when-not sent {pid true})))
+
+(defn dump-the-world [w pid]
+  (let [vf (make-visibility-filter w pid)]
+    (dumps-map
+      :self-player  (dump-self-player pid)
+      :assets       (dump w :assets)
+      :score        (dump w :score)
+      :position     (dump w :position, :filter vf, :map serialize-vec2)
+      :position-tts (dump w :position-tts, :filter vf)
+      :sprite       (dump w :sprite, :filter vf)
+      :layer        (dump w :layer, :filter vf)
+      :angle        (dump w :angle, :filter vf)
+      :type         (dump w :type, :filter vf)
+      )))
+

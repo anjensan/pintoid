@@ -1,4 +1,6 @@
-(ns pintoid.server.utils)
+(ns pintoid.server.utils
+  (:require [clojure.data.int-map :as im])
+  (:import [clojure.data.int_map PersistentIntMap]))
 
 (defmacro when-some* [bindings & body]
   (if (empty? bindings)
@@ -30,6 +32,13 @@
     (dissoc! c k)
     (assoc! c k v)))
 
+(defn map-val
+  ([f] (map (fn [[k v]] [k (f v)])))
+  ([f m] (into (empty m) (map-val f) m)))
+
+(defn edcat [& cs]
+  (eduction cat cs))
+
 (deftype MapKeyEduction [xform coll]
 
   clojure.lang.Sequential
@@ -51,3 +60,6 @@
   {:arglists '([xform* coll])}
   [& xforms]
   (MapKeyEduction. (apply comp (butlast xforms)) (last xforms)))
+
+(defn to-int-map [m]
+  (if (instance? PersistentIntMap m) m (into (im/int-map) m)))

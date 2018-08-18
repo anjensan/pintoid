@@ -51,7 +51,7 @@
 
 
 (defn handle-addrem-assets [w1 w2 wpatch]
-  (when-let [eids (seq (sort (changed-eids wpatch :assets)))]
+  (when-let [eids (seq (sort (changed-eids w1 wpatch :assets)))]
     (let [all-ass (into {} (map :assets (all-entities w2)))
           changed-aids (set (mapcat #(concat
                                       (->> % (entity w1) :assets keys)
@@ -76,7 +76,7 @@
 (defn handle-sprites-movement [w1 w2 wpatch]
   (let [t1 (world-time w1)
         t2 (world-time w2)]
-    (foreach! [eid (changed-eids wpatch :position)]
+    (foreach! [eid (changed-eids w1 wpatch :position)]
       (let [e1 (entity w1 eid)
             e2 (entity w2 eid)
             xy1 (:position e1)
@@ -98,7 +98,7 @@
 (defn handle-sprites-rotation [w1 w2 wpatch]
   (let [t1 (world-time w1)
         t2 (world-time w2)]
-    (foreach! [eid (changed-eids wpatch :angle)]
+    (foreach! [eid (changed-eids w1 wpatch :angle)]
       (let [e1 (entity w1 eid)
             e2 (entity w2 eid)
             a1 (:angle e1)
@@ -143,7 +143,7 @@
 
 
 (defn handle-players-score [w1 w2 wpatch]
-  (foreach! [eid (changed-eids wpatch :score)]
+  (foreach! [eid (changed-eids w1 wpatch :score)]
     (when-let [s (g/get-sprite eid :score-label)]
       (let [t (format-player-score (entity w2 eid))]
         (al/action!
@@ -152,7 +152,7 @@
 
 
 (defn handle-add-sprites [w1 w2 wpatch]
-  (foreach! [eid (changed-eids wpatch :sprite)]
+  (foreach! [eid (changed-eids w1 wpatch :sprite)]
     (let [entity (entity w2 eid)]
       (when (:sprite entity)
         (al/action!
@@ -163,7 +163,7 @@
 
 
 (defn handle-remove-sprites [w1 w2 wpatch]
-  (foreach! [eid (changed-eids wpatch :sprite)]
+  (foreach! [eid (changed-eids w1 wpatch :sprite)]
     (when-not (:sprite (entity w2 eid))
       (al/action!
        (world-time w2)

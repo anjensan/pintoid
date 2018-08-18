@@ -23,6 +23,7 @@
                  [prismatic/dommy "1.1.0"]
                  [ring/ring-core "1.7.0-RC1"]
                  [weasel/weasel "0.7.0"]
+                 [org.clojure/algo.monads "0.1.6"]
                  ]
 
   :plugins [[lein-cljsbuild "1.1.7"]
