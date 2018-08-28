@@ -9,7 +9,7 @@
   ([] (->PersistentECSImpl {} {} nil))
   ([eid-cid-comp-list]
    (into
-    (transduce (map first) add-entity (create-ecs) eid-cid-comp-list)
+    (reduce add-entity (create-ecs) (map first eid-cid-comp-list))
     eid-cid-comp-list)))
 
 (def ^:const empty-comp-map (im/int-map))
