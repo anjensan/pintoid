@@ -1,6 +1,7 @@
 (ns pintoid.server.game.physics
   (:use
-   [pintoid.server utils ecs game-maps sys])
+   [pintoid.server.ecs core system]
+   [pintoid.server game-maps])
   (:require
    [pintoid.server.vec2 :as v2]
    [taoensso.timbre :as timbre]

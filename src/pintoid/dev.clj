@@ -4,7 +4,7 @@
    [clojure.set :refer [union]]
    [pintoid.server.cswiring :refer [avatars send-to-client]]
    [pintoid.server.game.core :refer [world]]
-   [pintoid.server.ecs :as ecs]
+   [pintoid.server.ecs.core :as ecs]
    [weasel.repl.websocket]
    [cemerick.piggieback])
   (:import

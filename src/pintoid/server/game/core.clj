@@ -1,14 +1,13 @@
 (ns pintoid.server.game.core
   (:use
+   [pintoid.server.ecs core data dump]
    [pintoid.server.game physics collide kill player]
-   [pintoid.server utils ecs game-maps])
+   [pintoid.server vec2 game-maps])
   (:require
    [mount.core :refer [defstate]]
    [taoensso.timbre :as timbre]
-   [pintoid.server.ecs :as ecs]
    [pintoid.server.game-maps :as gm]
    ))
-
 
 (defstate last-stable-world
   :start (atom nil))
@@ -70,8 +69,25 @@
       (sys-fixate-world-state)
       )))
 
-
 (defn game-world-tick []
   (send-off world sys-world-tick))
 
 
+(defn- dump-self-player [pid]
+  (fn [s] [(when-not s {pid true}) true]))
+
+(defn dump-the-world [w pid]
+  (let [v? #(when-let [f (w % :visible?)] (f w pid %))
+        eids (into #{} (filter v?) (entities w :position))
+        vf (fn [[eid _]] (contains? eids eid))]
+    (dumps-map
+     :self-player  (dump-self-player pid)
+     :assets       (dump w :assets)
+     :score        (dump w :score)
+     :position     (dump w :position, :filter vf, :map to-vec)
+     :position-tts (dump w :position-tts, :filter vf)
+     :sprite       (dump w :sprite, :filter vf)
+     :layer        (dump w :layer, :filter vf)
+     :angle        (dump w :angle, :filter vf)
+     :type         (dump w :type, :filter vf)
+     )))

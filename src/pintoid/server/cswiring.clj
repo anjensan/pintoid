@@ -1,8 +1,7 @@
 (ns pintoid.server.cswiring
   (:use
-   clojure.algo.monads
    pintoid.server.game.core
-   [pintoid.server utils ecs])
+   pintoid.server.ecs.core)
   (:require
    [clojure.data.int-map :as im]
    [mount.core :refer [defstate]]
@@ -117,8 +116,6 @@
     (<! (timeout client-destroy-timeout))
     (alter-avatar pid avatar-destroy-when-disconnected)))
 
-(declare dump-the-world)
-
 (defn attach-ws-connection [pid wsc]
   (timbre/debugf "Attach new websocket to avatar %s" pid)
   (alter-avatar
@@ -140,7 +137,10 @@
   (if (and (w pid :player) (:ws-channel a))
     (let [ss (:dumpstate a)
           [d ss'] ((dump-the-world w pid) ss)
-          wpatch (into {} (comp (map-val vec) (remove (comp empty? second))) d)]
+          wpatch (into {} (comp
+                           (map (fn [[k v]] [k (vec v)]))
+                           (remove (fn [[k v]] (empty? v))))
+                       d)]
       (timbre/tracef "send to %s wpatch %s" pid wpatch)
       (send-to-client
        pid
@@ -161,86 +161,4 @@
     (dosync
      (doseq [[pid a] @avatars]
        (send-off a create-and-send-world-patch pid at w)))))
-
-
-;; Dumpers
-
-(with-monad (maybe-t state-m ::empty-dump)
-
-  (defn d-map [f dm]
-    (domonad [d dm] (eduction (map-val f) d)))
-
-  (defn d-filter [p dm]
-    (domonad [d dm] (eduction (filter p) d)))
-
-  (defn d-diff [dm]
-    (domonad [new ((m-lift 1 to-int-map) dm)
-              old (set-val ::d-diff-old new)]
-      (edcat
-        (eduction (comp (remove #(contains? new %)) (map #(vector % nil))) (keys old))
-        (eduction (remove (fn [[k v]] (= v (get old k)))) new))))
-
-  (defn d-when-not-identical [dm]
-    (domonad [new dm, old (set-val ::d-changed-old new)]
-      (if (identical? old new) ::empty-dump new)))
-  )
-
-
-(with-monad state-m
-
-  (defn dumps-map [& [k m & r :as rr]]
-    (if-not (seq rr)
-      (m-result {})
-      (domonad [v (with-state-field k m)
-                z (apply dumps-map r)]
-        (if-not (= v ::empty-dump)
-          (assoc z k v)
-          z))))
-
-  (defn dump
-    [w c & {filter :filter
-            map :map
-            diff :diff
-            icheck :ident-check
-            :or {diff true, icheck true}}]
-    (cond->> (m-result (get-comp-map w c))
-      icheck (d-when-not-identical)
-      filter (d-filter filter)
-      diff   (d-diff)
-      map    (d-map map)))
-  )
-
-
-;; === Logic
-
-(defn roundf [^double x ^double f]
-  (-> x (* f) (Math/round) (double) (/ f)))
-
-(defn serialize-vec2 [xy]
-  (when xy
-    [(roundf (:x xy) 100)
-     (roundf (:y xy) 100)]))
-
-(defn make-visibility-filter [w pid]
-  (let [v? #(when-let [f (w % :visible?)] (f w pid %))
-        eids (into #{} (filter v?) (entities w :position))]
-    (fn [[eid _]] (contains? eids eid))))
-
-(defn dump-self-player [pid]
-  (domonad state-m [sent (set-val :sent true)]
-    (when-not sent {pid true})))
-
-(defn dump-the-world [w pid]
-  (let [vf (make-visibility-filter w pid)]
-    (dumps-map
-      :self-player  (dump-self-player pid)
-      :assets       (dump w :assets)
-      :score        (dump w :score)
-      :position     (dump w :position, :filter vf, :map serialize-vec2)
-      :position-tts (dump w :position-tts, :filter vf)
-      :sprite       (dump w :sprite, :filter vf)
-      :layer        (dump w :layer, :filter vf)
-      :angle        (dump w :angle, :filter vf)
-      :type         (dump w :type, :filter vf)
-      )))
 

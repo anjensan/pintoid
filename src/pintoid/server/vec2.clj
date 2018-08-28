@@ -76,3 +76,6 @@
 
 (defn to-polar [^Vec2 v]
   [(mag v) (angle v)])
+
+(defn to-vec [^Vec2 v]
+  (when v [(:x v) (:y v)]))

@@ -1,5 +1,5 @@
-(ns pintoid.server.sys
-  (:use [pintoid.server utils ecs]))
+(ns pintoid.server.ecs.system
+  (:use [pintoid.server.ecs core util]))
 
 (defn- convert-seq-to-integrals
   [xs]

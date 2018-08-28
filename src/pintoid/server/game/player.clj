@@ -1,6 +1,6 @@
 (ns pintoid.server.game.player
   (:use
-   [pintoid.server utils ecs sys])
+   [pintoid.server.ecs core system])
   (:require
    [pintoid.server.vec2 :as v2]
    [taoensso.timbre :as timbre]

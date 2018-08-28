@@ -1,5 +1,4 @@
 (ns pintoid.server.web
-  (:use [pintoid.server cswiring utils ecs])
   (:require
    [pintoid.server.cswiring :as csw]
    [taoensso.timbre :as timbre]

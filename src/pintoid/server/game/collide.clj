@@ -1,6 +1,7 @@
 (ns pintoid.server.game.collide
   (:use
-   [pintoid.server utils ecs game-maps])
+   [pintoid.server.ecs core]
+   [pintoid.server game-maps])
   (:require
    [pintoid.server.vec2 :as v2]
    [taoensso.timbre :as timbre]
@@ -10,11 +11,11 @@
 (defn is-colliding? [w e1 e2]
   ;; TODO: use multimethod here
   (when-not (== e1 e2)
-    (when-some* [r1 (w e1 :radius)
-                 r2 (w e2 :radius)
-                 p1 (w e1 :position)
-                 p2 (w e2 :position)]
-      (< (v2/dist p1 p2) (+ r1 r2)))))
+    (let-entity w e1 [r1 :radius, p1 :position]
+      (when (and r1 p1)
+        (let-entity w e2 [r2 :radius, p2 :position]
+          (when (and r2 p2)
+            (< (v2/dist p1 p2) (+ r1 r2))))))))
 
 
 (defn sys-collide-entities [w]
