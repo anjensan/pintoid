@@ -6,7 +6,7 @@
    [pintoid.server.game.core :refer [world]]
    [pintoid.server.ecs.core :as ecs]
    [weasel.repl.websocket]
-   [cemerick.piggieback])
+   [cider.piggieback])
   (:import
    java.net.InetAddress))
 
@@ -98,6 +98,6 @@
                     :ip ip :port port
                     :pre-connect connect-client)]
     (if avatar
-      (cemerick.piggieback/cljs-repl
+      (cider.piggieback/cljs-repl
        (apply weasel.repl.websocket/repl-env (mapcat identity opts)))
       (println "No user with pid" pid))))
