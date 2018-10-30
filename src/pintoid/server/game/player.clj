@@ -1,10 +1,10 @@
 (ns pintoid.server.game.player
   (:use
-   [pintoid.server.ecs core system])
+   [pintoid.server.data consts proto]
+   [pintoid.server.ecs core system entity])
   (:require
    [pintoid.server.vec2 :as v2]
-   [taoensso.timbre :as timbre]
-   [pintoid.server.game-maps :as gm]))
+   [taoensso.timbre :as timbre]))
 
 
 (defn search-new-player-pos [w eid]
@@ -12,7 +12,7 @@
 
 
 (defn inc-player-score [w eid]
-  (conj w [eid :score (inc (w eid :score 0))]))
+  (update-comp w eid :score (fnil inc 0)))
 
 (defn sys-change-engine-based-on-ui [w now]
   (run-timed-system w now
@@ -22,9 +22,9 @@
          (let [ui (w eid ::user-input)
                rd (:rotate-dir ui 0)
                angle (w eid :angle 0)
-               angle' (+ angle (* rd gm/rotate-speed))
+               angle' (+ angle (* rd rotate-speed))
                ed (:engine-dir ui)
-               ef (case ed -1 (- gm/engine-reverse-force) 1 gm/engine-forward-force 0)
+               ef (case ed -1 (- engine-reverse-force) 1 engine-forward-force 0)
                fxy (v2/from-polar angle' ef)]
            (assoc-entity! w' eid
                           :self-fxy fxy

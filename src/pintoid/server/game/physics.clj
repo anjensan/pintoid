@@ -1,11 +1,19 @@
 (ns pintoid.server.game.physics
   (:use
    [pintoid.server.ecs core system]
-   [pintoid.server game-maps])
+   [pintoid.server.data consts])
   (:require
    [pintoid.server.vec2 :as v2]
-   [taoensso.timbre :as timbre]
-   [pintoid.server.game-maps :as gm]))
+   [taoensso.timbre :as timbre]))
+
+
+(defn calc-gravity-force [^double m1 ^double m2 p1 p2]
+  (let [d (v2/dist p1 p2)]
+    (if (zero? d)
+      v2/zero  ; FIXME: remove this?
+      (let [r' (/ d)
+            fx (* gravity-g r' m1 r' m2 r')]
+        (v2/scale (v2/v- p2 p1) fx)))))
 
 
 (defn sys-physics-move [w dt]

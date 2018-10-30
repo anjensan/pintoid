@@ -1,13 +1,13 @@
 (ns pintoid.server.game.core
   (:use
-   [pintoid.server.ecs core data dump]
+   [pintoid.server.ecs core data dump entity]
+   [pintoid.server.data core]
    [pintoid.server.game physics collide kill player]
-   [pintoid.server vec2 game-maps])
+   [pintoid.server vec2])
   (:require
    clojure.stacktrace
    [mount.core :refer [defstate]]
    [taoensso.timbre :as timbre]
-   [pintoid.server.game-maps :as gm]
    ))
 
 (defstate last-stable-world
@@ -19,7 +19,8 @@
 (defstate world
   :start (do
            (timbre/debug "Init world agent")
-           (send (agent (create-ecs) :error-handler world-error-handler) add-game-entities))
+           (send (agent (create-ecs) :error-handler world-error-handler)
+                 load-game-entities))
   :stop (do
           (timbre/debug "Stop world agent")
           (send world (constantly ::destroyed))))
@@ -60,6 +61,7 @@
 (defn- sys-world-tick [w]
   (let [now (current-time w)]
     (-> w
+      (actualize-entity-protos)
       (sys-spawn-bullets now)
       (sys-change-engine-based-on-ui now)
       (sys-kill-outdated-entities now)
@@ -84,7 +86,7 @@
         vf (fn [[eid _]] (contains? eids eid))]
     (dumps-map
      :self-player  (dump-self-player pid)
-     :assets       (dump w :assets)
+     :asset        (dump w :asset)
      :score        (dump w :score)
      :position     (dump w :position, :filter vf, :map to-vec)
      :position-tts (dump w :position-tts, :filter vf)

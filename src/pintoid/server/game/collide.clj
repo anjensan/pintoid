@@ -1,11 +1,10 @@
 (ns pintoid.server.game.collide
   (:use
    [pintoid.server.ecs core]
-   [pintoid.server game-maps])
+   [pintoid.server.data consts])
   (:require
    [pintoid.server.vec2 :as v2]
-   [taoensso.timbre :as timbre]
-   [pintoid.server.game-maps :as gm]))
+   [taoensso.timbre :as timbre]))
 
 
 (defn is-colliding? [w e1 e2]
