@@ -19,12 +19,14 @@
   (when-let [alpha (get props :alpha)] (set! (.-alpha obj) alpha))
   (when-let [visible (get props :visible)] (set! (.-visible obj) visible)))
 
-
 (defn- coerce-layer-properties [layer]
   (assoc layer
          :parallax (->pair (:parallax layer 1))
          :scale-rate (->pair (:scale-rate layer 1))))
 
+(defn- reorder-layers []
+  (.sort (.. lcontainer -children)
+         #(compare (.-zorder %1) (.-zorder %2))))
 
 (defmethod as/load-asset :layer [id layer]
   (let [lo (js/PIXI.Container.)
@@ -33,11 +35,18 @@
     (set! (.-zorder lo) (:zorder layer 0))
     (swap! layers assoc id (assoc layer :pixi-obj lo))
     (.addChild lcontainer lo)
-    (.sort (.. lcontainer -children)
-           #(compare (.-zorder %1) (.-zorder %2)))
+    (reorder-layers)
     ;; FIXME: return layer obj
     ()))
 
+(defn- init-root-layer []
+  (let [lo (js/PIXI.Container.)
+        p {:parallax [1 1] :scale-rate [1 1]}]
+    (set-layer-properties lo p)
+    (set! (.-zorder lo) 0)
+    (swap! layers assoc nil (assoc p :pixi-obj lo))
+    (.addChild lcontainer lo)
+    (reorder-layers)))
 
 (defmethod as/unload-asset :layer [id proto layer]
   (when-let [lo (get-in @layers [id :pixi-obj])]
@@ -47,12 +56,11 @@
 
 (defn- get-layer-pixi-obj [lid]
   (let [ls @layers
-        lid (or lid :layer/default)
         lo (if (contains? ls lid)
              (get ls lid)
              (do
                (timbre/warnf "Unknown layer %s" lid)
-               (get ls :layer/default)))]
+               (get ls nil)))]
    (get lo :pixi-obj)))
 
 
@@ -88,11 +96,10 @@
       vr
       (when-let [p (.-parent s)] (recur p)))))
 
-
 (defn init-layers-container [width height]
   (set! (.. lcontainer -position -x) (/ width 2))
   (set! (.. lcontainer -position -y) (/ height 2))
   (set! (.. lcontainer -viewrect) #js [[0 0] [width height]])
   (reset! camera-size (constantly [width height]))
-  (as/add-assets {:layer/default {:class :layer}})
+  (init-root-layer)
   lcontainer)

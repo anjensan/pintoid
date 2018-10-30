@@ -56,7 +56,7 @@
 (defn- get-texture [t]
   (cond
     (string? t) (js/PIXI.Texture.fromImage t)
-    (keyword? t) (if-let [x (as/asset :texture t)]
+    (as/asset-id? t) (if-let [x (as/asset :texture t)]
                    x
                    (do (timbre/warnf "Unknown texture %s" t) empty-texture))
     :else (do
@@ -69,14 +69,12 @@
 (defmulti create-sprite-factory
   (fn [proto] (:type proto)))
 
-
 (defmethod as/load-asset :sprite [_ sprite]
   {:proto sprite :factory (create-sprite-factory sprite)})
 
-
 (defn get-sprite-factory [id]
   (cond
-    (keyword? id) (if-let [x (as/asset :sprite id)]
+    (as/asset-id? id) (if-let [x (as/asset :sprite id)]
                     (:factory x)
                     (do
                       (timbre/warnf "Unknown sprite %s" id)
@@ -89,7 +87,7 @@
 
 (defn get-sprite-spec [id]
   (cond
-    (keyword? id) (:proto (as/asset :sprite id))
+    (as/asset-id? id) (:proto (as/asset :sprite id))
     (map? id) id))
 
 
@@ -159,9 +157,9 @@
 (defn- get-child-factories-seq [child]
   (cond
     (nil? child) nil
+    (as/asset-id? child) (get-sprite-factory child)
     (vector? child) (mapv get-sprite-factory child)
-    (map? child) (create-sprite-factory child)
-    (keyword? child) (get-sprite-factory child)))
+    (map? child) (create-sprite-factory child)))
 
 
 (defmethod create-sprite-factory :default [proto]
@@ -238,8 +236,8 @@
         (cond
           (vector? child) (create-sprite-factory {:type :container :child child})
           (map? child) (create-sprite-factory child)
-          (or (keyword? child) (string? child)) (get-sprite-factory child)
-          :else empty-sprite-factory)
+          (nil? child) empty-sprite-factory
+          :else (get-sprite-factory child))
         afactory (a/make-sprite-animator-factory child-factory proto)]
     (fn [props]
       (-> (afactory (dissoc-common-props props))

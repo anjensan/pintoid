@@ -23,7 +23,7 @@
 
 ;; world state
 (def world (atom (empty-world)))
-(def used-assets (atom {}))
+(def used-assets-by-sprite (atom {}))
 
 (defmulti add-entity-sprite :type)
 (defmulti remove-entity-sprite :type)
@@ -51,15 +51,10 @@
 
 
 (defn handle-addrem-assets [w1 w2 wpatch]
-  (when-let [eids (seq (sort (changed-eids w1 wpatch :assets)))]
-    (let [all-ass (into {} (map :assets (all-entities w2)))
-          changed-aids (set (mapcat #(concat
-                                      (->> % (entity w1) :assets keys)
-                                      (->> % (entity w2) :assets keys))
-                                eids))
-          ass (into {} (map (fn [x] [x (all-ass x)])) changed-aids)
+  (when-let [eids (seq (sort (changed-eids w1 wpatch :asset)))]
+    (let [ass (into (sorted-map) (map (fn [e] [e (:asset (entity w2 e))])) eids)
           updated-assets (as/add-assets ass)]
-      (foreach! [[eid deps] @used-assets]
+      (foreach! [[eid deps] @used-assets-by-sprite]
         (when (some updated-assets deps)
           (let [e1 (entity w1 eid)
                 e2 (entity w2 eid)]
@@ -69,7 +64,7 @@
                 (timbre/info "Recreate sprite" eid)
                 (remove-entity-sprite e1)
                 (let [[_ deps] (as/track-used-assets add-entity-sprite e2)]
-                  (swap! used-assets assoc eid deps)))))))
+                  (swap! used-assets-by-sprite assoc eid deps)))))))
       (timbre/info "Assets reloaded"))))
 
 
@@ -159,7 +154,7 @@
          (world-time w2)
          (fn []
            (let [[_ deps] (as/track-used-assets add-entity-sprite entity)]
-             (swap! used-assets assoc eid deps))))))))
+             (swap! used-assets-by-sprite assoc eid deps))))))))
 
 
 (defn handle-remove-sprites [w1 w2 wpatch]
@@ -168,17 +163,20 @@
       (al/action!
        (world-time w2)
        (fn []
-         (swap! used-assets dissoc eid)
+         (swap! used-assets-by-sprite dissoc eid)
          (remove-entity-sprite (entity w1 eid)))))))
 
 
 (defmethod add-entity-sprite :player [entity]
   (let [eid (:eid entity)
-        sprite (if (:self-player entity) :sprite/racket-red :sprite/racket-blue)]
+        sprite (if (:self-player entity)
+                 'pintoid.server.data.assets/racket-red
+                 'pintoid.server.data.assets/racket-blue)]
     (g/new-sprite eid sprite entity)
-    (g/new-sprite eid :score-label :sprite/player-score
-                  (assoc entity :text (format-player-score entity)))))
-
+    (g/new-sprite eid :score-label
+                  'pintoid.server.data.assets/player-score
+                  (assoc entity :text (format-player-score entity))
+  )))
 
 (defmethod select-entity-sprites [:rotate :player] [_ entity]
   [(g/get-sprite (:eid entity))])
