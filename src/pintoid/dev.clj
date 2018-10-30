@@ -28,7 +28,6 @@
         (assoc (ecs/get-full-entity w eid) :eid eid))
       (filter f)))))
 
-
 (defn avatar [pid]
   (pp/pprint (get @avatars pid)))
 
@@ -46,47 +45,13 @@
 (defn players []
   (pp/print-table (get-players)))
 
-
-(defn- find-asset-world [w aid]
-  (->> (ecs/entities w :assets)
-       (map #(get (w % :assets) aid))
-       (keep identity)
-       (last)))
-
 (defn asset [aid]
-  (find-asset-world @world aid))
-
-
-(defn- find-dev-asset-ids-world [w aid]
-  (->> (ecs/entities w [:* :assets ::dev-asset])
-       (filter #(contains? (w % :assets) aid))))
-
-
-(defn reset-asset! [aid]
-  (send world #(reduce ecs/remove-entity % (find-dev-asset-ids-world % aid)))
-  (await world)
-  (asset aid))
-
-(defn update-asset! [aid f & args]
-  (assert (apply f (asset aid) args))
-  (send world
-        (fn [w]
-          (let [asset (find-asset-world w aid)
-                asset' (apply f asset args)
-                eid (last (find-dev-asset-ids-world w aid))
-                e {:assets {aid asset'} ::dev-asset true}]
-            (if eid
-              (ecs/add-entity w eid e)
-              (ecs/add-new-entity w e)))))
-  (await world)
-  (asset aid))
-
+  (-> aid @world :asset))
 
 ;; TODO: update-entity, add-entity, etc
 
 (defn- localhost-address []
   (.getHostAddress (java.net.InetAddress/getLocalHost)))
-
 
 (defn client-repl [pid & {:keys [ip port] :as opts}]
   (let [port (or port 9001)
