@@ -10,13 +10,12 @@
 
 (def animation-uid-counter (atom 0))
 
-(defn- object-animation-id [anim-kind obj]
+(defn- object-animation-id [obj anim-kind]
   (let [aid (or
              (.--pintoid-anim-uid obj)
              (set! (.--pintoid-anim-uid obj)
-                   (str (swap! animation-uid-counter inc))))]
-    (.concat aid anim-kind)))
-
+                   (swap! animation-uid-counter inc)))]
+    (str anim-kind aid)))
 
 (defn- mk-linear-interpolator [t1 t2 v1 v2]
   (let [t2-t1 (- t2 t1)
