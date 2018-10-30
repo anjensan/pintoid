@@ -21,7 +21,7 @@
 (defn sys-collide-entities [w]
   ;; TODO: optimize collision detect alg, currently it's O(n^2)!
   (let [;; TODO: use marker component :collidable or :collision-shape
-        coll-eids (entities w :radius :position)]
+        coll-eids (entities w [:radius :position])]
     (reduce
      (fn [w eid]
        (put-comp

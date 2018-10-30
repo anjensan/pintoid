@@ -14,65 +14,53 @@
 (defn inc-player-score [w eid]
   (conj w [eid :score (inc (w eid :score 0))]))
 
-
-(def sys-change-engine-based-on-ui
-  (timed-system
+(defn sys-change-engine-based-on-ui [w now]
+  (run-timed-system w now
    (fn [w dt]
-     (into
-      w
-      (mapcat
-       (fn [eid]
-         (let [ui (w eid :user-input)
+     (entities-reduce! w [:player ::user-input]
+       (fn [w' eid]
+         (let [ui (w eid ::user-input)
                rd (:rotate-dir ui 0)
                angle (w eid :angle 0)
                angle' (+ angle (* rd gm/rotate-speed))
                ed (:engine-dir ui)
                ef (case ed -1 (- gm/engine-reverse-force) 1 gm/engine-forward-force 0)
                fxy (v2/from-polar angle' ef)]
-           [[eid :self-fxy fxy]
-            [eid :angle angle']])))
-      (entities w :player :user-input)))))
-
+           (assoc-entity! w' eid
+                          :self-fxy fxy
+                          :angle angle')))))))
 
 (defn sys-spawn-bullets [w now]
-  (reduce
-   (fn [w' eid]
-     (or
-      (let [ui (w eid :user-input)]
-        (when (or (:fire? ui) (:alt-fire? ui))
-          (let [b-proto (if (:fire? ui) gm/bullet gm/bullet-alt)
-                b (:bullet b-proto)
-                b-cooldown (:cooldown b)
-                last-fire-at (w eid :last-fire-at)]
-            (when (or (nil? last-fire-at) (< (+ last-fire-at b-cooldown) now))
-              (let [xy (w eid :position)
-                    vxy (w eid :velocity v2/zero)
-                    angle (w eid :angle)
-                    b-vxy (v2/v+ vxy (v2/from-polar angle (:velocity b)))
-                    b-xy xy
-                    b-lifetime (:lifetime b)]
-                (-> w'
-                    (put-comp eid :last-fire-at now)
-                    (add-new-entity
-                      (assoc b-proto
-                        :position b-xy
-                        :velocity b-vxy
-                        :sched-kill-at (+ now b-lifetime)
-                        :bullet (assoc gm/bullet :owner eid)
-                        :angle angle))))))))
-      w'))
-   w
-   (entities w :player :user-input)))
-
+  (entities-reduce w [:player ::user-input]
+    (fn [w' eid]
+      (let-entity w eid [ui ::user-input
+                         fc :fire-cooldown]
+        (when (and (or (nil? fc) (< fc now))
+                   (or (:fire? ui) (:alt-fire? ui)))
+          (let-entity w eid [xy :position
+                             vxy [:velocity v2/zero]
+                             angle :angle
+                             fc :fire-cooldown]
+            (let [b-proto (if (:fire? ui) (bullet) (bullet-alt))
+                  b (:bullet b-proto)
+                  b-vxy (v2/v+ vxy (v2/from-polar angle (:velocity b)))
+                  b-xy xy]
+              (-> w'
+                  (put-comp eid :fire-cooldown (+ now (:cooldown b)))
+                  (add-new-entity
+                   (assoc b-proto
+                          :sched-kill-at (+ now (:lifetime b))
+                          :position b-xy
+                          :velocity b-vxy
+                          :bullet (assoc b :owner eid)
+                          :angle angle))))))))))
 
 (defn remove-player [w eid]
   (remove-entity w eid))
 
-
 (defn add-new-player [w eid]
   (let [xy (search-new-player-pos w eid)]
-    (add-entity w eid (assoc gm/player :player true, :position xy))))
-
+    (add-entity w eid (player :position xy))))
 
 (defn process-uinput [w eid uinput]
-  (conj w [eid :user-input uinput]))
+  (put-comp w eid ::user-input uinput))

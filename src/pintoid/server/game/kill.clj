@@ -11,11 +11,10 @@
 (defn- kill-player [w eid]
   (let [xy' (search-new-player-pos w eid)]
     (-> w
-        (conj [eid :position xy'])
-        (conj [eid :position-tts (inc (w eid :position-tts 0))])
-        (conj [eid :velocity nil])
-        (conj [eid :score (dec (w eid :score 0))]))))
-
+        (put-comp eid :position xy')
+        (put-comp eid :position-tts (inc (w eid :position-tts 0)))
+        (put-comp eid :velocity nil)
+        (update-comp eid :score (fnil dec 0)))))
 
 (defn- kill-entity [w eid]
   (if (w eid :player)
@@ -25,7 +24,7 @@
 
 
 (defn sys-kill-collided-entities [w]
-  (reduce
+  (entities-reduce w :collide-with
    (fn [w' eid]
      (let [et (w eid :type)
            cw (w eid :collide-with)
@@ -43,12 +42,7 @@
 
          ;; everything kills bullet except other bullets & players
          (and (= et :bullet) (not-any? #{:bullet :player} cwt))
-         (kill-entity w' eid)
-
-         :else w')))
-   w
-   (entities w :collide-with)))
-
+         (kill-entity w' eid))))))
 
 (defn- entity-out-of-gamefield? [w eid]
   (when-let [xy (w eid :position)]
@@ -57,23 +51,17 @@
 
 
 (defn sys-kill-entities-out-of-gamefield [w]
-  (transduce
-   (filter #(entity-out-of-gamefield? w %))
-   (completing kill-entity)
-   w
-   (entities w :position)))
-
+  (entities-reduce w :position
+                    (filter #(entity-out-of-gamefield? w %))
+                    kill-entity))
 
 (defn sys-kill-outdated-entities [w now]
-  (transduce
-   (filter #(<= (w % :sched-kill-at) now))
-   (completing kill-entity)
-   w
-   (entities w :sched-kill-at)))
-
+  (entities-reduce w :sched-kill-at
+                    (filter #(<= (w % :sched-kill-at) now))
+                    kill-entity))
 
 (defn kill-entity-at [w eid at]
   (let [a (w eid :sched-kill-at)]
     (if (or (nil? a) (< at a))
-      (conj w [eid :sched-kill-at at])
+      (put-comp w eid :sched-kill-at at)
       w)))

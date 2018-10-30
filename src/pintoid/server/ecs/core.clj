@@ -29,16 +29,27 @@
 (defn drop-comp! [w e c]
   (put-comp! w e c nil))
 
-(defn- assoc-entity-with [f w e cvs]
+(defn update-comp [w e c f & as]
+  (put-comp w e c (apply f (get-comp w e c) as)))
+
+(defn update-comp! [w e c f & as]
+  (put-comp! w e c (apply f (get-comp w e c) as)))
+
+(defn has-entity? [w e]
+  (not (nil? (get-entity-comps w e))))
+
+(defn- assoc-entity-with-macro [f w e cvs]
   {:pre [(-> cvs count even?)
          (every? keyword? (take-nth 2 cvs))]}
-  (reduce (fn [c v] (f w e c v)) w (partition 2 cvs)))
+  (let [es (gensym)]
+    `(let [~es ~e]
+       (-> ~w ~@(for [[c v] (partition 2 cvs)] (list f es c v))))))
 
-(defn assoc-entity [w e & cvs]
-  (assoc-entity-with put-comp w e cvs))
+(defmacro assoc-entity [w e & cvs]
+  (assoc-entity-with-macro `put-comp w e cvs))
 
-(defn assoc-entity! [w e & cvs]
-  (assoc-entity-with put-comp! w e cvs))
+(defmacro assoc-entity! [w e & cvs]
+  (assoc-entity-with-macro `put-comp! w e cvs))
 
 (defmacro let-entity [w e bs & body]
   (let [ws (gensym)
@@ -51,15 +62,29 @@
   (when-let [cids (get-entity-comps w e)]
     (zipmap cids (map #(get-comp w e %) cids))))
 
-(defn entities
-  ([w c]
-   (eduction-map-key identity (get-comp-map w c)))
-  ([w c & cs]
-   (let [cs (cons c cs)
+(defn entities [w c]
+   (let [cs (if (seqable? c) (seq c) (list c))
          [mc & rcs] (sort-by #(count (get-comp-map w %)) cs)]
      (eduction-map-key
       (if (seq cs)
         (reduce comp (map #(filter (get-comp-map w %)) rcs))
         identity)
-      (get-comp-map w mc)))))
+      (get-comp-map w mc))))
 
+(defn entities-reduce
+  ([w c f]
+   (entities-reduce w c identity f))
+  ([w c xf f]
+   (transduce xf
+              (fn ([w'] w') ([w' e] (or (f w' e) w')))
+              w
+              (entities w c))))
+
+(defn entities-reduce!
+  ([w c f]
+   (entities-reduce! w c identity f))
+  ([w c xf f]
+   (transduce xf
+              (fn ([w'] (persistent! w')) ([w' e] (or (f w' e) w')))
+              (transient w)
+              (entities w c))))

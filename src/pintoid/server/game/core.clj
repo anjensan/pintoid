@@ -4,6 +4,7 @@
    [pintoid.server.game physics collide kill player]
    [pintoid.server vec2 game-maps])
   (:require
+   clojure.stacktrace
    [mount.core :refer [defstate]]
    [taoensso.timbre :as timbre]
    [pintoid.server.game-maps :as gm]
@@ -12,12 +13,13 @@
 (defstate last-stable-world
   :start (atom nil))
 
+(defn world-error-handler [world e]
+  (clojure.stacktrace/print-stack-trace e))
+
 (defstate world
   :start (do
            (timbre/debug "Init world agent")
-           (send
-            (agent (create-ecs))
-            #(reduce add-new-entity % (gm/game))))
+           (send (agent (create-ecs) :error-handler world-error-handler) add-game-entities))
   :stop (do
           (timbre/debug "Stop world agent")
           (send world (constantly ::destroyed))))

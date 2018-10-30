@@ -132,8 +132,8 @@
         (transient pm)
         pm)))))
 
-(deftype TransientECSImpl [^:unsynchronized-mutable cev-m
-                           ^:unsynchronized-mutable ec-m]
+(deftype TransientECSImpl [^:volatile-mutable cev-m
+                           ^:volatile-mutable ec-m]
   ImmutableECS
   (get-comp [_ e c]
     (when-let [cm (get cev-m c)]
