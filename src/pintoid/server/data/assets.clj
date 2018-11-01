@@ -32,9 +32,9 @@
   [x (range 1 30)]
   {:type :animator
    :a-rotation {:kind :saw
-                :period (* (+ 0.5 (rand)) 31400)
+                :period (* (+ 0.1 (rand)) 10000)
                 :min 0
-                :max 630}
+                :max (rand-nth [-6.3 6.3])}
    :child (rand-nth ast-static-sprites)})
 
 (defasset bullet-texture :texture
