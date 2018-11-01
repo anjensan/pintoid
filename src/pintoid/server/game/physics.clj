@@ -23,6 +23,10 @@
                          vxy [:velocity v2/zero]]
         (let [axy (v2/scale fxy (/ m))
               vxy' (v2/v+ vxy (v2/scale axy dt))
+              v (v2/mag vxy')
+              vxy' (if (> v max-object-velocity)
+                     (v2/from-polar (v2/angle vxy') max-object-velocity)
+                     vxy')
               dt2 (/ dt 2)
               xy' (v2/v+ xy (v2/scale vxy dt2) (v2/scale vxy' dt2))]
           (-> w'
