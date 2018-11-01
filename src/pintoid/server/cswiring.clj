@@ -51,7 +51,7 @@
 (defn- avatar-destroy [{pid :pid :as a}]
   (timbre/debugf "Destroy avatar for %s" pid)
   (when (contains? @avatars pid)
-    (timbre/warnf "Avatar %s has not been removed from 'avatars'!"))
+    (timbre/warnf "Avatar %s has not been removed from 'avatars'!" pid))
   (avatar-close-ws-chans a)
   (game-remove-player pid)
   {:pid pid :state ::destroyed})
@@ -130,9 +130,6 @@
           :ws-channel wsc
           :ws-reader (spawn-wschan-reading-loop pid wsc))))))
 
-
-;; == Send world patch
-
 (defn- create-and-send-world-patch [a pid at w]
   (if (and (w pid :player) (:ws-channel a))
     (let [ss (:dumpstate a)
@@ -141,7 +138,7 @@
                            (map (fn [[k v]] [k (vec v)]))
                            (remove (fn [[k v]] (empty? v))))
                        d)]
-      (timbre/tracef "send to %s wpatch %s" pid wpatch)
+      (timbre/tracef "Send to %s wpatch %s" pid wpatch)
       (send-to-client
        pid
        {:server-time (System/currentTimeMillis)
@@ -153,7 +150,7 @@
              :actual-world w
              :dumpstate ss'))
     (do
-      (timbre/tracef "player %s not in game" pid)
+      (timbre/tracef "Player %s not in game" pid)
       a)))
 
 (defn send-snapshots-to-all-clients []

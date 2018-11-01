@@ -6,7 +6,6 @@
    [pintoid.server.vec2 :as v2]
    [taoensso.timbre :as timbre]))
 
-
 (defn is-colliding? [w e1 e2]
   ;; TODO: use multimethod here
   (when-not (== e1 e2)
@@ -15,7 +14,6 @@
         (let-entity w e2 [r2 :radius, p2 :position]
           (when (and r2 p2)
             (< (v2/dist p1 p2) (+ r1 r2))))))))
-
 
 (defn sys-collide-entities [w]
   ;; TODO: optimize collision detect alg, currently it's O(n^2)!

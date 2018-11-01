@@ -7,7 +7,6 @@
    [pintoid.server.vec2 :as v2]
    [taoensso.timbre :as timbre]))
 
-
 (defn- kill-player [w eid]
   (let [xy' (search-new-player-pos w eid)]
     (-> w
@@ -21,7 +20,6 @@
     ;; FIXME: use multimethods or protocols here
     (kill-player w eid)
     (remove-entity w eid)))
-
 
 (defn sys-kill-collided-entities [w]
   (entities-reduce w :collide-with

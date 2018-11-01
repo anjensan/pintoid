@@ -25,7 +25,6 @@
           (timbre/debug "Stop world agent")
           (send world (constantly ::destroyed))))
 
-
 (def ^:private time-eid (next-entity))
 
 (defn- world-time [w]
@@ -41,22 +40,17 @@
   (let [w (or @last-stable-world @world)]
     [(world-time w) w]))
 
-
 (defn game-remove-player [eid]
   (send world remove-player eid))
-
 
 (defn game-add-new-player [eid]
   (send world add-new-player eid))
 
-
 (defn game-process-user-input [eid user-input]
   (send world process-uinput eid user-input))
 
-
 (defn- current-time [w]
   (System/currentTimeMillis))
-
 
 (defn- sys-world-tick [w]
   (let [now (current-time w)]
@@ -75,7 +69,6 @@
 
 (defn game-world-tick []
   (send-off world sys-world-tick))
-
 
 (defn- dump-self-player [pid]
   (fn [s] [(when-not s {pid true}) true]))
