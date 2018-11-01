@@ -39,11 +39,10 @@
     [w c & {filter :filter
             map :map
             diff :diff
-            icheck :ident-check
             :or {diff true, icheck true}}]
     (cond->> (m-result (get-comp-map w c))
-      icheck (d-when-not-identical)
-      filter (d-filter filter)
-      diff   (d-diff)
-      map    (d-map map)))
+      (not filter) (d-when-not-identical)
+      filter       (d-filter filter)
+      diff         (d-diff)
+      map          (d-map map)))
   )
