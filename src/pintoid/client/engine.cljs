@@ -43,12 +43,11 @@
 (defmulti select-entity-sprites
   (fn [purpose entity] [purpose (:type entity)]))
 
-(defmethod select-entity-sprites :default [_ entity]
-  (g/find-sprites-by-eid (:eid entity)))
+(defmethod select-entity-sprites :default [_ e]
+  (g/find-sprites-by-eid (:eid e)))
 
 (defn- foreach-entity-sprite [action entity f]
   (run! #(when % (f %)) (select-entity-sprites action entity)))
-
 
 (defn handle-addrem-assets [w1 w2 wpatch]
   (when-let [eids (seq (sort (changed-eids w1 wpatch :asset)))]
@@ -61,7 +60,7 @@
             (al/action!
               (world-time w2)
               (fn []
-                (timbre/info "Recreate sprite" eid)
+                (timbre/debug "Recreate sprite" eid)
                 (remove-entity-sprite e1)
                 (let [[_ deps] (as/track-used-assets add-entity-sprite e2)]
                   (swap! used-assets-by-sprite assoc eid deps)))))))
@@ -87,7 +86,8 @@
               (fn [obj]
                 (if (and xy1 (= tts1 tts2))
                   (a/linear-move obj t1 t2 xy1 xy2)
-                  (a/instant-move obj t1 t2 xy2)))))))))))
+                  (a/instant-move obj t2 xy2)
+                  ))))))))))
 
 
 (defn handle-sprites-rotation [w1 w2 wpatch]
@@ -107,30 +107,24 @@
               (fn [obj]
                 (if a1
                   (a/linear-rotate obj t1 t2 a1 a2)
-                  (a/instant-rotate obj t1 t2 a2)))))))))))
+                  (a/instant-rotate obj t2 a2)))))))))))
 
-
-(def camera-x 0)
-(def camera-y 0)
 
 (defn handle-player-camera-pos [w1 w2 wpatch]
-  (let [t2 (world-time w2)
-        t1 (world-time w1)
+  (let [t1 (world-time w1)
+        t2 (world-time w2)
         p1 (player-entity w1)
         p2 (player-entity w2)
         [x1 y1] (:position p1)
         [x2 y2] (:position p2)]
     (a/linear-animate
-     "camera-x" t1 t2 x1 x2
-     (fn [x]
-       (set! camera-x x)
-       (gl/set-viewport! camera-x camera-y 1)))
-    (a/linear-animate
-     "camera-y" t1 t2 y1 y2
-     (fn [y]
-       (set! camera-y y)
-       (gl/set-viewport! camera-x camera-y 1)))
-    ))
+     t1 t2 1 0
+     (fn [a]
+       (let [b (- 1 a)]
+         (gl/set-viewport!
+          (+ (* a x1) (* b x2))
+          (+ (* a y1) (* b y2)) 1)
+         true)))))
 
 
 (defn format-player-score [entity]
@@ -148,12 +142,13 @@
 
 (defn handle-add-sprites [w1 w2 wpatch]
   (foreach! [eid (changed-eids w1 wpatch :sprite)]
-    (let [entity (entity w2 eid)]
-      (when (:sprite entity)
+    (let [e (entity w2 eid)]
+      (when (:sprite e)
         (al/action!
          (world-time w2)
          (fn []
-           (let [[_ deps] (as/track-used-assets add-entity-sprite entity)]
+           (timbre/trace "Add sprite " e)
+           (let [[_ deps] (as/track-used-assets add-entity-sprite e)]
              (swap! used-assets-by-sprite assoc eid deps))))))))
 
 
@@ -164,6 +159,7 @@
        (world-time w2)
        (fn []
          (swap! used-assets-by-sprite dissoc eid)
+         (timbre/trace "Remove sprite " (entity w1 eid))
          (remove-entity-sprite (entity w1 eid)))))))
 
 

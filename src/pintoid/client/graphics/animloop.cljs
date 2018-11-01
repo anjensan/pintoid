@@ -1,22 +1,15 @@
 (ns pintoid.client.graphics.animloop
   (:require
-   [goog.object]
-   [goog.array]
    [taoensso.timbre :as timbre :include-macros true]))
 
 
 ;; completely skip outdated animations
 (def max-allowed-actions-lag 5000)
 
-(def active-animations (js-obj))
-(def simple-active-animations (js-obj))
-
 (def current-time 0)
+(def active-animations (array))
 (def pending-actions-map (array))
 (def pending-actions-times (array))
-
-(deftype ActiveAnimation [t1 t2 animfn finishfn])
-
 
 (defn action! [t act-fn]
   (if (>= current-time t)
@@ -31,25 +24,10 @@
           (goog.array/binaryInsert pending-actions-times tx))))))
 
 (defn animate!
-  ([aid anim-fn]
-   (if anim-fn
-     (aset simple-active-animations aid anim-fn)
-     (js-delete simple-active-animations aid)))
-  ([aid t1 t2 anim-fn]
-     (animate! aid t1 t2 anim-fn nil nil))
-  ([aid t1 t2 anim-fn init-fn finish-fn]
-   (let [av (ActiveAnimation. t1 t2 anim-fn finish-fn)]
-     (timbre/trace "add penging animation" aid t1 t2)
-     (action! t1
-      (fn []
-        (when init-fn (init-fn))
-        (aset active-animations aid av))))))
-
-(defn- execute-fns-array [al]
-  (loop [i 0]
-    (when (< i (.-length al))
-      ((aget al i))
-      (recur (inc i)))))
+  ([anim-fn]
+   (.push active-animations anim-fn))
+  ([t1 t2 anim-fn]
+   (action! t1 (fn [] (animate! #(when (< % t2) (anim-fn %)))))))
 
 (defn- run-scheduled-actions [time]
   (loop []
@@ -57,24 +35,25 @@
       (when (<= t time)
         (.shift pending-actions-times)
         (when (>= t (- time max-allowed-actions-lag))
-          (execute-fns-array (aget pending-actions-map t))
+          (let [al (aget pending-actions-map t)]
+            (loop [i 0]
+              (when (< i (.-length al))
+                ((aget al i))
+                (recur (inc i))))))
         (js-delete pending-actions-map t)
-        (recur))))))
+        (recur)))))
 
 (defn- run-active-animations [time]
-  (goog.object/forEach
-   simple-active-animations
-   (fn [an-fn! _ _]
-     (an-fn! time)))
-  (goog.object/forEach
-   active-animations
-   (fn [aa aid _]
-     (when (<= (.-t1 aa) time)
-       (if (<= (.-t2 aa) time)
-         (do
-           (js-delete active-animations aid)
-           (when-let [ff (.-finishfn aa)] (ff)))
-         (when-let [af (.-animfn aa)] (af time)))))))
+  (let [aa active-animations]
+    (loop [i 0, k (alength aa)]
+      (if (< i k)
+        (let [f (aget aa i)]
+          (if (f time)
+            (recur (inc i) k)
+            (do
+              (aset aa i (aget aa (dec k)))
+              (recur i (dec k)))))
+        (set! (.-length aa) k)))))
 
 (defn run-animations! [time]
   (set! current-time time)
