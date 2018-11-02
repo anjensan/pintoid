@@ -1,11 +1,12 @@
 (ns pintoid.server.game.core
   (:use
    [pintoid.server.ecs core data dump entity]
-   [pintoid.server.data core]
+   [pintoid.server.data core consts]
    [pintoid.server.game physics collide kill player]
    [pintoid.server vec2])
   (:require
    clojure.stacktrace
+   [pintoid.server.vec2 :as v2]
    [mount.core :refer [defstate]]
    [taoensso.timbre :as timbre]
    ))
@@ -73,15 +74,21 @@
 (defn- dump-self-player [pid]
   (fn [s] [(when-not s {pid true}) true]))
 
+(defn- visible-by-player? [w pid max-dist]
+  (let-entity w pid [pp :position]
+    (fn [eid]
+      (let-entity w eid [fow :fog-of-war pos :position]
+        (or
+         (not fow)
+         (< (v2/dist pos pp) max-dist))))))
+
 (defn dump-the-world [w pid]
-  (let [v? #(when-let [f (w % :visible?)] (f w pid %))
-        eids (into #{} (filter v?) (entities w :position))
-        vf (fn [[eid _]] (contains? eids eid))]
+  (let [vf (comp (memoize (visible-by-player? w pid max-user-view-distance)) key)]
     (dumps-map
      :self-player  (dump-self-player pid)
      :asset        (dump w :asset)
      :score        (dump w :score)
-     :position     (dump w :position, :filter vf, :map to-vec)
+     :position     (dump w :position, :filter vf, :map v2/to-vec)
      :position-tts (dump w :position-tts, :filter vf)
      :sprite       (dump w :sprite, :filter vf)
      :layer        (dump w :layer, :filter vf)

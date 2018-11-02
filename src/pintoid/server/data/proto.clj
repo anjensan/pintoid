@@ -3,20 +3,17 @@
         [pintoid.server.data consts assets])
   (:require [pintoid.server.vec2 :as v2]))
 
-(defn- visible-by-player? [w pid eid]
-  (< (v2/dist (w eid :position) (w pid :position)) max-user-view-distance))
-
 (defproto player [& {:keys [position]}]
   {:player true
    :type :player
+   :phys-move true
+   :fog-of-war true
    :position position
    :fxy v2/zero
-   :phys-move true
    :mass 200
    :angle 0
    :radius 30
    :sprite racket-red
-   :visible? (constantly true)
    })
 
 (defproto bullet []
@@ -24,10 +21,10 @@
    :sprite bullet-sprite
    :fxy v2/zero
    :phys-move true
+   :fog-of-war true
    :mass 100
    :angle 0
    :radius 20
-   :visible? visible-by-player?
    :bullet {:lifetime 5000
             :cooldown 200
             :velocity 1.0}
@@ -40,10 +37,10 @@
    :position (v2/vec2 0 0)
    :phys-move true
    :phys-act true
+   :fog-of-war true
    :mass 8000
    :angle 0
    :radius 10
-   :visible? visible-by-player?
    :bullet {:lifetime 10000
             :cooldown 1200
             :velocity 2.1}
@@ -56,8 +53,8 @@
    :sprite sprite
    :radius radius
    :layer lstars1
-   :visible? visible-by-player?
    :phys-act true
+   :fog-of-war true
    })
 
 (defproto planet [& {:keys [position mass sprite radius]}]
@@ -66,8 +63,8 @@
    :mass mass
    :sprite sprite
    :radius radius
-   :visible? visible-by-player?
    :phys-act true
+   :fog-of-war true
    })
 
 (defproto asteroid [& {:as cm}]
@@ -76,8 +73,8 @@
    :type :asteroid
    :mass 50
    :radius 5
-   :visible? visible-by-player?
    :phys-move true
+   :fog-of-war true
    ))
 
 (defproto blackhole [& {:as cm}]
@@ -86,8 +83,8 @@
    :type :black
    :mass 10000
    :phys-act true
+   :fog-of-war true
    :sprite blackhole-sprite
    :radius 2
-   :visible? visible-by-player?
    ))
 

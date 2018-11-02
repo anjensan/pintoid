@@ -41,13 +41,13 @@
                          sfxy [:self-fxy v2/zero]]
         (when (and xy m)
           (let [fxy (reduce
-                     #(if (= x eid)
+                     #(if (= %1 eid)
                         %1
                         (let-entity w %2 [xy2 :position, m2 :mass]
                           (v2/v+ %1 (calc-gravity-force m m2 xy xy2))))
                      sfxy
                      (entities w :phys-act :position :mass))]
-            (put-comp! w' eid :fxy)))))))
+            (put-comp! w' eid :fxy fxy)))))))
 
 (defn sys-simulate-physics [w now]
   (run-timed-system w now

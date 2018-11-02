@@ -51,12 +51,10 @@
   [[i x l] (map vector (range) starsky-tilemap-sprites starsky-layers)]
   {:type :static
    :position (v2/vec2 (* 97 i) (* 47 i))
-   :visible? (constantly true)
    :layer l
    :sprite {nil x}})
 
 (defentity static-circle
   {:type :static
    :position (v2/vec2 0 0)
-   :visible? (constantly true)
    :sprite static-circle-sprite})
