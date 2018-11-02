@@ -34,9 +34,9 @@
 (defn entity [eid]
   (pp/pprint (get-entity eid)))
 
-(defn entities
+(defn print-entities
   ([q]
-   (entities q (constantly true)))
+   (print-entities q (constantly true)))
   ([q f]
    (let [es (get-entities q f)
          ks (transduce (map (comp set keys)) union #{} es)]

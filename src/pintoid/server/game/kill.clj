@@ -54,8 +54,8 @@
 
 (defn sys-kill-outdated-entities [w now]
   (entities-reduce w :sched-kill-at
-                    (filter #(<= (w % :sched-kill-at) now))
-                    kill-entity))
+    (filter #(<= (w % :sched-kill-at) now))
+    kill-entity))
 
 (defn kill-entity-at [w eid at]
   (let [a (w eid :sched-kill-at)]

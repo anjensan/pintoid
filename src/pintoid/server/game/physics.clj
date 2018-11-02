@@ -15,9 +15,9 @@
         (v2/scale (v2/v- p2 p1) fx)))))
 
 (defn sys-physics-move [w dt]
-  (entities-reduce! w [:position :phys-move]
+  (entities-reduce! w [:phys-move :position]
     (fn [w' eid]
-      (let-entity w eid [xy  :position
+      (let-entity w eid [xy :position
                          fxy [:fxy v2/zero]
                          m   [:mass 1]
                          vxy [:velocity v2/zero]]
@@ -34,19 +34,20 @@
               (put-comp! eid :position xy')))))))
 
 (defn sys-physics-update-vxy [w dt]
-  (entities-reduce! w [:phys-move :mass :position]
+  (entities-reduce! w :phys-move
     (fn [w' eid]
-      (let [xy (w eid :position)
-            m (w eid :mass 1)
-            fxy (reduce
-                 (fn [w' x]
-                   (if (== x eid)
-                     w'
-                     (v2/v+ w' (calc-gravity-force m (w x :mass) xy (w x :position)))))
-                 (w eid :self-fxy v2/zero)
-                 (entities w [:phys-act :position :mass]))]
-        (-> w'
-            (put-comp! eid :fxy fxy))))))
+      (let-entity w eid [xy :position
+                         m :mass
+                         sfxy [:self-fxy v2/zero]]
+        (when (and xy m)
+          (let [fxy (reduce
+                     #(if (= x eid)
+                        %1
+                        (let-entity w %2 [xy2 :position, m2 :mass]
+                          (v2/v+ %1 (calc-gravity-force m m2 xy xy2))))
+                     sfxy
+                     (entities w :phys-act :position :mass))]
+            (put-comp! w' eid :fxy)))))))
 
 (defn sys-simulate-physics [w now]
   (run-timed-system w now

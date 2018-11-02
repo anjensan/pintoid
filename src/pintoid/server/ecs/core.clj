@@ -62,14 +62,14 @@
   (when-let [cids (get-entity-comps w e)]
     (zipmap cids (map #(get-comp w e %) cids))))
 
-(defn entities [w c]
-   (let [cs (if (seqable? c) (seq c) (list c))
-         [mc & rcs] (sort-by #(count (get-comp-map w %)) cs)]
-     (eduction-map-key
-      (if (seq cs)
-        (reduce comp (map #(filter (get-comp-map w %)) rcs))
-        identity)
-      (get-comp-map w mc))))
+(defn entities
+  ([w c]
+   (keys (get-comp-map w c)))
+  ([w c & cs]
+   (let [[mc & rcs] (sort-by #(count (get-comp-map w %)) (cons c cs))]
+     (eduction
+      (reduce comp (map #(filter (get-comp-map w %)) rcs))
+      (entities w mc)))))
 
 (defn entities-reduce
   ([w c f]
@@ -78,7 +78,7 @@
    (transduce xf
               (fn ([w'] w') ([w' e] (or (f w' e) w')))
               w
-              (entities w c))))
+              (if (seqable? c) (apply entities w c) (entities w c)))))
 
 (defn entities-reduce!
   ([w c f]
@@ -87,4 +87,4 @@
    (transduce xf
               (fn ([w'] (persistent! w')) ([w' e] (or (f w' e) w')))
               (transient w)
-              (entities w c))))
+              (if (seqable? c) (apply entities w c) (entities w c)))))
