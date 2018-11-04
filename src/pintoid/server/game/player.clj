@@ -14,33 +14,34 @@
 (defn inc-player-score [w eid]
   (update-comp w eid :score (fnil inc 0)))
 
-(defn sys-change-engine-based-on-ui [w now]
-  (run-timed-system w now
-   (fn [w dt]
-     (entities-reduce! w [:player ::user-input]
-       (fn [w' eid]
-         (let [ui (w eid ::user-input)
-               rd (:rotate-dir ui 0)
-               angle (w eid :angle 0)
-               angle' (+ angle (* rd rotate-speed))
-               ed (:engine-dir ui)
-               ef (case ed -1 (- engine-reverse-force) 1 engine-forward-force 0)
-               fxy (v2/from-polar angle' ef)]
-           (assoc-entity! w' eid
-                          :self-fxy fxy
-                          :angle angle')))))))
+(defn asys-change-engine-based-on-ui [w now]
+  (run-timed-system
+   w now
+   (fn [dt]
+     (comp-system!
+      (each-entity w eid [_ :player
+                          ui ::user-input
+                          angle [:angle 0]
+                          ]
+        (let [rd (:rotate-dir ui 0)
+              ed (:engine-dir ui)
+              angle' (+ angle (* rd rotate-speed))
+              ef (case ed -1 (- engine-reverse-force) 1 engine-forward-force 0)
+              fxy (v2/from-polar angle' ef)]
+          (fn->
+           (put-comp! eid :self-fxy fxy)
+           (put-comp! eid :angle angle'))))))))
 
 (defn sys-spawn-bullets [w now]
   (entities-reduce w [:player ::user-input]
     (fn [w' eid]
       (let-entity w eid [ui ::user-input
-                         fc :fire-cooldown]
+                         fc [:fire-cooldown 0]]
         (when (and (or (nil? fc) (< fc now))
                    (or (:fire? ui) (:alt-fire? ui)))
           (let-entity w eid [xy :position
                              vxy [:velocity v2/zero]
-                             angle :angle
-                             fc :fire-cooldown]
+                             angle :angle]
             (let [b-proto (if (:fire? ui) (bullet) (bullet-alt))
                   b (:bullet b-proto)
                   b-vxy (v2/v+ vxy (v2/from-polar angle (:velocity b)))

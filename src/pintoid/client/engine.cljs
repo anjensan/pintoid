@@ -11,6 +11,7 @@
          [keywordize-keys]])
   (:require
    [pintoid.client.asset :as as]
+   [pintoid.client.sound :as snd]
    [pintoid.client.graphics.animation :as a]
    [pintoid.client.graphics.animloop :as al]
    [pintoid.client.graphics.layer :as gl]
@@ -126,10 +127,15 @@
           (+ (* a y1) (* b y2)) 1)
          true)))))
 
+(defn handle-player-sound-pos [w1 w2 wpatch]
+  (let [t2 (world-time w2)
+        p2 (player-entity w2)
+        xy (:position p2)]
+    (al/action! t2 #(snd/set-listener-pos xy))))
+
 
 (defn format-player-score [entity]
   (str (:score entity)))
-
 
 (defn handle-players-score [w1 w2 wpatch]
   (foreach! [eid (changed-eids w1 wpatch :score)]
@@ -162,6 +168,27 @@
          (timbre/trace "Remove sprite " (entity w1 eid))
          (remove-entity-sprite (entity w1 eid)))))))
 
+(defn handle-addrem-sounds [w1 w2 wpatch]
+  (foreach! [eid (changed-eids w1 wpatch :sound)]
+    (let [t2 (world-time w2)
+          e1 (entity w1 eid)
+          e2 (entity w2 eid)
+          s1 (:sound e1 {})
+          s2 (:sound e2 {})]
+      (doseq [[k v2] s2]
+        (when-not (= (get s1 k) v2)
+          (al/action! t2 #(snd/play-sound eid k v2))))
+      (doseq [[k v2] s1]
+        (when-not (contains? s2 k)
+          (al/action! t2 #(snd/stop-sound eid k))))
+      )))
+
+(defn handle-move-sound-pos [w1 w2 wpatch]
+  (let [t2 (world-time w2)]
+    (foreach! [eid (changed-eids w1 wpatch :position)]
+      (let [e2 (entity w2 eid)]
+        (when (:sound e2)
+          (al/action! t2 #(snd/set-sound-pos eid (:position e2))))))))
 
 (defmethod add-entity-sprite :player [entity]
   (let [eid (:eid entity)
@@ -180,11 +207,17 @@
 
 (defn update-world-snapshot! [wpatch]
   (let [w1 @world, [w2 wpatch'] (apply-world-patch w1 wpatch)]
-    (handle-remove-sprites w1 w2 wpatch)
-    (handle-addrem-assets w1 w2 wpatch)
-    (handle-add-sprites w1 w2 wpatch)
-    (handle-sprites-movement w1 w2 wpatch)
-    (handle-sprites-rotation w1 w2 wpatch)
-    (handle-players-score w1 w2 wpatch)
-    (handle-player-camera-pos w1 w2 wpatch)
+    (doseq [f [
+               handle-remove-sprites
+               handle-addrem-assets
+               handle-add-sprites
+               handle-sprites-movement
+               handle-sprites-rotation
+               handle-players-score
+               handle-player-camera-pos
+               handle-player-sound-pos
+               handle-addrem-sounds
+               handle-move-sound-pos
+               ]]
+      (f w1 w2 wpatch))
     (reset! world w2)))

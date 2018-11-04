@@ -68,4 +68,5 @@
   (GET  "/game-sock" [] (wrap-websocket-handler game-ws-handler {:format :transit-json}))
   (resources "/js" {:root "js" :mime-types {"js" "text/javascript; charset=utf8"}})
   (resources "/img" {:root "img"})
+  (resources "/snd" {:root "snd"})
   (resources "/css" {:root "css"}))

@@ -29,3 +29,9 @@
 
 (defn to-int-map [m]
   (if (instance? PersistentIntMap m) m (into (im/int-map) m)))
+
+(defmacro when-some-ex [bv & body]
+  (let [[a b & bvr] bv]
+    (if (seq bvr)
+      `(when-some [~a ~b] (when-some-ex [~@bvr] ~@body))
+      `(when-some [~a ~b] ~@body))))

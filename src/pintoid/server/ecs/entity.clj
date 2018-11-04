@@ -13,7 +13,7 @@
       rs#)))
 
 (defn maybe-actualize-entity-proto [w e]
-  (let-entity w e [{v :var f :val :as p} ::proto-info]
+  (let-entity w e [{v :var f :val :as p} [::proto-info {}]]
     (if-not (identical? @v f)
       (let [{a :args c :last} p
             f' @v

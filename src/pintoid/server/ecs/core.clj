@@ -51,12 +51,43 @@
 (defmacro assoc-entity! [w e & cvs]
   (assoc-entity-with-macro `put-comp! w e cvs))
 
-(defmacro let-entity [w e bs & body]
-  (let [ws (gensym)
-        es (gensym)
+(defmacro let-entity
+  {:style/indent 3}
+  [w e bs & body]
+  (let [ws (gensym "w__")
+        es (gensym "eid__")
         gc (fn [c] (if (seqable? c) `(get-comp ~ws ~es ~@c) `(get-comp ~ws ~es ~c)))
         bb (mapcat (fn [[s c]] [s (gc c)]) (partition-all 2 bs))]
-    `(let [~ws ~w, ~es ~e, ~@bb] ~@body)))
+    `(let [~ws ~w, ~es ~e] (when-some-ex [~@bb] ~@body))))
+
+(defmacro each-entity
+  {:style/indent 3}
+  [w e bv & body]
+  (let [ws (gensym "w__")
+        es (gensym "eid__")
+        bvp (partition-all 2 bv)
+        csym (zipmap (map second bvp) (repeatedly #(gensym "cm__")))
+        must (vec (filter keyword? (map second bvp)))
+        emit-gcm (fn [[_ c]]
+                   [(csym c)
+                    (if (vector? c)
+                      `(get-comp-map ~ws ~(first c))
+                      `(get-comp-map ~ws ~c))])
+        emit-gc (fn [[s c]]
+                  [s (if (vector? c)
+                       `(get ~(csym c) ~es ~(second c))
+                       `(get ~(csym c) ~es))])]
+    `(let [~ws ~w
+           ~@(mapcat emit-gcm bvp)
+           mc# (min-key count ~@(map csym must))]
+       (eduction
+        (comp
+         (map (fn [~es]
+                (let [~e ~es]
+                  (when-some-ex [~@(mapcat emit-gc bvp)]
+                    ~@body))))
+         (filter some?))
+        (keys mc#)))))
 
 (defn get-full-entity [w e]
   (when-let [cids (get-entity-comps w e)]

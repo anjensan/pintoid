@@ -1,8 +1,8 @@
 (ns pintoid.server.game.core
   (:use
-   [pintoid.server.ecs core data dump entity]
+   [pintoid.server.ecs core data dump entity system]
    [pintoid.server.data core consts]
-   [pintoid.server.game physics collide kill player]
+   [pintoid.server.game physics collide kill player sound]
    [pintoid.server vec2])
   (:require
    clojure.stacktrace
@@ -58,13 +58,14 @@
     (-> w
       (actualize-entity-protos)
       (sys-spawn-bullets now)
-      (sys-change-engine-based-on-ui now)
+      ((asys->sys asys-change-engine-based-on-ui) now)
       (sys-kill-outdated-entities now)
-      (sys-simulate-physics now)
+      ((asys->sys asys-simulate-physics) now)
       (sys-collide-entities)
       (sys-kill-collided-entities)
       (sys-kill-entities-out-of-gamefield)
       (sys-attach-world-time now)
+      ((asys->sys asys-garbage-sounds) now)
       (sys-fixate-world-state)
       )))
 
@@ -77,7 +78,8 @@
 (defn- visible-by-player? [w pid max-dist]
   (let-entity w pid [pp :position]
     (fn [eid]
-      (let-entity w eid [fow :fog-of-war pos :position]
+      (let-entity w eid [fow [:fog-of-war false]
+                         pos :position]
         (or
          (not fow)
          (< (v2/dist pos pp) max-dist))))))
@@ -94,4 +96,5 @@
      :layer        (dump w :layer, :filter vf)
      :angle        (dump w :angle, :filter vf)
      :type         (dump w :type, :filter vf)
+     :sound        (dump w :sound, :filter vf)
      )))
