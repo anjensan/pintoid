@@ -56,7 +56,7 @@
 (defn- sys-world-tick [w]
   (let [now (current-time w)]
     (-> w
-      (actualize-entity-protos)
+      ((asys->sys asys-actualize-entity-protos))
       (sys-spawn-bullets now)
       ((asys->sys asys-change-engine-based-on-ui) now)
       (sys-kill-outdated-entities now)

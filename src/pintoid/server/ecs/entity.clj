@@ -1,5 +1,5 @@
 (ns pintoid.server.ecs.entity
-  (:use [pintoid.server.ecs core]))
+  (:use [pintoid.server.ecs core system]))
 
 (defrecord ProtoInfo [var val args last])
 
@@ -12,23 +12,24 @@
       (fn ~args (add-proto-info (do ~@body) (var ~name) rs#))
       rs#)))
 
-(defn maybe-actualize-entity-proto [w e]
-  (let-entity w e [{v :var f :val :as p} [::proto-info {}]]
-    (if-not (identical? @v f)
+(defn actualize-entity-proto [w e]
+  (let-entity w e [{v :var f :val :as p} ::proto-info]
+    (if (identical? @v f)
+      w
       (let [{a :args c :last} p
             f' @v
-            c' (apply f' a)]
-        (-> w
-            (into (comp
-                    (filter (fn [[k v]] (= (get c k) (get-comp w e k))))
-                    (filter (fn [[k v]] (not= v (get c k))))
-                    (map (fn [[k v]] [e k v])))
-                  c')
-            (put-comp e ::proto-info (assoc p :val f' :last c'))))
-      w)))
+            c' (apply f' a)
+            cs (into {} (filter (fn [[k v]] (and (= (get c k) (get-comp w e k))
+                                                 (not= v (get c k))))) c')
+            pi (assoc p :val f' :last c')
+            cs' (assoc cs ::proto-info pi)]
+        (reduce (fn [w' [k v]] (put-comp w' e k v)) w cs')))))
 
-(defn actualize-entity-protos [w]
-  (reduce maybe-actualize-entity-proto w (entities w ::proto)))
+(defn asys-actualize-entity-protos [w]
+  (comp-system
+   (each-entity w e [{v :var f :val} ::proto-info]
+     (when-not (identical? @v f)
+       #(actualize-entity-proto % e)))))
 
 (defn- emit-entity-name [n]
   (list 'quote (symbol (name (ns-name *ns*)) (name n))))
