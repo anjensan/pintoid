@@ -1,8 +1,9 @@
 (ns pintoid.server.game.player
   (:use
-   [pintoid.server.data consts proto]
+   [pintoid.server.data consts proto assets sounds]
    [pintoid.server.ecs core system entity])
   (:require
+   [pintoid.server.game.sound :as snd]
    [pintoid.server.vec2 :as v2]
    [taoensso.timbre :as timbre]))
 
@@ -27,8 +28,12 @@
               ed (:engine-dir ui)
               angle' (+ angle (* rd rotate-speed))
               ef (case ed -1 (- engine-reverse-force) 1 engine-forward-force 0)
-              fxy (v2/from-polar angle' ef)]
+              fxy (v2/from-polar angle' ef)
+              snd (if (= ed 0)
+                    #(snd/stop-sound! % eid :engine)
+                    #(snd/play-sound! % eid :engine engine-sound))]
           (fn->
+           (snd)
            (put-comp! eid :self-fxy fxy)
            (put-comp! eid :angle angle'))))))))
 
@@ -45,16 +50,19 @@
             (let [b-proto (if (:fire? ui) (bullet) (bullet-alt))
                   b (:bullet b-proto)
                   b-vxy (v2/v+ vxy (v2/from-polar angle (:velocity b)))
-                  b-xy xy]
+                  b-xy xy
+                  bid (next-entity)]
               (-> w'
                   (put-comp eid :fire-cooldown (+ now (:cooldown b)))
-                  (add-new-entity
+                  (add-entity bid
                    (assoc b-proto
                           :sched-kill-at (+ now (:lifetime b))
                           :position b-xy
                           :velocity b-vxy
                           :bullet (assoc b :owner eid)
-                          :angle angle))))))))))
+                          :angle angle))
+                  (snd/play-sound bid (rand-nth bullet-bang-sounds))
+                  ))))))))
 
 (defn remove-player [w eid]
   (remove-entity w eid))
