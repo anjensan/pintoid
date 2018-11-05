@@ -13,16 +13,29 @@
    :anchor [0.5 2.5]
    :style {"fill" "white" "font" "normal 18px Arial"}})
 
-(defn- mkas [image] {:anchor [0.5 0.5] :texture (str "/img/" image)})
+(defn- mkas [image & {:as opts}]
+  (assoc opts :anchor [0.5 0.5] :texture (str "/img/" image)))
 
-(defasset racket-blue :sprite (mkas "racket_blue.png"))
-(defasset racket-red :sprite (mkas "racket_red.png"))
+(defasset racket-blue :sprite
+  (mkas "racket_blue.png"))
 
-(defasset star1 :sprite (mkas "star1.png"))
-(defasset star2 :sprite (mkas "star2.png"))
-(defasset star3 :sprite (mkas "star3.png"))
-(defasset planet1 :sprite (mkas "pink_planet1.png"))
-(defasset planet2 :sprite (mkas "green_planet1.png"))
+(defasset racket-red :sprite
+  (mkas "racket_red.png"))
+
+(defasset star1 :sprite
+  (mkas "star1.png"))
+
+(defasset star2 :sprite
+  (mkas "star2.png"))
+
+(defasset star3 :sprite
+  (mkas "star3.png"))
+
+(defasset planet1 :sprite
+  (mkas "pink_planet1.png"))
+
+(defasset planet2 :sprite
+  (mkas "green_planet1.png"))
 
 (defassets ast-static-sprites :sprite
   [i (range 1 6)]
