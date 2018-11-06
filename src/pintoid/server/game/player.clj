@@ -28,7 +28,7 @@
               ed (:engine-dir ui)
               angle' (+ angle (* rd rotate-speed))
               ef (case ed -1 (- engine-reverse-force) 1 engine-forward-force 0)
-              fxy (v2/from-polar angle' ef)
+              fxy (v2/from-polar ef angle')
               snd (if (= ed 0)
                     #(snd/stop-sound! % eid :engine)
                     #(snd/play-sound! % eid :engine engine-sound))]
@@ -49,7 +49,7 @@
                              angle :angle]
             (let [b-proto (if (:fire? ui) (bullet) (bullet-alt))
                   b (:bullet b-proto)
-                  b-vxy (v2/v+ vxy (v2/from-polar angle (:velocity b)))
+                  b-vxy (v2/v+ vxy (v2/from-polar (:velocity b) angle))
                   b-xy xy
                   bid (next-entity)]
               (-> w'

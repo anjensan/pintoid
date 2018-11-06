@@ -16,7 +16,7 @@
 
 (defn- limit-vxy [vxy]
   (if (> (v2/mag vxy) max-object-velocity)
-    (v2/from-polar (v2/angle vxy) max-object-velocity)
+    (v2/from-polar max-object-velocity (v2/angle vxy))
     vxy))
 
 (defn asys-physics-move [w now]

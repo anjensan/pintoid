@@ -56,7 +56,7 @@
      (Math/abs (- (.-y v1) (.-y v2)))))
 
 (defn angle [^Vec2 v]
-  (Math/atan2 (.-x v) (.-y v)))
+  (Math/atan2 (.-y v) (.-x v)))
 
 (defn rotate [^Vec2 v ^double a]
   (let [sa (Math/sin a)
@@ -68,11 +68,13 @@
     (Vec2. nx ny)))
 
 (defn from-polar
-  ([[a m]] (from-polar a m))
-  ([^double a ^double m]
+  ([[m a]]
+   (from-polar a m))
+  ([^double m ^double a]
    (if (zero? m)
      zero
-     (Vec2. (* (Math/cos a) m) (* (Math/sin a) m)))))
+     (Vec2. (* (Math/cos a) m)
+            (* (Math/sin a) m)))))
 
 (defn to-polar [^Vec2 v]
   [(mag v) (angle v)])
