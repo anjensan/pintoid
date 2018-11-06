@@ -30,6 +30,28 @@
         (let [xy' (v2/v+ xy (v2/scale vxy dt))]
           (fn-> (put-comp! eid :position xy'))))))))
 
+(defn asys-physics-bound-circle [w now]
+  (run-timed-system
+   w now
+   (fn [dt]
+     (comp-system!
+      (each-entity w eid [_ :phys-move
+                          xy :position
+                          vxy :velocity]
+        (let [dd (v2/mag xy)]
+          (when (> dd world-jelly-radius)
+            (let [dd (v2/mag xy)
+                  nxy (v2/norm xy)
+                  nvxy (v2/norm vxy)
+                  p (+ 1 (v2/dot nxy nvxy))      ;; 0..2 - move in/out of the world
+                  x (/ (- dd world-jelly-radius) world-jelly-radius)
+                  fv (v2/v+ nxy nxy nvxy)        ;; stoping force direction
+                  fs (* p x dt world-jelly-coef) ;; stoping force value
+                  dvxy (v2/scale fv fs)
+                  f #(v2/v- (or % v2/zero) dvxy)]
+              (fn-> (update-comp! eid :velocity f)
+              )))))))))
+
 (defn asys-physics-update-vxy [w now]
   (run-timed-system
    w now
@@ -39,7 +61,6 @@
           [_    :phys-move
            xy   :position
            m    [:mass 1]
-           vxy  [:velocity v2/zero]
            sfxy [:self-fxy v2/zero]]
         (let [fxy (reduce
                    #(if (= %2 eid)
@@ -49,8 +70,8 @@
                    sfxy
                    (entities w :phys-act :position :mass))
               axy (v2/scale fxy (/ m))
-              vxy' (limit-vxy (v2/v+ vxy (v2/scale axy dt)))]
-          (fn-> (put-comp! eid :velocity vxy'))))))))
+              dvxy (limit-vxy (v2/scale axy dt))]
+          (fn-> (update-comp! eid :velocity (fnil v2/v+ v2/zero) dvxy))))))))
 
 (defn asys-simulate-physics [w now]
   (let [a (future (asys-physics-update-vxy w now))

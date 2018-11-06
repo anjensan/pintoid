@@ -61,6 +61,7 @@
       ((asys->sys asys-change-engine-based-on-ui) now)
       (sys-kill-outdated-entities now)
       ((asys->sys asys-simulate-physics) now)
+      ((asys->sys asys-physics-bound-circle) now)
       (sys-collide-entities)
       (sys-kill-collided-entities)
       (sys-kill-entities-out-of-gamefield)

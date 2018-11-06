@@ -45,7 +45,7 @@
 (defn- entity-out-of-gamefield? [w eid]
   (when-let [xy (w eid :position)]
     (let [[x y] ((juxt :x :y) xy)]
-      (> (v2/mag xy) world-radius))))
+      (> (v2/mag xy) world-kill-radius))))
 
 (defn sys-kill-entities-out-of-gamefield [w]
   (entities-reduce w :position
