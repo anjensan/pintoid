@@ -101,21 +101,3 @@
      (eduction
       (reduce comp (map #(filter (get-comp-map w %)) rcs))
       (entities w mc)))))
-
-(defn entities-reduce
-  ([w c f]
-   (entities-reduce w c identity f))
-  ([w c xf f]
-   (transduce xf
-              (fn ([w'] w') ([w' e] (or (f w' e) w')))
-              w
-              (if (seqable? c) (apply entities w c) (entities w c)))))
-
-(defn entities-reduce!
-  ([w c f]
-   (entities-reduce! w c identity f))
-  ([w c xf f]
-   (transduce xf
-              (fn ([w'] (persistent! w')) ([w' e] (or (f w' e) w')))
-              (transient w)
-              (if (seqable? c) (apply entities w c) (entities w c)))))

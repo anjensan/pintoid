@@ -54,20 +54,38 @@
   (System/currentTimeMillis))
 
 (defn- sys-world-tick [w]
-  (let [now (current-time w)]
+  (let [now (current-time w)
+        [fork join] (asys-fork-join)]
     (-> w
-      ((asys->sys asys-actualize-entity-protos))
-      (sys-spawn-bullets now)
-      ((asys->sys asys-change-engine-based-on-ui) now)
-      (sys-kill-outdated-entities now)
-      ((asys->sys asys-simulate-physics) now)
-      ((asys->sys asys-physics-bound-circle) now)
-      (sys-collide-entities)
-      (sys-kill-collided-entities)
-      (sys-kill-entities-out-of-gamefield)
-      (sys-attach-world-time now)
-      ((asys->sys asys-garbage-sounds) now)
-      (sys-fixate-world-state)
+        (sys-attach-world-time now)
+        (fork :actualize-protos asys-actualize-entity-protos)
+
+        (fork :sounds asys-garbage-sounds now)
+        (fork :kill-outdated asys-kill-outdated-entities now)
+        (fork :kill-out-of-gamefield asys-kill-entities-out-of-gamefield)
+        (fork :engine asys-change-engine-based-on-ui now)
+
+        (join :actualize-protos)
+
+        (fork :physics asys-simulate-physics now)
+        (fork :physics-bound asys-physics-bound-circle now)
+        (fork :collide asys-collide-entities)
+
+        (join :collide)
+        (fork :kill-collided asys-kill-collided-entities)
+
+        (join :kill-outdated)
+        (join :sounds)
+        (join :engine)
+        (join :kill-out-of-gamefield)
+        (join :kill-collided)
+        (join :physics)
+        (join :physics-bound)
+
+        (fork :bullets asys-spawn-bullets now)
+        (join :bullets)
+
+        (sys-fixate-world-state)
       )))
 
 (defn game-world-tick []

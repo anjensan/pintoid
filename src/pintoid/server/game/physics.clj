@@ -23,18 +23,18 @@
   (run-timed-system
    w now
    (fn [dt]
-     (comp-system!
+     (combine-systems!
       (each-entity w eid
           [xy   :position
            vxy  :velocity]
-        (let [xy' (v2/v+ xy (v2/scale vxy dt))]
-          (fn-> (put-comp! eid :position xy'))))))))
+        (let [dxy (v2/scale vxy dt)]
+          (fn-> (update-comp! eid :position v2/v+' dxy))))))))
 
 (defn asys-physics-bound-circle [w now]
   (run-timed-system
    w now
    (fn [dt]
-     (comp-system!
+     (combine-systems!
       (each-entity w eid [_ :phys-move
                           xy :position
                           vxy :velocity]
@@ -56,7 +56,7 @@
   (run-timed-system
    w now
    (fn [dt]
-     (comp-system!
+     (combine-systems!
       (each-entity w eid
           [_    :phys-move
            xy   :position
@@ -71,7 +71,7 @@
                    (entities w :phys-act :position :mass))
               axy (v2/scale fxy (/ m))
               dvxy (limit-vxy (v2/scale axy dt))]
-          (fn-> (update-comp! eid :velocity (fnil v2/v+ v2/zero) dvxy))))))))
+          (fn-> (update-comp! eid :velocity v2/v+' dvxy))))))))
 
 (defn asys-simulate-physics [w now]
   (let [a (future (asys-physics-update-vxy w now))

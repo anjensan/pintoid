@@ -1,6 +1,6 @@
 (ns pintoid.server.game.collide
   (:use
-   [pintoid.server.ecs core]
+   [pintoid.server.ecs core system]
    [pintoid.server.data consts])
   (:require
    [pintoid.server.vec2 :as v2]
@@ -13,14 +13,12 @@
       (let-entity w e2 [r2 :radius, p2 :position]
         (< (v2/dist p1 p2) (+ r1 r2))))))
 
-(defn sys-collide-entities [w]
-  ;; TODO: optimize collision detect alg, currently it's O(n^2)!
-  (let [;; TODO: use marker component :collidable or :collision-shape
-        coll-eids (entities w :radius :position)]
-    (reduce
-     (fn [w eid]
-       (put-comp
-        w eid :collide-with
-        (seq (filter #(is-colliding? w eid %) coll-eids))))
-     w
-     coll-eids)))
+(defn asys-collide-entities [w]
+  (combine-systems
+   ;; TODO: optimize collision detect alg, currently it's O(n^2)!
+   (let [;; TODO: use marker component :collidable or :collision-shape
+         coll-eids (entities w :radius :position)]
+     (for [eid coll-eids]
+       (let [cw (vec (filter #(is-colliding? w eid %) coll-eids))]
+         (fn [w']
+           (put-comp w' eid :collide-with cw)))))))

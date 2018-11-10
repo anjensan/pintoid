@@ -1,6 +1,6 @@
 (ns pintoid.server.game.kill
   (:use
-   [pintoid.server.ecs core]
+   [pintoid.server.ecs core system]
    [pintoid.server.data consts]
    [pintoid.server.game player])
   (:require
@@ -21,41 +21,47 @@
     (kill-player w eid)
     (remove-entity w eid)))
 
-(defn sys-kill-collided-entities [w]
-  (entities-reduce w :collide-with
-   (fn [w' eid]
-     (let [et (w eid :type)
-           cw (w eid :collide-with)
-           cwt (map #(w % :type) cw)]
+(defn- inc-players-score [w ps]
+  (reduce inc-player-score w ps))
+
+(defn asys-kill-collided-entities [w]
+  (combine-systems
+   (each-entity w eid [cw :collide-with
+                       et :type]
+     (when-let [cwt (seq (map #(w % :type) cw))]
+
        ;; TODO: move out, use multimethods/protocols?
        (cond
          ;; everything kills player except own bullets
-         (and (= et :player)
-              (some #(not= eid (:owner (w % :bullet))) cw))
+         (and (= et :player) (some #(not= eid (:owner (w % :bullet))) cw))
          (let [all-bullets-owners (keep #(:owner (w % :bullet)) cw)
                bullets-owners (remove #(= eid %) all-bullets-owners)]
-           (as-> w' $
-             (reduce inc-player-score $ bullets-owners)
-             (kill-player $ eid)))
+           (fn->
+            (inc-players-score bullets-owners)
+            (kill-player eid)))
 
          ;; everything kills bullet except other bullets & players
          (and (= et :bullet) (not-any? #{:bullet :player} cwt))
-         (kill-entity w' eid))))))
+         (fn-> (kill-entity eid))
+
+         )))))
 
 (defn- entity-out-of-gamefield? [w eid]
   (when-let [xy (w eid :position)]
     (let [[x y] ((juxt :x :y) xy)]
       (> (v2/mag xy) world-kill-radius))))
 
-(defn sys-kill-entities-out-of-gamefield [w]
-  (entities-reduce w :position
-                    (filter #(entity-out-of-gamefield? w %))
-                    kill-entity))
+(defn asys-kill-entities-out-of-gamefield [w]
+  (combine-systems
+   (each-entity w eid [p :position]
+     (when (entity-out-of-gamefield? w p)
+       (fn-> (kill-entity eid))))))
 
-(defn sys-kill-outdated-entities [w now]
-  (entities-reduce w :sched-kill-at
-    (filter #(<= (w % :sched-kill-at) now))
-    kill-entity))
+(defn asys-kill-outdated-entities [w now]
+  (combine-systems
+   (each-entity w eid [t :sched-kill-at]
+     (when (<= t now)
+       (fn-> (kill-entity eid))))))
 
 (defn kill-entity-at [w eid at]
   (let [a (w eid :sched-kill-at)]

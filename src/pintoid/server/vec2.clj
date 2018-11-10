@@ -25,6 +25,17 @@
   ([v1 v2 v3 v4] (-> v1 (v+ v2) (v+ v3) (v+ v4)))
   ([v1 v2 v3 v4 & vs] (reduce v+ (v+ v1 v2 v3 v4) vs)))
 
+(defn v+'
+  ([] zero)
+  ([v1] (or v1 zero))
+  ([^Vec2 v1 ^Vec2 v2]
+   (if (and (some? v1) (some? v2))
+     (v+ v1 v2)
+     (or v1 v2 zero)))
+  ([v1 v2 v3] (-> v1 (v+' v2) (v+' v3)))
+  ([v1 v2 v3 v4] (-> v1 (v+' v2) (v+' v3) (v+' v4)))
+  ([v1 v2 v3 v4 & vs] (reduce v+' (v+' v1 v2 v3 v4) vs)))
+
 (defn v-
   ([^Vec2 v1] (Vec2. (- (.-x v1)) (- (.-y v1))))
   ([^Vec2 v1 ^Vec2 v2] (Vec2. (- (.-x v1) (.-x v2)) (- (.-y v1) (.-y v2))))

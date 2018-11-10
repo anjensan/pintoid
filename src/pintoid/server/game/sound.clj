@@ -16,7 +16,7 @@
                         (get (get-comp w sound-id :asset)
                              :duration
                              default-sound-duration))))]
-    (comp-system!
+    (combine-systems!
      (each-entity w eid [u ::until]
        (when-not (every? #(and (some? %)
                                (> % now))

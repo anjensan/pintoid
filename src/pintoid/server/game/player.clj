@@ -11,7 +11,6 @@
 (defn search-new-player-pos [w eid]
   (v2/vec2 (rand-int 2000) (rand-int 2000)))
 
-
 (defn inc-player-score [w eid]
   (update-comp w eid :score (fnil inc 0)))
 
@@ -19,7 +18,7 @@
   (run-timed-system
    w now
    (fn [dt]
-     (comp-system!
+     (combine-systems!
       (each-entity w eid [_ :player
                           ui ::user-input
                           angle [:angle 0]
@@ -37,32 +36,33 @@
            (put-comp! eid :self-fxy fxy)
            (put-comp! eid :angle angle'))))))))
 
-(defn sys-spawn-bullets [w now]
-  (entities-reduce w [:player ::user-input]
-    (fn [w' eid]
-      (let-entity w eid [ui ::user-input
-                         fc [:fire-cooldown 0]]
-        (when (and (or (nil? fc) (< fc now))
-                   (or (:fire? ui) (:alt-fire? ui)))
-          (let-entity w eid [xy :position
-                             vxy [:velocity v2/zero]
-                             angle :angle]
-            (let [b-proto (if (:fire? ui) (bullet) (bullet-alt))
-                  b (:bullet b-proto)
-                  b-vxy (v2/v+ vxy (v2/from-polar (:velocity b) angle))
-                  b-xy xy
-                  bid (next-entity)]
-              (-> w'
-                  (put-comp eid :fire-cooldown (+ now (:cooldown b)))
-                  (add-entity bid
-                   (assoc b-proto
-                          :sched-kill-at (+ now (:lifetime b))
-                          :position b-xy
-                          :velocity b-vxy
-                          :bullet (assoc b :owner eid)
-                          :angle angle))
-                  (snd/play-sound bid (rand-nth bullet-bang-sounds))
-                  ))))))))
+(defn asys-spawn-bullets [w now]
+  (combine-systems
+   (each-entity w eid [_ :player
+                       ui ::user-input
+                       fc [:fire-cooldown 0]]
+     (when (and (or (nil? fc) (< fc now))
+                (or (:fire? ui) (:alt-fire? ui)))
+       (let-entity w eid [xy :position
+                          vxy [:velocity v2/zero]
+                          angle :angle]
+         (let [b-proto (if (:fire? ui) (bullet) (bullet-alt))
+               b (:bullet b-proto)
+               b-vxy (v2/v+ vxy (v2/from-polar (:velocity b) angle))
+               b-xy xy
+               bid (next-entity)]
+           (fn->
+            (put-comp eid :fire-cooldown (+ now (:cooldown b)))
+            (add-entity
+             bid
+             (assoc b-proto
+                    :sched-kill-at (+ now (:lifetime b))
+                    :position b-xy
+                    :velocity b-vxy
+                    :bullet (assoc b :owner eid)
+                    :angle angle))
+            (snd/play-sound bid (rand-nth bullet-bang-sounds))
+            )))))))
 
 (defn remove-player [w eid]
   (remove-entity w eid))

@@ -29,17 +29,23 @@
   (let [sid (next-entity)]
     `(run-timed-system* ~sid ~w ~now ~sf)))
 
-(defn comp-system [fs]
+(defn combine-systems [fs]
   (let [fs (into [] (filter some?) fs)]
     (fn [w]
       (reduce (fn [w' f] (or (f w') w')) w fs))))
 
-(defn comp-system! [fs!]
+(defn combine-systems! [fs!]
   (let [fs! (into [] (filter some?) fs!)]
     (fn [w]
       (persistent!
        (reduce (fn [w' f!] (or (f! w') w')) (transient w) fs!)))))
 
-(defn asys->sys [sf]
-  (fn [w & args]
-    ((apply sf w args) w)))
+(defn asys-fork-join []
+  (let [a (atom {})]
+    [(fn fork [w id as & args]
+       (let [f (future (apply as w args))]
+         (swap! a assoc id f))
+       w)
+     (fn join [w id]
+       (let [f (get @a id)]
+         (@f w)))]))

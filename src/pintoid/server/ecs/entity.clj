@@ -26,7 +26,7 @@
         (reduce (fn [w' [k v]] (put-comp w' e k v)) w cs')))))
 
 (defn asys-actualize-entity-protos [w]
-  (comp-system
+  (combine-systems
    (each-entity w e [{v :var f :val} ::proto-info]
      (when-not (identical? @v f)
        #(actualize-entity-proto % e)))))
@@ -77,10 +77,12 @@
                                  (throw (ex-info "Invalid entity var" {:var v})))))
 
 (defn unload-undefined-entities [w]
-  (entities-reduce w ::name
+  (reduce
    (fn [w' e]
      (let-entity w e [n ::name]
-       (if (resolve n) w' (remove-entity w' e))))))
+       (if (resolve n) w' (remove-entity w' e))))
+   w
+   (entities w ::name)))
 
 (defmacro defasset [name cls spec]
   `(defentity ~name
