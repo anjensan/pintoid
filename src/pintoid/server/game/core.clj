@@ -1,11 +1,18 @@
 (ns pintoid.server.game.core
   (:use
-   [pintoid.server.ecs core data dump entity system]
    [pintoid.server.data core consts]
    [pintoid.server.game physics collide kill player sound]
    [pintoid.server vec2])
   (:require
    clojure.stacktrace
+   [clojure.algo.monads :as m]
+   [pintoid.server.ecs
+    [core :refer :all]
+    [entity :refer :all]
+    [system :as ecss]
+    [dump :as ecsd]
+    [data :refer [create-ecs]]]
+   [taoensso.tufte :as tufte]
    [pintoid.server.vec2 :as v2]
    [mount.core :refer [defstate]]
    [taoensso.timbre :as timbre]
@@ -53,40 +60,69 @@
 (defn- current-time [w]
   (System/currentTimeMillis))
 
+(defn profile-asys
+  ([as-var]
+   (profile-asys (-> as-var meta :name) as-var))
+  ([n as]
+   (fn [w & rs]
+     (let [d (promise)
+           f (tufte/p [:run n]
+              (let [z (apply as w rs)]
+                (deliver d :done)
+                z))]
+       (fn [w']
+         (tufte/p [:wait n] @d)
+         (tufte/p [:fixup n] (f w'))
+         )))))
+
+(defn asys-fork-join []
+  (let [[fork' join] (ecss/asys-fork-join)
+        fork (fn [w id as & rs] (apply fork' w id (profile-asys as) rs))]
+    [fork join]))
+
 (defn- sys-world-tick [w]
-  (let [now (current-time w)
-        [fork join] (asys-fork-join)]
-    (-> w
-        (sys-attach-world-time now)
-        (fork :actualize-protos asys-actualize-entity-protos)
+  (tufte/profile
+   {:dynamic? true}
+   (tufte/p
+    {:id :sys-world-tick}
+    (let [now (current-time w)
+          [fork join] (asys-fork-join)]
+      (-> w
+          (sys-attach-world-time now)
+          (fork :actualize-protos #'asys-actualize-entity-protos)
 
-        (fork :sounds asys-garbage-sounds now)
-        (fork :kill-outdated asys-kill-outdated-entities now)
-        (fork :kill-out-of-gamefield asys-kill-entities-out-of-gamefield)
-        (fork :engine asys-change-engine-based-on-ui now)
+          (fork :sounds #'asys-garbage-sounds now)
+          (fork :kill-outdated #'asys-kill-outdated-entities now)
+          (fork :kill-out-of-gamefield #'asys-kill-entities-out-of-gamefield)
+          (fork :engine #'asys-change-engine-based-on-ui now)
 
-        (join :actualize-protos)
+          (join :actualize-protos)
 
-        (fork :physics asys-simulate-physics now)
-        (fork :physics-bound asys-physics-bound-circle now)
-        (fork :collide asys-collide-entities)
+          (fork :physics-vxy #'asys-physics-update-vxy now)
+          (fork :physics-move #'asys-physics-move now)
 
-        (join :collide)
-        (fork :kill-collided asys-kill-collided-entities)
+          (fork :physics-bound #'asys-physics-bound-circle now)
+          (fork :collide #'asys-collide-entities)
+          (join :collide)
 
-        (join :kill-outdated)
-        (join :sounds)
-        (join :engine)
-        (join :kill-out-of-gamefield)
-        (join :kill-collided)
-        (join :physics)
-        (join :physics-bound)
+          (join :kill-outdated)
+          (join :sounds)
+          (join :engine)
+          (join :kill-out-of-gamefield)
 
-        (fork :bullets asys-spawn-bullets now)
-        (join :bullets)
+          (join :physics-bound)
+          (join :physics-move)
 
-        (sys-fixate-world-state)
-      )))
+          (fork :kill-collided #'asys-kill-collided-entities)
+
+          (join :physics-vxy)
+
+          (fork :bullets #'asys-spawn-bullets now)
+          (join :bullets)
+          (join :kill-collided)
+
+          (sys-fixate-world-state)
+          )))))
 
 (defn game-world-tick []
   (send-off world sys-world-tick))
@@ -103,17 +139,25 @@
          (not fow)
          (< (v2/dist pos pp) max-dist))))))
 
+(defn dumpc [w c & rs]
+  (tufte/p [:dump c]
+   (m/domonad m/state-m [d (apply ecsd/dumpc w c rs)] (vec d))))
+
 (defn dump-the-world [w pid]
-  (let [vf (comp (memoize (visible-by-player? w pid max-user-view-distance)) key)]
-    (dumps-map
-     :self-player  (dump-self-player pid)
-     :asset        (dump w :asset)
-     :score        (dump w :score)
-     :position     (dump w :position, :filter vf, :map v2/to-vec)
-     :position-tts (dump w :position-tts, :filter vf)
-     :sprite       (dump w :sprite, :filter vf)
-     :layer        (dump w :layer, :filter vf)
-     :angle        (dump w :angle, :filter vf)
-     :type         (dump w :type, :filter vf)
-     :sound        (dump w :sound, :filter vf)
-     )))
+  (tufte/profile
+   {:dynamic? true}
+   (tufte/p
+    :dump-the-world
+    (let [vf (comp (memoize (visible-by-player? w pid max-user-view-distance)) key)]
+      (ecsd/dumps-map
+       :self-player  (dump-self-player pid)
+       :asset        (dumpc w :asset)
+       :score        (dumpc w :score)
+       :position     (dumpc w :position, :filter vf, :map v2/to-vec)
+       :position-tts (dumpc w :position-tts, :filter vf)
+       :sprite       (dumpc w :sprite, :filter vf)
+       :layer        (dumpc w :layer, :filter vf)
+       :angle        (dumpc w :angle, :filter vf)
+       :type         (dumpc w :type, :filter vf)
+       :sound        (dumpc w :sound, :filter vf)
+       )))))

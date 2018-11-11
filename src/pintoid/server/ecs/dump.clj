@@ -4,7 +4,7 @@
   (:require [clojure.data.int-map :as im])
   (:import [clojure.data.int_map PersistentIntMap]))
 
-(with-monad (maybe-t state-m ::empty-dump)
+(with-monad (maybe-t state-m [])
 
   (defn d-map [f dm]
     (domonad [d dm] (eduction (map (fn [[k v]] [k (f v)])) d)))
@@ -21,7 +21,7 @@
 
   (defn d-when-not-identical [dm]
     (domonad [new dm, old (set-val ::d-changed-old new)]
-      (if (identical? old new) ::empty-dump new)))
+      (if (identical? old new) [] new)))
   )
 
 (with-monad state-m
@@ -31,11 +31,11 @@
       (m-result {})
       (domonad [v (with-state-field k m)
                 z (apply dumps-map r)]
-        (if-not (= v ::empty-dump)
+        (if-not (= v [])
           (assoc z k v)
           z))))
 
-  (defn dump
+  (defn dumpc
     [w c & {filter :filter
             map :map
             diff :diff

@@ -15,6 +15,7 @@
                  [com.cognitect/transit-clj "0.8.313"]
                  [com.cognitect/transit-cljs "0.8.256"]
                  [com.taoensso/timbre "4.10.0"]
+                 [com.taoensso/tufte "2.0.1"]
                  [compojure/compojure "1.6.1"]
                  [hiccup/hiccup "2.0.0-alpha1"]
                  [http-kit/http-kit "2.3.0"]

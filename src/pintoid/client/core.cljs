@@ -18,12 +18,8 @@
    [dommy.core :refer [sel1]]
    ))
 
-
-(timbre/set-level! :info)
-
 ;; TODO: implement adaptive interpolation lag (based on ping).
 (def animation-interpolation-lag 100)
-
 
 (defn drawing-loop [timestamp]
   (js/requestAnimationFrame drawing-loop)
@@ -33,7 +29,6 @@
     (al/run-animations! draw-at)
     (g/render-graphics!)))
 
-
 (defn start-app []
   (init-cs-communication)
   (init-user-input)
@@ -42,6 +37,5 @@
     (g/init-autoscaling c))
   (spawn-user-input-sender get-user-input-state)
   (drawing-loop 0))
-
 
 (set! (.-onload js/window) start-app)

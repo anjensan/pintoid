@@ -6,6 +6,7 @@
    [mount.core :as mount :refer [defstate]]
    [aero.core :as aero]
    [taoensso.timbre :as timbre]
+   [taoensso.tufte :as tufte]
    [clojure.tools.nrepl.server :as nrepl]
    [org.httpkit.server :as hkit]
    [ring.middleware.params]
@@ -13,14 +14,12 @@
   (:import
    [java.util.concurrent TimeUnit ScheduledThreadPoolExecutor]))
 
-
 (defstate config
   :start (if-let [cf (:config-file (mount/args))]
            (do
              (timbre/info "Load configuration file" cf)
              (aero/read-config cf))
            (timbre/warn "No configuration file provided - start with all defaults")))
-
 
 (defstate nrepl
   :start (let [ip (get-in config [:nrepl :bind] "127.0.0.1")
@@ -74,10 +73,31 @@
           (webserver)))
 
 
+(defstate pstats-aggregator
+  :start (let [a (agent nil)]
+           (timbre/info "Start profiling")
+           (tufte/add-handler! ::pstats-aggr #(send a tufte/merge-pstats (:pstats %)))
+           a)
+  :stop (do
+          (timbre/info "Stop profiling")
+          (tufte/remove-handler! ::pstats-aggr)))
+
+(defn- dump-n-clean-pstats []
+  (send pstats-aggregator
+   #(when % (timbre/info "Profile\n" (tufte/format-pstats %)))))
+
+(defstate dump-pstats
+  :start (let [ctick (get config :profile-tickrate 60000)]
+           (timbre/infof "Start profiling timer, period %sms" ctick)
+           (sched-at-fixed-rate #'dump-n-clean-pstats ctick))
+  :stop (do (timbre/info "Stop profiling timer")
+            (.cancel dump-pstats true)))
+
 (defn start
   ([]
    (start (System/getenv "PINTOID_CONFIG")))
   ([cf]
    (->
     (mount/with-args {:config-file cf})
+    ;; (mount/except [#'pstats-aggregator #'dump-pstats])
     (mount/start))))

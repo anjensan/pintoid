@@ -72,8 +72,3 @@
               axy (v2/scale fxy (/ m))
               dvxy (limit-vxy (v2/scale axy dt))]
           (fn-> (update-comp! eid :velocity v2/v+' dvxy))))))))
-
-(defn asys-simulate-physics [w now]
-  (let [a (future (asys-physics-update-vxy w now))
-        b (future (asys-physics-move w now))]
-    (fn-> (@a) (@b))))
