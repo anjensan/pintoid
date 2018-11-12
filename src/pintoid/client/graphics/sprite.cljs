@@ -7,7 +7,7 @@
      ->blendmode vec->point minmax]]
    [pintoid.client.graphics.animation :as a]
    [pintoid.client.graphics.tilemap :as tm]
-   [pintoid.client.graphics.animloop :as al]
+   [pintoid.client.animloop :as al]
    [taoensso.timbre :as timbre :include-macros true])
   (:require-macros
    [pintoid.client.macros :refer [defjsclass call-super foreach!]]))

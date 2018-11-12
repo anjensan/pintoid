@@ -1,8 +1,8 @@
 (ns pintoid.client.core
   (:require [cljsjs.pixi]
             [dommy.core :as d]
+            [pintoid.client.animloop :as al]
             [pintoid.client.graphics.core :as g]
-            [pintoid.client.graphics.animloop :as al]
             [taoensso.timbre :as timbre :include-macros true])
   (:use
    [pintoid.client.utils :only [panic!]]

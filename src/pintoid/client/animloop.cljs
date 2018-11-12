@@ -1,4 +1,4 @@
-(ns pintoid.client.graphics.animloop
+(ns pintoid.client.animloop
   (:require
    [taoensso.timbre :as timbre :include-macros true]))
 

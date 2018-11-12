@@ -4,7 +4,7 @@
    [pintoid.client.asset :as as]
    [pintoid.client.graphics.utils :refer [->point ->pair]]
    [pintoid.client.graphics.animation :as a]
-   [pintoid.client.graphics.animloop :as al]
+   [pintoid.client.animloop :as al]
    [taoensso.timbre :as timbre]))
 
 (defonce lcontainer (js/PIXI.Container.))

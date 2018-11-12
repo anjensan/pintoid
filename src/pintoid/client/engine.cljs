@@ -12,8 +12,8 @@
   (:require
    [pintoid.client.asset :as as]
    [pintoid.client.sound :as snd]
+   [pintoid.client.animloop :as al]
    [pintoid.client.graphics.animation :as a]
-   [pintoid.client.graphics.animloop :as al]
    [pintoid.client.graphics.layer :as gl]
    [pintoid.client.graphics.core :as g]
    )

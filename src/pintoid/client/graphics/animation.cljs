@@ -1,7 +1,7 @@
 (ns pintoid.client.graphics.animation
   (:require
    [cljsjs.pixi]
-   [pintoid.client.graphics.animloop :refer [action! animate!]]
+   [pintoid.client.animloop :refer [action! animate!]]
    [pintoid.client.graphics.utils :refer [pi2]])
   (:require-macros
    [taoensso.timbre :as timbre]
