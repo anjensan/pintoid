@@ -8,7 +8,6 @@
   (assoc cm ::proto-info (->ProtoInfo var @var args cm)))
 
 (defmacro defproto [name args & body]
-  (timbre/debugf "Define proto '%s" name)
   `(defn ~name [& rs#]
      (apply
       (fn ~args (add-proto-info (do ~@body) (var ~name) rs#))
@@ -39,7 +38,6 @@
 
 (defmacro defentity
   [name spec]
-  (timbre/debugf "Define entity '%s" name)
   (let [pn (symbol (str name "-proto"))]
     `(do
        (defonce ~name (next-entity))
@@ -49,7 +47,6 @@
 
 (defmacro defentities
   [name bvec spec]
-  (timbre/debugf "Define entities '%s" name)
   (let [pn (symbol (str name "-proto"))
         pg (symbol (str name "-eidgen"))
         pvec (vec (take-nth 2 bvec))]
@@ -71,7 +68,13 @@
              (map (fn [a] #(apply p a)) pa))))))
 
 (defn- maybe-add-entity [w [e p]]
-  (if-not (has-entity? w e) (add-entity w e (p)) w))
+  (if-not (has-entity? w e)
+    (let [x (p)]
+      (if-let [a (:asset x)]
+        (timbre/debugf "Add asset %s, type %s, name %s" e (:class a) (:name a))
+        (timbre/debugf "Add entity %s, name %s" e (::name x)))
+      (add-entity w e x))
+    w))
 
 (defn load-entities-from-ns [w ns]
   (timbre/debugf "Load entities from ns %s" ns)
@@ -93,11 +96,9 @@
    (entities w ::name)))
 
 (defmacro defasset [name cls spec]
-  (timbre/debugf "Define asset %s %s" name cls)
   `(defentity ~name
      {:asset (assoc ~spec :class ~cls :name ~(emit-entity-name name))}))
 
 (defmacro defassets [name cls bvec spec]
-  (timbre/debugf "Define assets %s %s" name cls)
   `(defentities ~name ~bvec
      {:asset (assoc ~spec :class ~cls :name ~(emit-entity-name name))}))

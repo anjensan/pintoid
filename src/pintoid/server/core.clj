@@ -57,7 +57,8 @@
   (w))
 
 (defn init-profiling
-  [{:keys [enabled level ns-pattern] :or {enabled false}}]
+  [{:keys [enabled level ns-pattern]
+    :or {enabled false level 5 ns-pattern "*"}}]
   (if enabled
     (do
       (timbre/info "Initialize profiling")
@@ -68,11 +69,6 @@
       (timbre/debug "Disable profiling")
       (tufte/set-min-level! 6)
       false)))
-
-(defn init-logging
-  [c]
-  (timbre/merge-config! c)
-  :configured)
 
 (defn start-pstats-aggregator []
   (timbre/info "Start pstats aggregator")
@@ -85,38 +81,31 @@
   (tufte/remove-handler! ::pstats-aggr)
   (send a (constantly nil)))
 
-
-(defstate config
-  :start (load-config (:config-file (mount/args))))
-
-(defstate logging
-  :start (init-logging (get config :log)))
-
 (defstate nrepl
-  :start (start-nrepl (get config :nrepl))
+  :start (start-nrepl (get (mount/args) :nrepl))
   :stop (stop-nrepl nrepl))
 
 (defstate scheduler
-  :start (start-scheduler (:scheduler config))
+  :start (start-scheduler (:scheduler (mount/args)))
   :stop (stop-scheduler scheduler))
 
 (defstate game-timer
   :start (sched-fixed-rate
           scheduler "game" #'game-world-tick
-          (get-in config [:scheduler :game-tickrate] 30))
+          (get-in (mount/args) [:scheduler :game-tickrate] 30))
   :stop (unschedule "game" game-timer))
 
 (defstate client-timer
   :start (sched-fixed-rate scheduler "client" #'send-snapshots-to-all-clients
-          (get-in config [:scheduler :client-tickrate] 60))
+          (get-in (mount/args) [:scheduler :client-tickrate] 60))
   :stop (unschedule "client" client-timer))
 
 (defstate webserver
-  :start (start-webserver (get config :web))
+  :start (start-webserver (get (mount/args) :web))
   :stop (stop-webserver webserver))
 
 (defstate profiling
-  :start (init-profiling (get config :profile)))
+  :start (init-profiling (get (mount/args) :profile)))
 
 (defstate pstats-aggregator
   :start (when profiling (start-pstats-aggregator))
@@ -129,13 +118,17 @@
 (defstate pstats-dump-timer
   :start (when profiling
            (sched-fixed-rate scheduler "profile" #'dump-n-clean-pstats
-            (get-in config [:profile :period] 60000)))
+            (get-in (mount/args) [:profile :period] 60000)))
   :stop (when profiling (unschedule "profile" pstats-dump-timer)))
+
+(defn start-config [c]
+  (timbre/merge-config! (get c :log))
+  (->
+   (mount/with-args c)
+   (mount/start)))
 
 (defn start
   ([]
    (start (or (System/getenv "PINTOID_CONFIG") "config.edn")))
   ([cf]
-   (->
-    (mount/with-args {:config-file cf})
-    (mount/start))))
+   (start-config (load-config cf))))

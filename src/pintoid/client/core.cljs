@@ -41,4 +41,5 @@
   (spawn-user-input-sender get-user-input-state user-input-update-period)
   (drawing-loop 0))
 
+(timbre/set-level! :debug)
 (set! (.-onload js/window) start-app)
