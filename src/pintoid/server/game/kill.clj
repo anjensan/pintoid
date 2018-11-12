@@ -7,15 +7,8 @@
    [pintoid.server.vec2 :as v2]
    [taoensso.timbre :as timbre]))
 
-(defn- kill-player [w eid]
-  (let [xy' (search-new-player-pos w eid)]
-    (-> w
-        (put-comp eid :position xy')
-        (put-comp eid :position-tts (inc (w eid :position-tts 0)))
-        (put-comp eid :velocity nil)
-        (update-comp eid :score (fnil dec 0)))))
-
 (defn- kill-entity [w eid]
+  (timbre/debugf "Kill collided entity %s, type %s" eid (get-comp w eid :type))
   (if (w eid :player)
     ;; FIXME: use multimethods or protocols here
     (kill-player w eid)
@@ -55,12 +48,14 @@
   (combine-systems
    (each-entity w eid [p :position]
      (when (entity-out-of-gamefield? w p)
+       (timbre/tracef "Kill out-of-field entity %s" eid)
        (fn-> (kill-entity eid))))))
 
 (defn asys-kill-outdated-entities [w now]
   (combine-systems
    (each-entity w eid [t :sched-kill-at]
      (when (<= t now)
+       (timbre/tracef "Kill outdated entity %s" eid)
        (fn-> (kill-entity eid))))))
 
 (defn kill-entity-at [w eid at]

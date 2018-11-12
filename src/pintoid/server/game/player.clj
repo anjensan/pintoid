@@ -9,10 +9,21 @@
 
 
 (defn search-new-player-pos [w eid]
-  (v2/vec2 (rand-int 2000) (rand-int 2000)))
+  (let [p (v2/vec2 (rand-int 2000) (rand-int 2000))]
+    (timbre/debugf "Player %s pos %s" eid p)
+    p))
 
 (defn inc-player-score [w eid]
   (update-comp w eid :score (fnil inc 0)))
+
+(defn kill-player [w eid]
+  (timbre/debugf "Kill & respawn player %s" eid)
+  (let [xy' (search-new-player-pos w eid)]
+    (-> w
+        (put-comp eid :position xy')
+        (put-comp eid :position-tts (inc (w eid :position-tts 0)))
+        (put-comp eid :velocity nil)
+        (update-comp eid :score (fnil dec 0)))))
 
 (defn asys-change-engine-based-on-ui [w now]
   (run-timed-system
@@ -31,6 +42,7 @@
               snd (if (= ed 0)
                     #(snd/stop-sound! % eid :engine)
                     #(snd/play-sound! % eid :engine engine-sound))]
+          (timbre/tracef "Update player angle to %s, self-fxy %s" angle' fxy)
           (fn->
            (snd)
            (put-comp! eid :self-fxy fxy)
@@ -51,6 +63,7 @@
                b-vxy (v2/v+ vxy (v2/from-polar (:velocity b) angle))
                b-xy xy
                bid (next-entity)]
+           (timbre/debugf "Spawn bullet for %s" eid)
            (fn->
             (put-comp eid :fire-cooldown (+ now (:cooldown b)))
             (add-entity

@@ -22,7 +22,7 @@
   :start (atom nil))
 
 (defn world-error-handler [world e]
-  (clojure.stacktrace/print-stack-trace e))
+  (timbre/error e "world error"))
 
 (defstate world
   :start (do
@@ -39,9 +39,11 @@
   (w time-eid ::time))
 
 (defn- sys-attach-world-time [w now]
+  (timbre/tracef "Atatch time %s to world" now)
   (add-entity w time-eid {::time now}))
 
 (defn- sys-fixate-world-state [w]
+  (timbre/tracef "Fixate world state")
   (reset! last-stable-world w))
 
 (defn get-world []
@@ -49,12 +51,15 @@
     [(world-time w) w]))
 
 (defn game-remove-player [eid]
+  (timbre/debugf "Remove player %s" eid)
   (send world remove-player eid))
 
 (defn game-add-new-player [eid]
+  (timbre/debugf "Add new player %s" eid)
   (send world add-new-player eid))
 
 (defn game-process-user-input [eid user-input]
+  (timbre/tracef "User input from %s: %s" eid user-input)
   (send world process-uinput eid user-input))
 
 (defn- current-time [w]
@@ -65,13 +70,10 @@
    (profile-asys (-> as-var meta :name) as-var))
   ([n as]
    (fn [w & rs]
-     (let [d (promise)
-           f (tufte/p [:run n]
-              (let [z (apply as w rs)]
-                (deliver d :done)
-                z))]
+     (timbre/tracef "Spawn system %s" n)
+     (let [f (tufte/p [:run n] (apply as w rs))]
        (fn [w']
-         (tufte/p [:wait n] @d)
+         (timbre/tracef "Fixup system %s" n)
          (tufte/p [:fixup n] (f w'))
          )))))
 
@@ -81,10 +83,9 @@
     [fork join]))
 
 (defn- sys-world-tick [w]
-  (tufte/profile
-   {:dynamic? true}
-   (tufte/p
-    {:id :sys-world-tick}
+  (timbre/tracef "== Next world tick... ==")
+  (tufte/profile {:dynamic? true}
+   (tufte/p :sys-world-tick
     (let [now (current-time w)
           [fork join] (asys-fork-join)]
       (-> w
@@ -102,6 +103,7 @@
           (fork :physics-move #'asys-physics-move now)
 
           (fork :physics-bound #'asys-physics-bound-circle now)
+
           (fork :collide #'asys-collide-entities)
           (join :collide)
 
@@ -144,6 +146,7 @@
    (m/domonad m/state-m [d (apply ecsd/dumpc w c rs)] (vec d))))
 
 (defn dump-the-world [w pid]
+  (timbre/tracef "Dump world for player %s" pid)
   (tufte/profile
    {:dynamic? true}
    (tufte/p

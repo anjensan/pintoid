@@ -35,13 +35,14 @@
          :name (get-in req [:session :name])))
 
 (defn create-player-avatar [pid req]
-  (send avatars
-        (fn [as]
-          (let [a (or (get as pid)
-                      (create-empty-avatar pid))]
-            (populate-avatar-with-req a req)
-            (assoc as pid a)))))
-
+  (timbre/tracef "Create avatar %s for req %s" pid req)
+  (send
+   avatars
+   (fn [as]
+     (let [a (or (get as pid)
+                 (create-empty-avatar pid))]
+       (populate-avatar-with-req a req)
+       (assoc as pid a)))))
 
 (defn- avatar-close-ws-chans [a]
   (when-let [wc (:ws-channel a)] (close! wc))
@@ -57,20 +58,23 @@
   {:pid pid :state ::destroyed})
 
 (defn- cleanup-avatars [as]
+  (timbre/debugf "Destroy avatars %s" as)
   (send avatars #(doseq [[_ a] %] (send a avatar-destroy))) {})
 
 (defn destroy-player-avatar [pid]
-  (send avatars
-        (fn [as]
-          (when-let [a (get as pid)]
-            (send a avatar-destroy)
-            (dissoc as pid)))))
+  (timbre/debugf "Destroy player avatar %s" pid)
+  (send
+   avatars
+   (fn [as]
+     (when-let [a (get as pid)]
+       (send a avatar-destroy)
+       (dissoc as pid)))))
 
 (defn send-to-client [pid message]
   (alter-avatar pid
    (fn [a]
      (when-let [c (:ws-channel a)]
-       (timbre/tracef "To client %s: %s" pid message)
+       (timbre/tracef "Message %s << %s" pid message)
        (go (>! (:ws-channel a) message)))
      a)))
 
@@ -99,8 +103,10 @@
   (timbre/infof "Client %s disconnected" (:pid a))
   (dissoc a :ws-channel))
 
-(defn- avatar-destroy-when-disconnected [{wsc :ws-channel :as a}]
-  (if wsc a (avatar-destroy a)))
+(defn- avatar-destroy-when-disconnected [pid]
+  (let [{wsc :ws-channel} (get @avatars pid)]
+    (when-not wsc
+      (destroy-player-avatar pid))))
 
 (defn- spawn-wschan-reading-loop [pid ws-channel]
   (go
@@ -109,12 +115,12 @@
         (cond
           error      (alter-avatar pid handle-client-chan-error error)
           message    (do
-                      (timbre/tracef "From client %s: %s" pid message)
+                      (timbre/tracef "Message %s >> %s" pid message)
                       (alter-avatar pid handle-client-message message)
                       (recur)))))
     (alter-avatar pid handle-client-disconnected)
     (<! (timeout client-destroy-timeout))
-    (alter-avatar pid avatar-destroy-when-disconnected)))
+    (avatar-destroy-when-disconnected pid)))
 
 (defn attach-ws-connection [pid wsc]
   (timbre/debugf "Attach new websocket to avatar %s" pid)
@@ -131,6 +137,7 @@
           :ws-reader (spawn-wschan-reading-loop pid wsc))))))
 
 (defn- create-and-send-world-patch [a pid at w]
+  (timbre/tracef "Create and send world patch for %s, at %s" pid at)
   (if (and (w pid :player) (:ws-channel a))
     (let [ss (:dumpstate a)
           [d ss'] ((dump-the-world w pid) ss)
@@ -138,7 +145,6 @@
                            (map (fn [[k v]] [k (vec v)]))
                            (remove (fn [[k v]] (empty? v))))
                        d)]
-      (timbre/tracef "Send to %s wpatch %s" pid wpatch)
       (send-to-client
        pid
        {:server-time (System/currentTimeMillis)

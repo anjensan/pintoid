@@ -14,10 +14,11 @@
         (< (v2/dist p1 p2) (+ r1 r2))))))
 
 (defn asys-collide-entities [w]
-  (combine-systems
-   ;; TODO: optimize collision detect alg, currently it's O(n^2)!
-   (let [;; TODO: use marker component :collidable or :collision-shape
-         coll-eids (entities w :radius :position)]
+  (let [;; TODO: use marker component :collidable or :collision-shape
+        coll-eids (vec (entities w :radius :position))]
+    (timbre/tracef "Check collistions of %d entities" (count coll-eids))
+    (combine-systems
+     ;; TODO: optimize collision detect alg, currently it's O(n^2)!
      (for [eid coll-eids]
        (let [cw (vec (filter #(is-colliding? w eid %) coll-eids))]
          (fn [w']

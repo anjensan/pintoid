@@ -10,6 +10,7 @@
 (def ^:private sound-id-counter (atom 0))
 
 (defn asys-garbage-sounds [w now]
+  (timbre/tracef "Garbage collect sounds")
   (let [df (memoize (fn [sound-id]
                       (if (nil? sound-id)
                         default-sound-duration
@@ -37,11 +38,13 @@
             (put-comp! eid ::until u'))))))))
 
 (defn stop-all-sounds [w eid]
+  (timbre/tracef "Stop all sounds for %s" eid)
   (->
    (drop-comp w eid :sound)
    (drop-comp w eid ::until)))
 
 (defn stop-all-sounds! [w eid]
+  (timbre/tracef "Stop all sounds for %s" eid)
   (->
    (drop-comp w eid :sound)
    (drop-comp w eid ::until)))
@@ -50,6 +53,7 @@
   ([w eid sound-id]
    (play-sound w eid (swap! sound-id-counter inc) sound-id))
   ([w eid play-id sound-id]
+   (timbre/tracef "Play sound %s with key %s for %s" sound-id play-id eid)
    (-> w
        (update-comp eid :sound assoc play-id sound-id)
        (update-comp eid ::until assoc play-id nil))))
@@ -58,16 +62,19 @@
   ([w eid sound-id]
    (play-sound! w eid (swap! sound-id-counter inc) sound-id))
   ([w eid play-id sound-id]
+   (timbre/tracef "Play sound %s with key %s for %s" sound-id play-id eid)
    (-> w
        (update-comp! eid :sound assoc play-id sound-id)
        (update-comp! eid ::until assoc play-id nil))))
 
 (defn stop-sound! [w eid play-id]
+  (timbre/tracef "Stop play %s for %s" play-id eid)
   (-> w
       (update-comp! eid :sound dissoc play-id)
       (update-comp! eid ::until dissoc play-id)))
 
 (defn stop-sound [w eid play-id]
+  (timbre/tracef "Stop play %s for %s" play-id eid)
   (-> w
       (update-comp eid :sound dissoc play-id)
       (update-comp eid ::until dissoc play-id)))
