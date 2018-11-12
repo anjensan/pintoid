@@ -1,5 +1,5 @@
 (ns pintoid.server.data.starsky
-  (:use [pintoid.server.ecs core entity]
+  (:use [pintoid.server.entity]
         [pintoid.server.data assets consts])
   (:require [pintoid.server.vec2 :as v2]))
 

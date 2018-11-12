@@ -29,11 +29,19 @@
 (defn drop-comp! [w e c]
   (put-comp! w e c nil))
 
-(defn update-comp [w e c f & as]
-  (put-comp w e c (apply f (get-comp w e c) as)))
+(defn update-comp
+  ([w e c f] (put-comp w e c (f (get-comp w e c))))
+  ([w e c f a1] (put-comp w e c (f (get-comp w e c) a1)))
+  ([w e c f a1 a2] (put-comp w e c (f (get-comp w e c) a1 a2)))
+  ([w e c f a1 a2 a3] (put-comp w e c (f (get-comp w e c) a1 a2 a3)))
+  ([w e c f a1 a2 a3 & rs] (put-comp w e c (apply f (get-comp w e c) a1 a2 a3 rs))))
 
-(defn update-comp! [w e c f & as]
-  (put-comp! w e c (apply f (get-comp w e c) as)))
+(defn update-comp!
+  ([w e c f] (put-comp! w e c (f (get-comp w e c))))
+  ([w e c f a1] (put-comp! w e c (f (get-comp w e c) a1)))
+  ([w e c f a1 a2] (put-comp! w e c (f (get-comp w e c) a1 a2)))
+  ([w e c f a1 a2 a3] (put-comp! w e c (f (get-comp w e c) a1 a2 a3)))
+  ([w e c f a1 a2 a3 & rs] (put-comp! w e c (apply f (get-comp w e c) a1 a2 a3 rs))))
 
 (defn has-entity? [w e]
   (not (nil? (get-entity-comps w e))))

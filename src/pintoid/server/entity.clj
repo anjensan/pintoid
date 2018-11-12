@@ -1,4 +1,5 @@
-(ns pintoid.server.ecs.entity
+(ns pintoid.server.entity
+  (:require [taoensso.timbre :as timbre])
   (:use [pintoid.server.ecs core system]))
 
 (defrecord ProtoInfo [var val args last])
@@ -7,6 +8,7 @@
   (assoc cm ::proto-info (->ProtoInfo var @var args cm)))
 
 (defmacro defproto [name args & body]
+  (timbre/debugf "Define proto '%s" name)
   `(defn ~name [& rs#]
      (apply
       (fn ~args (add-proto-info (do ~@body) (var ~name) rs#))
@@ -29,6 +31,7 @@
   (combine-systems
    (each-entity w e [{v :var f :val} ::proto-info]
      (when-not (identical? @v f)
+       (timbre/debugf "Actualize proto for %s" e)
        #(actualize-entity-proto % e)))))
 
 (defn- emit-entity-name [n]
@@ -36,6 +39,7 @@
 
 (defmacro defentity
   [name spec]
+  (timbre/debugf "Define entity '%s" name)
   (let [pn (symbol (str name "-proto"))]
     `(do
        (defonce ~name (next-entity))
@@ -45,6 +49,7 @@
 
 (defmacro defentities
   [name bvec spec]
+  (timbre/debugf "Define entities '%s" name)
   (let [pn (symbol (str name "-proto"))
         pg (symbol (str name "-eidgen"))
         pvec (vec (take-nth 2 bvec))]
@@ -69,14 +74,17 @@
   (if-not (has-entity? w e) (add-entity w e (p)) w))
 
 (defn load-entities-from-ns [w ns]
+  (timbre/debugf "Load entities from ns %s" ns)
   (when (and (symbol? ns) (nil? (find-ns ns))) (require ns))
   (reduce maybe-add-entity w (->> ns ns-map vals (mapcat eid-proto-from-entity-var))))
 
 (defn load-entity-from-var [w v]
+  (timbre/debugf "Load entity from var %s" v)
   (reduce maybe-add-entity w (or (eid-proto-from-entity-var v)
                                  (throw (ex-info "Invalid entity var" {:var v})))))
 
 (defn unload-undefined-entities [w]
+  (timbre/debugf "Unload undefined entities")
   (reduce
    (fn [w' e]
      (let-entity w e [n ::name]
@@ -85,9 +93,11 @@
    (entities w ::name)))
 
 (defmacro defasset [name cls spec]
+  (timbre/debugf "Define asset %s %s" name cls)
   `(defentity ~name
      {:asset (assoc ~spec :class ~cls :name ~(emit-entity-name name))}))
 
 (defmacro defassets [name cls bvec spec]
+  (timbre/debugf "Define assets %s %s" name cls)
   `(defentities ~name ~bvec
      {:asset (assoc ~spec :class ~cls :name ~(emit-entity-name name))}))

@@ -6,9 +6,9 @@
   (:require
    clojure.stacktrace
    [clojure.algo.monads :as m]
+   [pintoid.server.entity :refer :all]
    [pintoid.server.ecs
     [core :refer :all]
-    [entity :refer :all]
     [system :as ecss]
     [dump :as ecsd]
     [data :refer [create-ecs]]]

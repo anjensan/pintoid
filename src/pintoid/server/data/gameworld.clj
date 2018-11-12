@@ -1,5 +1,5 @@
 (ns pintoid.server.data.gameworld
-  (:use [pintoid.server.ecs core entity]
+  (:use [pintoid.server.entity]
         [pintoid.server.data consts proto assets])
   (:require [pintoid.server.vec2 :as v2]))
 

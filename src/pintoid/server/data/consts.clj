@@ -1,5 +1,4 @@
 (ns pintoid.server.data.consts
-  (:use [pintoid.server.ecs core entity])
   (:require [pintoid.server.vec2 :as v2]))
 
 (def world-radius 5000)

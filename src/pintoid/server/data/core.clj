@@ -1,5 +1,5 @@
 (ns pintoid.server.data.core
-  (:use [pintoid.server.ecs entity]))
+  (:use [pintoid.server.entity]))
 
 (defn load-game-entities [w]
   (-> w

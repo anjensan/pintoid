@@ -1,6 +1,6 @@
 (ns pintoid.server.game.sound
   (:use
-   [pintoid.server.ecs core system entity])
+   [pintoid.server.ecs core system])
   (:require
    [taoensso.timbre :as timbre]
    [pintoid.server.ecs.core :refer :all]

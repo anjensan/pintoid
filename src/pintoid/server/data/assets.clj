@@ -1,5 +1,5 @@
 (ns pintoid.server.data.assets
-  (:use [pintoid.server.ecs core entity])
+  (:use pintoid.server.entity)
   (:require [pintoid.server.vec2 :as v2]))
 
 (defasset lstars1 :layer {:parallax 1.00 :zorder 80})

@@ -1,7 +1,7 @@
 (ns pintoid.server.game.player
   (:use
    [pintoid.server.data consts proto assets sounds]
-   [pintoid.server.ecs core system entity])
+   [pintoid.server.ecs core system])
   (:require
    [pintoid.server.game.sound :as snd]
    [pintoid.server.vec2 :as v2]
