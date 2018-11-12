@@ -104,9 +104,10 @@
   (dissoc a :ws-channel))
 
 (defn- avatar-destroy-when-disconnected [pid]
-  (let [{wsc :ws-channel} (get @avatars pid)]
-    (when-not wsc
-      (destroy-player-avatar pid))))
+  (when-let [a (get @avatars pid)]
+    (let [{wsc :ws-channel} @a]
+      (when-not wsc
+        (destroy-player-avatar pid)))))
 
 (defn- spawn-wschan-reading-loop [pid ws-channel]
   (go
