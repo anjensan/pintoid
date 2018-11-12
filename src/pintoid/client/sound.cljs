@@ -28,11 +28,13 @@
   (.unload h))
 
 (defn set-listener-pos [[x y]]
-  (.pos js/Howler x y 0))
+  ;; TODO: Extern 'Howler.pos'
+  ((.bind (aget js/Howler "pos") js/Howler) x y 0))
 
 (defn set-sound-pos [eid [x y]]
   (doseq [[p h] (vals (get @sounds eid))]
-    (.pos h x y nil p)))
+    ;; TODO: Extern 'Howl.pos'
+    ((.bind (aget h "pos") h) x y nil p)))
 
 (defn- add-sound-p [eid sid obj]
   (swap! sounds assoc-in [eid sid] obj))
