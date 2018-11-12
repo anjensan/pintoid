@@ -10,9 +10,6 @@
    [taoensso.timbre :as timbre]
    [cljs.core.async.macros :refer [go go-loop]]))
 
-
-(def user-input-update-period 50)
-
 (def client-server-time-diff 0)
 (def ^:private timediff-history (atom nil))
 (def ^:private ^:const timediff-history-size 100)
@@ -26,6 +23,7 @@
 
 (defn init-cs-communication []
   (go
+    (timbre/info "Open websocket connection")
     (let [{:keys [ws-channel error]}
           (<! (ws-ch websocket-url {:format :transit-json
                                         :read-ch (chan 10)
@@ -37,13 +35,9 @@
           (receive-server-messages ws-channel)
           (on-channel-connected))))))
 
-
-;; == Send to server
-
 (defn send-message-to-server [msg]
   (when-let [c server-ws-channel]
     (go (>! c msg))))
-
 
 (declare receive-message)
 
@@ -56,22 +50,22 @@
           (receive-message message)
           (recur))))))
 
-(defn spawn-user-input-sender [make-user-input-snapshot-fn]
+(defn spawn-user-input-sender [make-user-input-snapshot-fn period]
+  (timbre/debug "Spawn user input reading loop")
   (go-loop []
     (let [ui (make-user-input-snapshot-fn)]
       (send-message-to-server {:command :user-input :data ui}))
-    (<! (timeout user-input-update-period))
+    (<! (timeout period))
     (recur)))
 
-
-(defmulti receive-message
-  (comp keyword :command))
+(defmulti receive-message (comp keyword :command))
 
 (defn on-channel-connected []
+  (timbre/trace "Send :join-game message")
   (send-message-to-server {:command :join-game}))
 
 (defmethod receive-message :default [msg]
-  (timbre/info "unknown server message" msg))
+  (timbre/info "Unknown server message" msg))
 
 (defn- update-clint-server-time-diff [time]
   (let [d1 (- time (js/performance.now))]
@@ -81,8 +75,10 @@
                  ls (sort (concat tl (repeat timediff-preserve d0)))
                  n (int (/ (count ls) 2))
                  v (nth ls n)]
+             (when (not= client-server-time-diff v)
+               (timbre/debugf "Update client-server-time-diff to %f" v))
              (set! client-server-time-diff v)
-             (timbre/tracef "Update client-server-time-diff to %f" v)))))
+             ))))
 
 (defmethod receive-message :wpatch [m]
   (update-clint-server-time-diff (:server-time m))

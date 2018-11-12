@@ -9,7 +9,6 @@
    [taoensso.timbre :as timbre]
    [pintoid.client.macros :refer [foreach!]]))
 
-
 (def sprites (atom {}))
 (def sprites-nil (atom {}))
 
@@ -41,8 +40,8 @@
       (set! (.. c -style -marginTop) margin)
       (set! (.. c -style -marginBottom) margin))))
 
-
 (defn init-autoscaling [canvas]
+  (timbre/info "Enable canvas autoscaling")
   (.addEventListener
    js/window "resize"
    (fn [event]
@@ -50,12 +49,11 @@
        (scale-canvas-to-window canvas))))
   (scale-canvas-to-window canvas))
 
-
 (defn init-pixi-renderer [width height]
+  (timbre/infof "Init pixi renderer, size [%s %s]" width height)
   (set! pixi-renderer (js/PIXI.autoDetectRenderer width height #js {:antialias true}))
   (set! pixi-layers (gl/init-layers-container width height))
   (.-view pixi-renderer))
-
 
 (defn get-sprite
   ([eid]
@@ -65,11 +63,9 @@
      (get @sprites-nil eid)
      (get (get @sprites eid) sid))))
 
-
 (defn find-sprites-by-eid [eid]
   (when-let [s (get @sprites eid)]
     (vals s)))
-
 
 (defn- destroy-sprite [obj]
   (when obj
@@ -77,14 +73,12 @@
       (.removeChild p obj))
     (.destroy obj)))
 
-
 (defn remove-sprites-by-eid [eid]
   (when-let [m (get @sprites eid)]
     (doseq [s (vals m)]
       (destroy-sprite s))
     (swap! sprites dissoc eid)
     (swap! sprites-nil dissoc eid)))
-
 
 (defn remove-sprite
   ([eid]
@@ -98,7 +92,6 @@
            (swap! sprites dissoc eid)
            (swap! sprites assoc eid m')))
        (destroy-sprite s)))))
-
 
 (defn new-sprite
   ([eid sprite props]
@@ -115,7 +108,6 @@
      (when (nil? sid)
        (swap! sprites-nil assoc eid sprite))
      sprite)))
-
 
 (defn render-graphics! []
   (.render pixi-renderer pixi-layers))

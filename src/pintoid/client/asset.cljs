@@ -4,6 +4,8 @@
   (:require-macros
    [pintoid.client.macros :refer [foreach!]]))
 
+(def preload-assets true)
+
 (defrecord Asset [name class proto obj deps])
 
 (def assets (atom {}))
@@ -38,7 +40,7 @@
 (defn- get-asset [aid]
   (let [aid (maybe-resolve-name aid)]
     (when-let [x *used-assets*]
-      (timbre/debug "Depend on %s" aid)
+      (timbre/tracef "Depend on %s" aid)
       (swap! x conj aid))
     (@assets aid)))
 
@@ -49,10 +51,9 @@
         [result (set @deps)]))))
 
 (defn- reload-asset-obj! [aid]
+  (timbre/debug "Maybe reload asset" aid)
   (let [{:keys [obj proto]} (get @assets aid)]
-    (when obj
-      (timbre/info "Unload old asset" aid)
-      (unload-asset aid proto obj))
+    (when obj (unload-asset aid proto obj))
     (let [[obj deps] (track-used-assets load-asset aid proto)]
       (timbre/info "Load asset" aid (:name proto))
       (update-asset-obj! aid obj deps)
@@ -66,6 +67,7 @@
    @assets))
 
 (defn- clean-asset-obj-with-deps! [aid]
+  (timbre/debug "Clean asset object" aid)
   (when-let [{:keys [proto obj] :as asset} (@assets aid)]
     (update-asset-obj! aid nil nil)
     (run! clean-asset-obj-with-deps! (find-all-dependants aid))
@@ -89,6 +91,7 @@
        nil))))
 
 (defn add-assets [ass]
+  (timbre/infof "Add %d assets..." (count ass))
   (binding [*updated-assets* (atom #{})]
     (let [ids (map key ass)]
       (run! clean-asset-obj-with-deps! (reverse ids))
@@ -97,8 +100,9 @@
         (timbre/info "Add asset" aid (:name proto))
         (swap! name-to-aids update (:name proto) (fnil conj []) aid)
         (swap! assets assoc aid (->Asset (:name proto) (:class proto) proto nil nil)))
-      (timbre/debug "Preload assets...")
-      (run! asset ids))
+      (when preload-assets
+        (timbre/debug "Preload assets...")
+        (run! asset ids)))
     @*updated-assets*))
 
 (defn add-asset [aid proto]

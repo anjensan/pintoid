@@ -1,11 +1,9 @@
 (ns pintoid.client.macros)
 
-
 (defmacro foreach! [[s sq & {xf :xf}] & body]
   `(do
      (reduce (~(or xf `identity) (fn [_# ~s] ~@body)) nil ~sq)
      nil))
-
 
 (defn- ctor-with-this-arg [[[this & args] & body]]
   `(fn [~@args]
@@ -14,10 +12,8 @@
         ~@body
         this#))))
 
-
 (defn- fn-with-this-arg [[[this & args] & body]]
   `(fn [~@args] (cljs.core/this-as ~this ~@body)))
-
 
 (defmacro call-super
   [class this method & args]
@@ -33,7 +29,6 @@
         (~mi (.getPrototypeOf js/Object (.-prototype ~class)))
         ~this
         (cljs.core/array ~@args)))))
-
 
 (defmacro defjsclass [class-name parent-class & ctor-and-methods]
   (let [ctor-body? (fn [[x & _]] (or (vector? x) (= 'constructor x)))

@@ -8,14 +8,11 @@
 (def ^:const +inf js/Infinity)
 (def ^:const -inf (- js/Infinity))
 
-
 (defn point->vec [pp]
   [(.-x pp) (.-y pp)])
 
-
 (defn vec->point [[x y]]
   (js/PIXI.Point. x y))
-
 
 (defn ->rectangle [v]
   (when v
@@ -25,10 +22,8 @@
       (let [[[x1 y1] [x2 y2]] v]
         (js/PIXI.Rectangle. x1 y1 (- x2 x1) (- y2 y1))))))
 
-
 (defn minmax [x y]
   [(min x y) (max x y)])
-
 
 (defn ->pair [xy]
   (when xy
@@ -36,13 +31,11 @@
       (let [[x y] xy] [x y])
       [xy xy])))
 
-
 (defn ->point [xy]
   (cond
     (nil? xy) nil
     (sequential? xy) (let [[x y] xy] (js/PIXI.Point. x y))
     :else (let [a (float xy)] (js/PIXI.Point. a a))))
-
 
 (defn ->blendmode [bm]
   (cond

@@ -2,7 +2,7 @@
   (:require
    [cljsjs.howler]
    [pintoid.client.asset :as as]
-   )
+   [taoensso.timbre :as timbre])
   (:require-macros
    [taoensso.timbre :as timbre]
    [pintoid.client.macros :refer [foreach!]]))
@@ -42,17 +42,17 @@
   (swap! sounds #(if (seq (get % eid)) % (dissoc % eid))))
 
 (defn stop-sound [eid sid]
-  (timbre/tracef "stop sound, entity %s, sid %s" eid sid)
+  (timbre/tracef "Stop sound, entity %s, sid %s" eid sid)
   (when-let [[p h] (get-in @sounds [eid sid])]
     (.stop h p)))
 
 (defn stop-sounds [eid]
-  (timbre/tracef "stop all sounds, entity %s" eid)
+  (timbre/tracef "Stop all sounds, entity %s" eid)
   (doseq [[sid [p h]] (get @sounds eid)]
     (.stop h p)))
 
 (defn play-sound [eid sid sound]
-  (timbre/tracef "play sound, entity %s, sid %s, sound %s" eid sid sound)
+  (timbre/tracef "Play sound, entity %s, sid %s, sound %s" eid sid sound)
   (when-let [[p h] (get-in @sounds [eid sid])]
     (.stop h p))
   (let [h (as/asset :sound sound)

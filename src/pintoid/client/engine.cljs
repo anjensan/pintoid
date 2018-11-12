@@ -21,7 +21,6 @@
    [taoensso.timbre :as timbre]
    [pintoid.client.macros :refer [foreach!]]))
 
-
 ;; world state
 (def world (atom (empty-world)))
 (def used-assets-by-sprite (atom {}))
@@ -29,8 +28,8 @@
 (defmulti add-entity-sprite :type)
 (defmulti remove-entity-sprite :type)
 
-
 (defmethod add-entity-sprite :default [entity]
+  (timbre/debug "Add entity sprite" entity)
   (let [s (:sprite entity)
         eid (:eid entity)]
     (if (map? s)
@@ -38,8 +37,8 @@
       (g/new-sprite eid nil s entity))))
 
 (defmethod remove-entity-sprite :default [entity]
+  (timbre/debug "Remove entity sprite" entity)
   (g/remove-sprites-by-eid (:eid entity)))
-
 
 (defmulti select-entity-sprites
   (fn [purpose entity] [purpose (:type entity)]))
@@ -65,8 +64,7 @@
                 (remove-entity-sprite e1)
                 (let [[_ deps] (as/track-used-assets add-entity-sprite e2)]
                   (swap! used-assets-by-sprite assoc eid deps)))))))
-      (timbre/info "Assets reloaded"))))
-
+      (timbre/debug "Assets loaded"))))
 
 (defn handle-sprites-movement [w1 w2 wpatch]
   (let [t1 (world-time w1)
@@ -90,7 +88,6 @@
                   (a/instant-move obj t2 xy2)
                   ))))))))))
 
-
 (defn handle-sprites-rotation [w1 w2 wpatch]
   (let [t1 (world-time w1)
         t2 (world-time w2)]
@@ -109,7 +106,6 @@
                 (if a1
                   (a/linear-rotate obj t1 t2 a1 a2)
                   (a/instant-rotate obj t2 a2)))))))))))
-
 
 (defn handle-player-camera-pos [w1 w2 wpatch]
   (let [t1 (world-time w1)
@@ -133,7 +129,6 @@
         xy (:position p2)]
     (al/action! t2 #(snd/set-listener-pos xy))))
 
-
 (defn format-player-score [entity]
   (str (:score entity)))
 
@@ -145,7 +140,6 @@
           (world-time w2)
           #(set! (.-text s) t))))))
 
-
 (defn handle-add-sprites [w1 w2 wpatch]
   (foreach! [eid (changed-eids w1 wpatch :sprite)]
     (let [e (entity w2 eid)]
@@ -156,7 +150,6 @@
            (timbre/trace "Add sprite " e)
            (let [[_ deps] (as/track-used-assets add-entity-sprite e)]
              (swap! used-assets-by-sprite assoc eid deps))))))))
-
 
 (defn handle-remove-sprites [w1 w2 wpatch]
   (foreach! [eid (changed-eids w1 wpatch :sprite)]
@@ -191,6 +184,7 @@
           (al/action! t2 #(snd/set-sound-pos eid (:position e2))))))))
 
 (defmethod add-entity-sprite :player [entity]
+  (timbre/debug "Add player entity sprite" entity)
   (let [eid (:eid entity)
         sprite (if (:self-player entity)
                  'pintoid.server.data.assets/racket-red
@@ -203,7 +197,6 @@
 
 (defmethod select-entity-sprites [:rotate :player] [_ entity]
   [(g/get-sprite (:eid entity))])
-
 
 (defn update-world-snapshot! [wpatch]
   (let [w1 @world, [w2 wpatch'] (apply-world-patch w1 wpatch)]

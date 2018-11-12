@@ -12,7 +12,6 @@
   (:require-macros
    [pintoid.client.macros :refer [defjsclass call-super foreach!]]))
 
-
 (def empty-texture
   (js/PIXI.Texture.fromImage "/img/clojure.png"))
 
@@ -22,7 +21,6 @@
    :type :sprite
    :texture "/img/clojure.png"
    :anchor [0.5 0.5]})
-
 
 (declare get-texture)
 
@@ -41,17 +39,14 @@
        (->rectangle trim)
        rotate))))
 
-
 (defmethod as/load-asset :texture [id proto]
   (let [t (create-texture-object proto)]
     (js/PIXI.Texture.addToCache t (str id))
     t))
 
-
 (defmethod as/unload-asset :texture [id proto texture]
   (js/PIXI.Texture.removeFromCache (str id))
   (.destroy texture))
-
 
 (defn- get-texture [t]
   (cond
@@ -84,19 +79,16 @@
             (timbre/warnf "Invalid sprite id %s" id)
             empty-sprite-factory)))
 
-
 (defn get-sprite-spec [id]
   (cond
     (as/asset-id? id) (:proto (as/asset :sprite id))
     (map? id) id))
-
 
 (defn make-sprite
   ([spec]
    (make-sprite spec nil))
   ([spec props]
    ((get-sprite-factory spec) props)))
-
 
 (defn make-common-props-setter [props]
   (let [{:keys [position scale pivot rotation alpha visible
@@ -123,7 +115,6 @@
       obj
       )))
 
-
 (defn dissoc-common-props [props]
   (dissoc
    props
@@ -131,7 +122,6 @@
    :position :scale :pivot :rotation :alpha
    :visible :anchor :mask :cache-as-bitmap
    ))
-
 
 (defn make-tiling-sprite-props-setter [props]
   (let [{:keys [tile-position tile-scale]} props
@@ -143,7 +133,6 @@
       obj
       )))
 
-
 (defn make-text-props-setter [props]
   (let [{:keys [text style]} props
         style (when style (clj->js style))]
@@ -153,7 +142,6 @@
       obj
       )))
 
-
 (defn- get-child-factories-seq [child]
   (cond
     (nil? child) nil
@@ -161,15 +149,12 @@
     (vector? child) (mapv get-sprite-factory child)
     (map? child) (create-sprite-factory child)))
 
-
 (defmethod create-sprite-factory :default [proto]
   (timbre/warnf "Unknown sprite: %s" proto)
   (create-sprite-factory empty-sprite-proto))
 
-
 (defmethod create-sprite-factory nil [proto]
   (create-sprite-factory (assoc proto :type :sprite)))
-
 
 (defmethod create-sprite-factory :sprite [proto]
   (let [t (get-texture (get proto :texture :unknown))
@@ -184,7 +169,6 @@
         ((make-common-props-setter props) s)
         s))))
 
-
 (defmethod create-sprite-factory :container [proto]
   (let [child-factories (get-child-factories-seq (:child proto))
         sps (make-common-props-setter proto)]
@@ -196,7 +180,6 @@
         (sps s)
         ((make-common-props-setter props) s)
         s))))
-
 
 (defmethod create-sprite-factory :tiling-sprite [proto]
   (let [t (get-texture (get proto :texture :unknown))
@@ -212,7 +195,6 @@
           ((make-common-props-setter props))
           ))))
 
-
 (defmethod create-sprite-factory :random-tilemap [proto]
   (let [tiles-factories (mapv get-sprite-factory (:tiles proto))
         sps (make-common-props-setter proto)
@@ -227,7 +209,6 @@
           (sps)
           ((make-common-props-setter props))
           ))))
-
 
 (defmethod create-sprite-factory :animator [proto]
   (let [sps (make-common-props-setter proto)
@@ -245,7 +226,6 @@
           ((make-common-props-setter props))
           ))))
 
-
 (defmethod create-sprite-factory :text [proto]
   (let [sps (make-common-props-setter proto)
         tps (make-text-props-setter proto)]
@@ -256,7 +236,6 @@
           ((make-common-props-setter props))
           ((make-text-props-setter props))
           ))))
-
 
 (defmethod create-sprite-factory :graphics [proto]
   (let [sps (make-common-props-setter proto)
@@ -269,7 +248,6 @@
         ((make-common-props-setter props) s)
         (run! (fn [[m a]] (.apply (aget s m) s a)) dos)
         s))))
-
 
 (def empty-sprite-factory
   (create-sprite-factory empty-sprite-proto))

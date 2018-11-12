@@ -3,11 +3,9 @@
   (:require-macros
    [dommy.core :refer [sel1]]))
 
-
 (defn map-val
   ([f] (map (fn [[k v]] [k (f v)])))
   ([f m] (into (empty m) (map-val f) m)))
-
 
 (defn transpose-mom [mom]
   "Transpose map of maps.
@@ -27,13 +25,11 @@
    (persistent!)
    (into {} (map-val persistent!))))
 
-
 (defn limit-str [n & ss]
   (let [s (apply str ss)]
     (if (> (count s) n)
       (str (subs s 0 n) "...")
       s)))
-
 
 (defn panic! [msg]
   ;; TODO: Stop drawing-loop

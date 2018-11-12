@@ -2,7 +2,6 @@
   (:require
    [taoensso.timbre :as timbre :include-macros true]))
 
-
 ;; completely skip outdated animations
 (def max-allowed-actions-lag 5000)
 

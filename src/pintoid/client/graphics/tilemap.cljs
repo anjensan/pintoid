@@ -9,18 +9,15 @@
    [taoensso.timbre :as timbre]
    [pintoid.client.macros :refer [defjsclass call-super foreach!]]))
 
-
 (defn- bounding-rectangle [points]
   (let [xs (map first points)
         ys (map second points)]
     [[(reduce min xs) (reduce min ys)]
      [(reduce max xs) (reduce max ys)]]))
 
-
 (defn- advance-bounds [[[x1 y1] [x2 y2]] a]
   [[(js/Math.floor (- x1 a)) (js/Math.floor (- y1 a))]
    [(js/Math.ceil (+ x2 a)) (js/Math.ceil (+ y2 a))]])
-
 
 (defn- recreate-tiles-impl [view-rect wt bounds advance tiles create-tile! drop-tile!]
   (let [wtapply #(->> % vec->point (.apply wt) point->vec)
@@ -66,7 +63,6 @@
            (assoc a cr (create-tile! cr))))
        $
        maybe-crs))))
-
 
 (defjsclass TilemapSpriteImpl js/PIXI.Container
 
@@ -124,7 +120,6 @@
         (run! #(do (set! (.-parent %) this) (.updateTransform %)) ta)
         (set! (.-children this) (apply array ta))
         (set! (.-tiles this) tiles')))))
-
 
 (defn make-tilemap-sprite-factory
   [create-tile

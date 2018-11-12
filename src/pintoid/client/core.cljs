@@ -21,6 +21,8 @@
 ;; TODO: implement adaptive interpolation lag (based on ping).
 (def animation-interpolation-lag 100)
 
+(def user-input-update-period 50)
+
 (defn drawing-loop [timestamp]
   (js/requestAnimationFrame drawing-loop)
   (let [server-timestamp (+ timestamp client-server-time-diff)
@@ -30,12 +32,13 @@
     (g/render-graphics!)))
 
 (defn start-app []
+  (timbre/infof "Start application")
   (init-cs-communication)
   (init-user-input)
   (let [c (g/init-pixi-renderer 3200 1800)]
     (d/append! (sel1 :body) c)
     (g/init-autoscaling c))
-  (spawn-user-input-sender get-user-input-state)
+  (spawn-user-input-sender get-user-input-state user-input-update-period)
   (drawing-loop 0))
 
 (set! (.-onload js/window) start-app)
