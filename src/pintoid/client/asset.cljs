@@ -4,7 +4,7 @@
   (:require-macros
    [pintoid.client.macros :refer [foreach!]]))
 
-(def preload-assets true)
+(def preload-assets false)
 
 (defrecord Asset [name class proto obj deps])
 
@@ -37,13 +37,6 @@
     n
     (rand-nth (get @name-to-aids n))))
 
-(defn- get-asset [aid]
-  (let [aid (maybe-resolve-name aid)]
-    (when-let [x *used-assets*]
-      (timbre/tracef "Depend on %s" aid)
-      (swap! x conj aid))
-    (@assets aid)))
-
 (defn track-used-assets [f & args]
   (let [deps (atom #{})]
     (binding [*used-assets* deps]
@@ -75,20 +68,28 @@
       (timbre/info "Unload asset" aid (:name proto))
       (unload-asset aid proto obj))))
 
+(defn- get-asset [aid]
+    (@assets aid))
+
 (defn asset
   ([aid]
    (asset nil aid))
   ([class aid]
-   (if-let [a (get-asset aid)]
-     (do
-       (when (and class (not= (:class a) class))
-         (timbre/warnf "Asset %s has class %s, expected %s" aid (:class a) class))
-       (if-let [obj (:obj a)]
-         obj
-         (reload-asset-obj! aid)))
-     (do
-       (timbre/warnf "Asset %s with class %s not found" aid class)
-       nil))))
+   (let [aid (maybe-resolve-name aid)
+         a (get @assets aid)]
+     (if a
+       (do
+         (when-let [x *used-assets*]
+           (timbre/tracef "Depend on %s" aid)
+           (swap! x conj aid))
+         (when (and class (not= (:class a) class))
+           (timbre/warnf "Asset %s has class %s, expected %s" aid (:class a) class))
+         (if-let [obj (:obj a)]
+           obj
+           (reload-asset-obj! aid)))
+       (do
+         (timbre/warnf "Asset %s with class %s not found" aid class)
+         nil)))))
 
 (defn add-assets [ass]
   (timbre/infof "Add %d assets..." (count ass))
@@ -101,7 +102,7 @@
         (swap! name-to-aids update (:name proto) (fnil conj []) aid)
         (swap! assets assoc aid (->Asset (:name proto) (:class proto) proto nil nil)))
       (when preload-assets
-        (timbre/debug "Preload assets...")
+        (timbre/info "Preload assets...")
         (run! asset ids)))
     @*updated-assets*))
 

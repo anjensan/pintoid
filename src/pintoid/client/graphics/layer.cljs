@@ -8,7 +8,9 @@
    [taoensso.timbre :as timbre]))
 
 (defonce lcontainer (js/PIXI.Container.))
-(defonce layers (atom {}))
+(defonce root-layer nil)
+
+(defonce layers (atom #{}))
 (defonce camera-size (atom [1 1]))
 (defonce camera (atom {}))
 
@@ -31,41 +33,36 @@
         layer (coerce-layer-properties layer)]
     (set-layer-properties lo layer)
     (set! (.-zorder lo) (:zorder layer 0))
-    (swap! layers assoc id (assoc layer :pixi-obj lo))
+    (swap! layers conj id)
     (.addChild lcontainer lo)
     (reorder-layers)
-    ;; FIXME: return layer obj
-    ()))
+    (assoc layer :pixi-obj lo)))
 
 (defn- init-root-layer []
   (let [lo (js/PIXI.Container.)
         p {:parallax [1 1] :scale-rate [1 1]}]
     (set-layer-properties lo p)
     (set! (.-zorder lo) 0)
-    (swap! layers assoc nil (assoc p :pixi-obj lo))
+    (set! root-layer (assoc p :pixi-obj lo))
+    (swap! layers conj nil)
     (.addChild lcontainer lo)
     (reorder-layers)))
 
-(defmethod as/unload-asset :layer [id proto layer]
-  (when-let [lo (get-in @layers [id :pixi-obj])]
-    (.removeChild lcontainer lo)
-    (swap! layers dissoc id)))
+(defmethod as/unload-asset :layer [id proto lo]
+  (.removeChild lcontainer lo)
+  (reorder-layers))
 
-(defn- get-layer-pixi-obj [lid]
-  (let [ls @layers
-        lo (if (contains? ls lid)
-             (get ls lid)
-             (do
-               (timbre/warnf "Unknown layer %s" lid)
-               (get ls nil)))]
-   (get lo :pixi-obj)))
+(defn- get-layer-asset [lid]
+  (if (nil? lid)
+    root-layer
+    (or (as/asset :layer lid) root-layer)))
 
 (defn layer-add [layer-id obj]
-  (when-let [po (get-layer-pixi-obj layer-id)]
+  (when-let [po (:pixi-obj (get-layer-asset layer-id))]
     (.addChild po obj)))
 
 (defn layer-remove [layer-id obj]
-  (when-let [po (get-layer-pixi-obj layer-id)]
+  (when-let [po (:pixi-obj (get-layer-asset layer-id))]
     (.removeChild po obj)))
 
 (defn- set-viewport-for-layer!
@@ -79,8 +76,8 @@
   ([x y s]
    (set-viewport! x y s s))
   ([x y sx sy]
-   (doseq [[lid lo] @layers]
-     (set-viewport-for-layer! lo x y sx sy))))
+   (doseq [lid @layers]
+     (set-viewport-for-layer! (get-layer-asset lid) x y sx sy))))
 
 (defn get-sprite-view-rect [sprite]
   (loop [s sprite]
