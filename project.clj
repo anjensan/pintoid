@@ -30,32 +30,27 @@
 
   :plugins [[lein-cljsbuild "1.1.7"]
             [lein-shell "0.5.0"]
+            [lein-with-env-vars "0.2.0"]
             [lein-binplus "0.6.4"]]
 
-  :main pintoid.main
-  :prep-tasks ["clean" "compile" ["cljsbuild" "once"]]
-  :release-tasks [["vcs" "assert-committed"]
-                  ["change" "version"
-                   "leiningen.release/bump-version" "release"]
-                  ["vcs" "commit"]
-                  ["vcs" "tag"]
-                  ["uberjar"]]
+  :hooks [leiningen.cljsbuild
+          leiningen.with-env-vars/auto-inject]
 
+  :main pintoid.main
   :jar-name "pintoid-onlyclj-%s.jar"
   :uberjar-name "pintoid-%s.jar"
+
   :bin {:name "../pintoid"
         :jvm-opts
         ["-server"
          "-Xms64m"
          "-Xmx1024m"
-         "-XX:+AggressiveOpts"
          "-XX:MaxGCPauseMillis=10"
          ]}
 
   :resource-paths ["resources" "target/resources"]
   :aliases {"jar" "uberjar"
-            "run-prod" ["do" "uberjar," "shell" "java" "-jar"
-                        "target/pintoid-${:version}.jar"]}
+            "run-prod" ["do" "uberjar," "shell" "java" "-jar" "target/pintoid-${:version}.jar"]}
 
   :cljsbuild
   {:builds
@@ -67,26 +62,22 @@
                       :main pintoid.client.core}}}}
 
   :profiles
-  {
-   :dev-cljs
-   {:cljsbuild
-    {:builds {:main {:compiler {:optimizations :whitespace
-                                :source-map "target/resources/js/pintoid.js.map"
-                                :output-dir "target/resources/js"
-                                :pretty-print true
-                                }}}}
-    :repl-options {:nrepl-middleware [cider.piggieback/wrap-cljs-repl]}
-    }
+  {:dev
+   {:cljsbuild {:builds {:main {:compiler {:optimizations :whitespace
+                                           :source-map "target/resources/js/pintoid.js.map"
+                                           :output-dir "target/resources/js"
+                                           :pretty-print true
+                                           }}}}
+    :repl-options {:nrepl-middleware [cider.piggieback/wrap-cljs-repl]}}
 
-   :prod-cljs
-   {:cljsbuild
-    {:builds {:main {:jar true
-                     :compiler {:optimizations :advanced
-                                :elide-asserts true}}}}}
+   :prod
+   {:env-vars {:TIMBRE_LEVEL :info}
+    :cljsbuild {:builds {:main {:jar true
+                                :compiler {:optimizations :advanced
+                                           :elide-asserts true}}}}}
 
-   :repl [:dev-cljs {:dependencies [[criterium/criterium "0.4.4"]]}]
-   :dev [:dev-cljs]
-   :prod [:prod-cljs {}]
+   :repl [:dev {:dependencies [[criterium/criterium "0.4.4"]]}]
+
    :uberjar [:prod {:aot :all :auto-clean true}]
    }
   )
