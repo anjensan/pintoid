@@ -1,10 +1,10 @@
 (ns pintoid.server.web
   (:require
+   [clojure.string :as s]
    [pintoid.server.cswiring :as csw]
    [taoensso.timbre :as timbre]
    [ring.util.response :refer [response redirect]]
-   [ring.middleware.params]
-   [ring.middleware.session]
+   [ring.middleware params session cookies]
    [compojure.core :refer [defroutes GET POST]]
    [compojure.route :refer [resources]]
    [chord.http-kit :refer [wrap-websocket-handler]]
@@ -26,8 +26,12 @@
              :viewBox "0 0 100 102" :preserveAspectRatio "none"}
        [:path {:d "M0 0 L50 100 L100 0 Z"}]]
       (hf/form-to {:id "joinform"} [:post "join-game"]
-                  (hf/text-field {:autocomplete false} "name")
-                  (hf/submit-button "Join")
+                  (hf/text-field
+                   {:pattern "^[a-zA-Z0-9_-]{1,16}$"
+                    :title   "no more than 16 alphanumeric characters"}
+                   "name"
+                   (get-in req [:cookies "nick" :value] "anonymous"))
+                  (hf/submit-button "PLAY")
                   )]])))
 
 (defn page-game [req]
@@ -45,13 +49,24 @@
       [:body {:style "background: dimgray; overflow: hidden"}
        [:div.content]]))))
 
+(defn- limit-str [s n]
+  (if (> (count s) n) (subs s 0 n) s))
+
+(defn- coerce-nick [n]
+  (-> n
+      (s/replace #"[^a-zA-Z0-9_-]" "*")
+      (limit-str 16)))
+
 (defn join-game [req]
   (timbre/tracef "Join game req: %s" req)
   (let [pid (or (get-in req [:session :pid])
-                (csw/generate-player-pid))]
-    (csw/create-player-avatar pid req)
+                (csw/generate-player-pid))
+        nick (coerce-nick (get-in req [:params "name"] "anonymous"))
+        ip (get req :remote-addr)]
+    (csw/create-player-avatar pid {:ip ip :nick nick})
     (-> (redirect "/game" :see-other)
         (assoc-in [:session :pid] pid)
+        (assoc-in [:cookies "nick"] {:value nick :max-age 2592000})
         )))
 
 (defn game-ws-handler [req]
@@ -76,4 +91,5 @@
 (defn ring-handler []
   (-> #'pintoid.server.web/app-routes
       (ring.middleware.params/wrap-params)
+      (ring.middleware.cookies/wrap-cookies)
       (ring.middleware.session/wrap-session)))

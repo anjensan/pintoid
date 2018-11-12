@@ -7,14 +7,13 @@
    [pintoid.server.vec2 :as v2]
    [taoensso.timbre :as timbre]))
 
-
 (defn search-new-player-pos [w eid]
   (let [p (v2/vec2 (rand-int 2000) (rand-int 2000))]
     (timbre/debugf "Player %s pos %s" eid p)
     p))
 
 (defn inc-player-score [w eid]
-  (update-comp w eid :score (fnil inc 0)))
+  (update-comp w eid :player update :score (fnil inc 0)))
 
 (defn kill-player [w eid]
   (timbre/debugf "Kill & respawn player %s" eid)
@@ -23,7 +22,7 @@
         (put-comp eid :position xy')
         (put-comp eid :position-tts (inc (w eid :position-tts 0)))
         (put-comp eid :velocity nil)
-        (update-comp eid :score (fnil dec 0)))))
+        (update-comp eid :player update :score (fnil dec 0)))))
 
 (defn asys-change-engine-based-on-ui [w now]
   (run-timed-system
@@ -80,9 +79,9 @@
 (defn remove-player [w eid]
   (remove-entity w eid))
 
-(defn add-new-player [w eid]
+(defn add-new-player [w eid {:keys [score nick] :or {score 0}}]
   (let [xy (search-new-player-pos w eid)]
-    (add-entity w eid (player :position xy))))
+    (add-entity w eid (player :position xy :nick nick :score score))))
 
 (defn process-uinput [w eid uinput]
   (put-comp w eid ::user-input uinput))

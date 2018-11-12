@@ -11,7 +11,7 @@
 (defasset player-score :sprite
   {:type :text
    :anchor [0.5 2.5]
-   :style {"fill" "white" "fontFamily" "Arial" "fontSize" "18px"}})
+   :style {"fill" "silver" "fontFamily" "Times New Roman" "fontSize" "15px"}})
 
 (defn- mkas [image & {:as opts}]
   (assoc opts :anchor [0.5 0.5] :texture (str "/img/" image)))

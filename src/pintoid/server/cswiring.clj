@@ -23,25 +23,18 @@
       (timbre/debugf "Unknown pid %s, skip %s" pid f))))
 
 (defn generate-player-pid []
-  (next-entity :player))
+  (next-entity))
 
 (defn- create-empty-avatar [pid]
   (agent {:pid pid}))
 
-(defn- populate-avatar-with-req [a req]
-  (timbre/tracef "Update avatar %s with data from req %s" a req)
-  (send a assoc
-         :host (:remote-addr req)
-         :name (get-in req [:session :name])))
-
-(defn create-player-avatar [pid req]
-  (timbre/tracef "Create avatar %s for req %s" pid req)
-  (send
-   avatars
+(defn create-player-avatar [pid {:keys [ip nick]}]
+  (timbre/tracef "Create avatar %s" pid)
+  (send avatars
    (fn [as]
      (let [a (or (get as pid)
                  (create-empty-avatar pid))]
-       (populate-avatar-with-req a req)
+       (send a assoc :host ip :nick nick)
        (assoc as pid a)))))
 
 (defn- avatar-close-ws-chans [a]
@@ -62,7 +55,6 @@
   (send avatars #(doseq [[_ a] %] (send a avatar-destroy))) {})
 
 (defn destroy-player-avatar [pid]
-  (timbre/debugf "Destroy player avatar %s" pid)
   (send
    avatars
    (fn [as]
@@ -86,8 +78,8 @@
   a)
 
 (defmethod handle-client-message :join-game [a m]
-  (timbre/infof "Player %s joined the game" (:pid a))
-  (game-add-new-player (:pid a))
+  (timbre/infof "Player '%s' joined the game" (:nick a))
+  (game-add-new-player (:pid a) {:nick (:nick a)})
   a)
 
 (defmethod handle-client-message :user-input [a m]
@@ -100,7 +92,7 @@
   a)
 
 (defn handle-client-disconnected [a]
-  (timbre/infof "Client %s disconnected" (:pid a))
+  (timbre/infof "Player '%s' disconnected" (:nick a))
   (dissoc a :ws-channel))
 
 (defn- avatar-destroy-when-disconnected [pid]
@@ -161,8 +153,8 @@
       a)))
 
 (defn send-snapshots-to-all-clients []
+  (timbre/trace "Send snapthots to all clients")
   (let [[at w] (get-world)]
-    (dosync
-     (doseq [[pid a] @avatars]
-       (send-off a create-and-send-world-patch pid at w)))))
+    (doseq [[pid a] @avatars]
+      (send-off a create-and-send-world-patch pid at w))))
 

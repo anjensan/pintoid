@@ -54,9 +54,9 @@
   (timbre/debugf "Remove player %s" eid)
   (send world remove-player eid))
 
-(defn game-add-new-player [eid]
-  (timbre/debugf "Add new player %s" eid)
-  (send world add-new-player eid))
+(defn game-add-new-player [eid {:keys [nick]}]
+  (timbre/debugf "Add new player %s: %s" eid nick)
+  (send world add-new-player eid {:nick nick}))
 
 (defn game-process-user-input [eid user-input]
   (timbre/tracef "User input from %s: %s" eid user-input)
@@ -154,8 +154,8 @@
     (let [vf (comp (memoize (visible-by-player? w pid max-user-view-distance)) key)]
       (ecsd/dumps-map
        :self-player  (dump-self-player pid)
+       :player       (dumpc w :player)
        :asset        (dumpc w :asset)
-       :score        (dumpc w :score)
        :position     (dumpc w :position, :filter vf, :map v2/to-vec)
        :position-tts (dumpc w :position-tts, :filter vf)
        :sprite       (dumpc w :sprite, :filter vf)

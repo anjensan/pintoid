@@ -130,10 +130,11 @@
     (al/action! t2 #(snd/set-listener-pos xy))))
 
 (defn format-player-score [entity]
-  (str (:score entity)))
+  (let [{:keys [score nick]} (get entity :player)]
+    (str nick " " score)))
 
 (defn handle-players-score [w1 w2 wpatch]
-  (foreach! [eid (changed-eids w1 wpatch :score)]
+  (foreach! [eid (changed-eids w1 wpatch :player)]
     (when-let [s (g/get-sprite eid :score-label)]
       (let [t (format-player-score (entity w2 eid))]
         (al/action!

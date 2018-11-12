@@ -3,9 +3,9 @@
         [pintoid.server.data consts assets])
   (:require [pintoid.server.vec2 :as v2]))
 
-(defproto player [& {:keys [position]}]
-  {:player true
-   :type :player
+(defproto player [& {:keys [position score nick] :or {score 0}}]
+  {:type :player
+   :player {:score score :nick nick}
    :phys-move true
    :fog-of-war true
    :position position
