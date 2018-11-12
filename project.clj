@@ -59,7 +59,7 @@
 
   :cljsbuild
   {:builds
-   {:main {:source-paths ["src"]
+   {:main {:source-paths ["src/pintoid/client"]
            :compiler {:output-to "target/resources/js/pintoid.js"
                       :language-in :ecmascript5
                       :language-out :ecmascript5
