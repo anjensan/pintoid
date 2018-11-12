@@ -1,0 +1,20 @@
+{
+ :nrepl {:enabled true
+         :bind "127.0.0.1"
+         :port 9891}
+
+ :scheduler {:threads 2
+             :game-tickrate 30
+             :client-tickrate 60
+             }
+
+ :web {:bind "127.0.0.1"
+       :port 8080}
+
+ :profile {:enabled false
+           :level 3
+           :period 10000
+           :ns-pattern "*"}
+
+ :log {:level :debug}
+ }

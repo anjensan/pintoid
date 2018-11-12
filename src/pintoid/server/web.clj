@@ -3,6 +3,8 @@
    [pintoid.server.cswiring :as csw]
    [taoensso.timbre :as timbre]
    [ring.util.response :refer [response redirect]]
+   [ring.middleware.params]
+   [ring.middleware.session]
    [compojure.core :refer [defroutes GET POST]]
    [compojure.route :refer [resources]]
    [chord.http-kit :refer [wrap-websocket-handler]]
@@ -70,3 +72,8 @@
   (resources "/img" {:root "img"})
   (resources "/snd" {:root "snd"})
   (resources "/css" {:root "css"}))
+
+(defn ring-handler []
+  (-> #'pintoid.server.web/app-routes
+      (ring.middleware.params/wrap-params)
+      (ring.middleware.session/wrap-session)))
