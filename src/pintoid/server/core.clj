@@ -10,7 +10,10 @@
    [clojure.tools.nrepl.server :as nrepl]
    [org.httpkit.server :as hkit])
   (:import
-   [java.util.concurrent TimeUnit ScheduledThreadPoolExecutor]))
+   [java.util.concurrent
+    TimeUnit
+    ScheduledThreadPoolExecutor
+    ScheduledExecutorService]))
 
 (defn load-config [cf]
   (timbre/infof "Load config file '%s'" cf)
@@ -29,23 +32,13 @@
     (nrepl/stop-server s)))
 
 (defn start-scheduler
-  [{:keys [threads] :or {threads 4}}]
-  (timbre/infof "Start scheduler with %s threads" threads)
+  [{:keys [threads] :or {threads 1}}]
+  (timbre/infof "Start scheduler" threads)
   (ScheduledThreadPoolExecutor. threads))
 
 (defn stop-scheduler [^ScheduledThreadPoolExecutor s]
   (timbre/info "Stop scheduler")
   (.shutdown s))
-
-(defn sched-fixed-rate [s ^ScheduledThreadPoolExecutor n f p]
-  (timbre/infof "Start %s timer (%sms)" n p)
-  (.scheduleAtFixedRate
-   s f 0 (long p)
-   java.util.concurrent.TimeUnit/MILLISECONDS))
-
-(defn unschedule [n t]
-  (timbre/info "Stop %s timer" n)
-  (.cancel t true))
 
 (defn start-webserver
   [{:keys [bind port] :or {bind "0.0.0.0" port 8080}}]
@@ -58,10 +51,10 @@
 
 (defn init-profiling
   [{:keys [enabled level ns-pattern]
-    :or {enabled false level 5 ns-pattern "*"}}]
+    :or {enabled false level 2 ns-pattern "*"}}]
   (if enabled
     (do
-      (timbre/info "Initialize profiling")
+      (timbre/info "Initialize profiling at level %s, ns '%s'" level ns-pattern)
       (tufte/set-min-level! level)
       (tufte/set-ns-pattern! ns-pattern)
       true)
@@ -89,15 +82,33 @@
   :start (start-scheduler (:scheduler (mount/args)))
   :stop (stop-scheduler scheduler))
 
+(defn- sched-fixed-rate [name rate task]
+  (timbre/infof "Start %s timer (%sms)" name rate)
+  (let [pns (long rate)
+        cnt (atom 2)
+        done #(swap! cnt inc)
+        f (fn []
+            (if (<= @cnt 0)
+              (timbre/debugf "Skip %s timer" name)
+              (do
+                (swap! cnt dec)
+                (task done))))]
+    (.scheduleAtFixedRate scheduler f pns pns TimeUnit/MILLISECONDS)))
+
+(defn- unschedule [name timer]
+  (timbre/info "Stop %s timer" name)
+  (.cancel timer true))
+
 (defstate game-timer
-  :start (sched-fixed-rate
-          scheduler "game" #'game-world-tick
-          (get-in (mount/args) [:scheduler :game-tickrate] 30))
+  :start (sched-fixed-rate "game"
+          (get-in (mount/args) [:scheduler :game-tickrate] 30)
+          #'game-world-tick)
   :stop (unschedule "game" game-timer))
 
 (defstate client-timer
-  :start (sched-fixed-rate scheduler "client" #'send-snapshots-to-all-clients
-          (get-in (mount/args) [:scheduler :client-tickrate] 60))
+  :start (sched-fixed-rate "client"
+          (get-in (mount/args) [:scheduler :client-tickrate] 30)
+          #'send-snapshots-to-all-clients)
   :stop (unschedule "client" client-timer))
 
 (defstate webserver
@@ -111,14 +122,16 @@
   :start (when profiling (start-pstats-aggregator))
   :stop (when profiling (stop-pstats-aggregator pstats-aggregator)))
 
-(defn- dump-n-clean-pstats []
+(defn- dump-n-clean-pstats [done]
   (send pstats-aggregator
-   #(when % (timbre/info "Profile\n" (tufte/format-pstats %)))))
+        #(when % (timbre/info "Profile\n" (tufte/format-pstats %))))
+  (done))
 
 (defstate pstats-dump-timer
   :start (when profiling
-           (sched-fixed-rate scheduler "profile" #'dump-n-clean-pstats
-            (get-in (mount/args) [:profile :period] 60000)))
+           (sched-fixed-rate "profile"
+            (get-in (mount/args) [:profile :period] 60000)
+            #'dump-n-clean-pstats))
   :stop (when profiling (unschedule "profile" pstats-dump-timer)))
 
 (defn start-config [c]

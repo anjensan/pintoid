@@ -152,9 +152,13 @@
       (timbre/tracef "Player %s not in game" pid)
       a)))
 
-(defn send-snapshots-to-all-clients []
-  (timbre/trace "Send snapthots to all clients")
+(defn send-snapshots-to-all-clients [done]
   (let [[at w] (get-world)]
-    (doseq [[pid a] @avatars]
-      (send-off a create-and-send-world-patch pid at w))))
-
+    (send
+     avatars
+     (fn [as]
+       (timbre/trace "Send snapthots to all clients")
+       (doseq [[pid a] as]
+         (send-off a create-and-send-world-patch pid at w))
+       (done)
+       as))))

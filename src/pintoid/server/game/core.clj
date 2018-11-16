@@ -126,8 +126,9 @@
           (sys-fixate-world-state)
           )))))
 
-(defn game-world-tick []
-  (send-off world sys-world-tick))
+(defn game-world-tick [done]
+  (send-off world sys-world-tick)
+  (send world (fn [w] (done) w)))
 
 (defn- dump-self-player [pid]
   (fn [s] [(when-not s {pid true}) true]))
