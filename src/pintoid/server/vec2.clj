@@ -81,6 +81,10 @@
 (defn dist [^Vec2 v1 ^Vec2 v2]
   (mag (v- v2 v1)))
 
+(defn dist2 [^Vec2 v1 ^Vec2 v2]
+  (+ (sqr (- (.-x v1) (.-x v2)))
+     (sqr (- (.-y v1) (.-y v2)))))
+
 (defn dist-m [^Vec2 v1 ^Vec2 v2]
   (+ (Math/abs (- (.-x v1) (.-x v2)))
      (Math/abs (- (.-y v1) (.-y v2)))))
