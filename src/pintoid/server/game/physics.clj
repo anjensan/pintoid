@@ -46,9 +46,9 @@
                   p (+ 1 (v2/dot nxy nvxy))      ;; 0..2 - move in/out of the world
                   x (/ (- dd world-jelly-radius) world-jelly-radius)
                   fv (v2/v+ nxy nxy nvxy)        ;; stoping force direction
-                  fs (* p x dt world-jelly-coef) ;; stoping force value
+                  fs (* -1 p x dt world-jelly-coef) ;; stoping force value
                   dvxy (v2/scale fv fs)
-                  f #(v2/v- (or % v2/zero) dvxy)]
+                  f #(v2/v+' % dvxy)]
               (fn-> (update-comp! eid :velocity f)
               )))))))))
 
@@ -65,7 +65,7 @@
         (let [fxy (reduce
                    #(if (= %2 eid)
                       %1
-                      (let-entity w %2 [xy2 :position, m2 :mass]
+                      (let-entity w %2 [xy2 :position, m2 [:mass 1]]
                         (v2/v+ %1 (calc-gravity-force m m2 xy xy2))))
                    sfxy
                    (entities w :phys-act :position :mass))

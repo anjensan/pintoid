@@ -54,7 +54,7 @@
     :or {enabled false level 2 ns-pattern "*"}}]
   (if enabled
     (do
-      (timbre/info "Initialize profiling at level %s, ns '%s'" level ns-pattern)
+      (timbre/infof "Initialize profiling at level %s, ns '%s'" level ns-pattern)
       (tufte/set-min-level! level)
       (tufte/set-ns-pattern! ns-pattern)
       true)
