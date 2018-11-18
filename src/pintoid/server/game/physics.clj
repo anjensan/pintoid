@@ -11,7 +11,7 @@
     (if (zero? d)
       v2/zero  ; FIXME: remove this?
       (let [r' (/ d)
-            fx (* gravity-g r' m1 r' m2 r')]
+            fx (* gravity-g r' m1 r' m2)]
         (v2/scale (v2/v- p2 p1) fx)))))
 
 (defn- limit-vxy [vxy]

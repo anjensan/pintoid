@@ -6,7 +6,7 @@
 (def world-jelly-radius 5000)
 (def world-jelly-coef 0.01)
 
-(def gravity-g 0.015)
+(def gravity-g 0.00003)
 
 (def engine-forward-force 0.08)
 (def engine-reverse-force 0.02)
