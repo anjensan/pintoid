@@ -17,6 +17,23 @@
   ([[a b]] (vec2 a b))
   ([a b] (Vec2. a b)))
 
+(defn vnan? [^Vec2 v]
+  (or (Double/isNaN (:x v))
+      (Double/isNaN (:y v))))
+
+(defn vzero?
+  ([^Vec2 v]
+   (and
+    (== 0 (.-x v))
+    (== 0 (.-y v))))
+  ([^Vec2 v ^double eps]
+   (and
+    (<= (Math/abs (.-x v)) eps)
+    (<= (Math/abs (.-y v)) eps))))
+
+(defmacro not-nan [v]
+  `(do (assert (not (vnan? ~v))) ~v))
+
 (defn v+
   ([] zero)
   ([v1] v1)
