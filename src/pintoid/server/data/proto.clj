@@ -13,6 +13,7 @@
    :mass 200
    :angle 0
    :radius 30
+   :collide :circle
    :sprite racket-red
    })
 
@@ -25,6 +26,7 @@
    :mass 100
    :angle 0
    :radius 20
+   :collide :circle
    :bullet {:lifetime 5000
             :cooldown 200
             :velocity 1.0}
@@ -41,6 +43,7 @@
    :mass 8000
    :angle 0
    :radius 10
+   :collide :circle
    :bullet {:lifetime 10000
             :cooldown 1200
             :velocity 2.1}
@@ -52,6 +55,7 @@
    :mass mass
    :sprite sprite
    :radius radius
+   :collide :circle
    :layer lstars1
    :phys-act true
    :fog-of-war true
@@ -63,6 +67,7 @@
    :mass mass
    :sprite sprite
    :radius radius
+   :collide :circle
    :phys-act true
    :fog-of-war true
    })
@@ -73,6 +78,7 @@
    :type :asteroid
    :mass 50
    :radius 5
+   :collide :circle
    :phys-move true
    :fog-of-war true
    ))
