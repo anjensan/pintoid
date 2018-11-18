@@ -56,8 +56,10 @@
 
 (defn norm [^Vec2 v]
   (let [m (mag v)]
-    (Vec2. (/ (.-x v) m)
-           (/ (.-y v) m))))
+    (if (== 0 m)
+      zero
+      (Vec2. (/ (.-x v) m)
+             (/ (.-y v) m)))))
 
 (defn dist [^Vec2 v1 ^Vec2 v2]
   (mag (v- v2 v1)))
