@@ -1,6 +1,6 @@
 (ns pintoid.server.vec2)
 
-(set! *unchecked-math* true)
+(set! *unchecked-math* :warn-on-boxed)
 (set! *warn-on-reflection* true)
 
 (defrecord Vec2 [^double x ^double y]
@@ -10,7 +10,7 @@
 (def ^:const zero (Vec2. 0 0))
 (def ^:const one  (Vec2. 1 1))
 
-(definline ^:private sqr [x]
+(defmacro ^:private sqr [x]
   `(let [x# ~x] (* x# x#)))
 
 (defn vec2
@@ -18,8 +18,8 @@
   ([a b] (Vec2. a b)))
 
 (defn vnan? [^Vec2 v]
-  (or (Double/isNaN (:x v))
-      (Double/isNaN (:y v))))
+  (or (Double/isNaN (.-x v))
+      (Double/isNaN (.-y v))))
 
 (defn vzero?
   ([^Vec2 v]
@@ -63,11 +63,11 @@
 (defn scale [^Vec2 v ^double c]
   (Vec2. (* c (.-x v)) (* c (.-y v))))
 
-(defn dot [^Vec2 v1 ^Vec2 v2]
+(defn dot ^double [^Vec2 v1 ^Vec2 v2]
   (+ (* (.-x v1) (.-x v2))
      (* (.-y v1) (.-y v2))))
 
-(defn mag [^Vec2 v]
+(defn mag ^double [^Vec2 v]
   (Math/sqrt (+ (sqr (.-x v))
                 (sqr (.-y v)))))
 
@@ -78,18 +78,18 @@
       (Vec2. (/ (.-x v) m)
              (/ (.-y v) m)))))
 
-(defn dist [^Vec2 v1 ^Vec2 v2]
+(defn dist ^double [^Vec2 v1 ^Vec2 v2]
   (mag (v- v2 v1)))
 
-(defn dist2 [^Vec2 v1 ^Vec2 v2]
+(defn dist2 ^double [^Vec2 v1 ^Vec2 v2]
   (+ (sqr (- (.-x v1) (.-x v2)))
      (sqr (- (.-y v1) (.-y v2)))))
 
-(defn dist-m [^Vec2 v1 ^Vec2 v2]
+(defn distm ^double [^Vec2 v1 ^Vec2 v2]
   (+ (Math/abs (- (.-x v1) (.-x v2)))
      (Math/abs (- (.-y v1) (.-y v2)))))
 
-(defn angle [^Vec2 v]
+(defn angle ^double [^Vec2 v]
   (Math/atan2 (.-y v) (.-x v)))
 
 (defn rotate [^Vec2 v ^double a]
@@ -114,4 +114,4 @@
   [(mag v) (angle v)])
 
 (defn to-vec [^Vec2 v]
-  (when v [(:x v) (:y v)]))
+  (when v [(.-x v) (.-y v)]))
