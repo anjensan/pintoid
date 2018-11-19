@@ -2,10 +2,12 @@
   (:require [taoensso.timbre :as timbre])
   (:use [pintoid.server.ecs core system]))
 
-(defrecord ProtoInfo [var val args last])
+(defrecord ProtoInfo [deps var args last])
 
 (defn add-proto-info [cm var args]
-  (assoc cm ::proto-info (->ProtoInfo var @var args cm)))
+  (assoc cm ::proto-info
+         (->ProtoInfo (cons [var @var] (-> cm ::proto-info :deps))
+                      var args cm)))
 
 (defmacro defproto [name args & body]
   `(defn ~name [& rs#]
@@ -13,23 +15,27 @@
       (fn ~args (add-proto-info (do ~@body) (var ~name) rs#))
       rs#)))
 
+(defn- proto-info-changed? [{:keys [deps]}]
+  (some (fn [[a b]] (not (identical? @a b))) deps))
+
 (defn actualize-entity-proto [w e]
-  (let-entity w e [{v :var f :val :as p} ::proto-info]
-    (if (identical? @v f)
+  (let-entity w e [pi ::proto-info]
+    (if-not (proto-info-changed? pi)
       w
-      (let [{a :args c :last} p
-            f' @v
+      (let [deps' (mapv (fn [[a _]] [a @a]) (:deps pi))
+            {a :args c :last} pi
+            f' @(:var pi)
             c' (apply f' a)
             cs (into {} (filter (fn [[k v]] (and (= (get c k) (get-comp w e k))
                                                  (not= v (get c k))))) c')
-            pi (assoc p :val f' :last c')
+            pi (assoc pi :last c' :deps deps')
             cs' (assoc cs ::proto-info pi)]
         (reduce (fn [w' [k v]] (put-comp w' e k v)) w cs')))))
 
 (defn asys-actualize-entity-protos [w]
   (combine-systems
-   (each-entity w e [{v :var f :val} ::proto-info]
-     (when-not (identical? @v f)
+   (each-entity w e [pi ::proto-info]
+     (when (proto-info-changed? pi)
        (timbre/debugf "Actualize proto for %s" e)
        #(actualize-entity-proto % e)))))
 
@@ -59,17 +65,17 @@
 
 (defn- eid-proto-from-entity-var [v]
   (let [m (meta v)
-        p (::proto m)]
-    (when p
+        pi (::proto m)]
+    (when pi
       (let [pa (::proto-args m [[]])
             vv @v]
         (map vector
              (if (seqable? vv) vv [vv])
-             (map (fn [a] #(apply p a)) pa))))))
+             (map (fn [a] #(apply pi a)) pa))))))
 
-(defn- maybe-add-entity [w [e p]]
+(defn- maybe-add-entity [w [e pi]]
   (if-not (has-entity? w e)
-    (let [x (p)]
+    (let [x (pi)]
       (if-let [a (:asset x)]
         (timbre/debugf "Add asset %s, type %s, name %s" e (:class a) (:name a))
         (timbre/debugf "Add entity %s, name %s" e (::name x)))
