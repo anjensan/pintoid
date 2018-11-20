@@ -7,10 +7,10 @@
 (def world-jelly-coef 0.01)
 
 (def gravity-g 0.00003)
+(def gravity-mind 0.001)
 (def gravity-thau 1)
 
 (def engine-forward-force 0.08)
 (def engine-reverse-force 0.02)
 (def rotate-speed 0.21)
 (def max-user-view-distance 2500)
-(def max-object-velocity 2)

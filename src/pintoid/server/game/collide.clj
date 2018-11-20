@@ -14,8 +14,6 @@
     [(get-comp w e1 :collide)
      (get-comp w e2 :collide)]))
 
-;; ===
-
 (defn- detect-collisions-naive-1 [w e eids acc]
   (loop [[z & r] eids, a acc]
     (if z

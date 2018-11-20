@@ -10,11 +10,6 @@
 (set! *unchecked-math* :warn-on-boxed)
 (set! *warn-on-reflection* true)
 
-(defn- limit-vxy [vxy]
-  (if (> (v2/mag vxy) ^double max-object-velocity)
-    (v2/from-polar max-object-velocity (v2/angle vxy))
-    vxy))
-
 (defn asys-physics-move [w now]
   (run-timed-system
    w now
@@ -48,9 +43,6 @@
                   f #(v2/v+' % dvxy)]
               (fn-> (update-comp! eid :velocity f)
               )))))))))
-
-
-;; ===
 
 (defrecord MTree [^double size
                   ^double mass
@@ -91,8 +83,7 @@
    (vals (group-by :center mtt))))
 
 (defn- mtree [w]
-  (let [evv (into
-             []
+  (let [evv (into []
              (comp
               (map #(let-entity w % [p :position, m :mass]
                       (MTree. 0 m p (v2/scale p m) nil)))
@@ -112,11 +103,11 @@
                       p2 (.-center mt)
                       m2 (.-mass mt)
                       sz (.-size mt)]
-                  (let [d2 (v2/dist2 p1 p2)]
-                    (if (and ch (> (* sz sz) (* d2 th2)))
-                      (transduce (map g) v2/v+' ch)
-                      (when-not (zero? d2)
-                        (v2/scale (v2/v- p2 p1) (/ (* gg m1 m2) d2))))))))]
+                  (when-not (and (= p1 p2) (not ch))
+                    (let [d2 (v2/dist2 p1 p2)]
+                      (if (and ch (> (* sz sz) (* d2 th2)))
+                        (transduce (map g) v2/v+' ch)
+                        (v2/scale (v2/v- p2 p1) (/ (* gg m1 m2) (+ d2 gravity-mind)))))))))]
       (or (g mt) v2/zero))))
 
 (defn asys-physics-update-vxy [w now]
@@ -132,6 +123,5 @@
              ^double m :mass]
           (when (> m 0)
             (let [fxy (v2/v+' (mt-gravity w eid mt) sfxy)
-                  axy (v2/scale fxy (/ m))
-                  dvxy (limit-vxy (v2/scale axy dt))]
+                  dvxy (v2/scale fxy (/ dt m))]
               (fn-> (update-comp! eid :velocity v2/v+' dvxy))))))))))
