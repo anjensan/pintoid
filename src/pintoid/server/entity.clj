@@ -23,12 +23,18 @@
     (if-not (proto-info-changed? pi)
       w
       (let [deps' (mapv (fn [[a _]] [a @a]) (:deps pi))
-            {a :args c :last} pi
+            {args :args last :last} pi
             f' @(:var pi)
-            c' (apply f' a)
-            cs (into {} (filter (fn [[k v]] (and (= (get c k) (get-comp w e k))
-                                                 (not= v (get c k))))) c')
-            pi (assoc pi :last c' :deps deps')
+            new (apply f' args)
+            cs (into {}
+                (filter
+                 (fn [[k v]]
+                   (and (= (get last k) (get-comp w e k))
+                        (not= v (get last k)))))
+                (merge
+                 (zipmap (keys last) (repeat nil))
+                 new))
+            pi (assoc pi :last new :deps deps')
             cs' (assoc cs ::proto-info pi)]
         (reduce (fn [w' [k v]] (put-comp w' e k v)) w cs')))))
 

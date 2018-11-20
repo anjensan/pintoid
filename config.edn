@@ -11,7 +11,7 @@
  :web {:bind "127.0.0.1"
        :port 8080}
 
- :profile {:enabled false
+ :profile {:enabled true
            :level 3
            :period 10000
            :ns-pattern "*"}
