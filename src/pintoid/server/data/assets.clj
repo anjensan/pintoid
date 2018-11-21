@@ -6,11 +6,12 @@
 
 ;; Hud
 (defasset hud-scores :layer
-  {:zorder 100})
+  {:zorder 100 :scale-rate 0.2})
 
 (defasset player-score :sprite
   {:type :text
    :anchor [0.5 2.5]
+   :layer hud-scores
    :style {"fill" "silver" "fontFamily" "Times New Roman" "fontSize" "15px"}})
 
 (defn- mkas [image & {:as opts}]

@@ -9,7 +9,9 @@
           [0.95 -970]
           [1.15 100]]]
   {:parallax p
-   :zorder z})
+   :scale-rate (/ (+ p 1) 2)
+   :zorder z}
+  )
 
 (defasset starsky-base-texture :texture
   {:image "/img/starsky.jpeg"})
