@@ -107,13 +107,13 @@
                     (let [d2 (v2/dist2 p1 p2)]
                       (if (and ch (> (* sz sz) (* d2 th2)))
                         (transduce (map g) v2/v+' ch)
-                        (v2/scale (v2/v- p2 p1) (/ (* gg m1 m2) (+ d2 gravity-mind)))))))))]
+                        (v2/scale (v2/v- p2 p1) (/ (* gg m1 m2) (+ d2 ^double gravity-mind)))))))))]
       (or (g mt) v2/zero))))
 
 (defn asys-physics-update-vxy [w now]
   (run-timed-system
    w now
-   (fn [dt]
+   (fn [^double dt]
      (let [mt (mtree w)]
        (combine-systems!
         (each-entity w eid
