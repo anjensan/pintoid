@@ -67,10 +67,12 @@
 
 (defn- set-viewport-for-layer!
   [{obj :pixi-obj [px py] :parallax [srx sry] :scale-rate} x y sx sy]
-  (set! (.. obj -position -x) (-> px (* x) (-)))
-  (set! (.. obj -position -y) (-> py (* y) (-)))
-  (set! (.. obj -scale -x) (-> srx (/ sx) (+ 1) (- srx) (/)))
-  (set! (.. obj -scale -x) (-> sry (/ sy) (+ 1) (- sry) (/))))
+  (let [ssx (-> srx (/ sx) (+ 1) (- srx) (/))
+        ssy (-> sry (/ sy) (+ 1) (- sry) (/))]
+    (set! (.. obj -position -x) (-> px (* ssx) (* x) (-)))
+    (set! (.. obj -position -y) (-> py (* ssy) (* y) (-)))
+    (set! (.. obj -scale -x) ssx)
+    (set! (.. obj -scale -y) ssy)))
 
 (defn set-viewport!
   ([x y s]
