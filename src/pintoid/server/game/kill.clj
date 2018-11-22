@@ -1,11 +1,12 @@
 (ns pintoid.server.game.kill
   (:use
    [pintoid.server.ecs core system]
-   [pintoid.server.data consts]
    [pintoid.server.game player])
   (:require
    [pintoid.server.vec2 :as v2]
    [taoensso.timbre :as timbre]))
+
+(def world-kill-radius 12000)
 
 (defn- kill-entity [w eid]
   (timbre/debugf "Kill collided entity %s, type %s" eid (get-comp w eid :type))

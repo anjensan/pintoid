@@ -1,4 +1,4 @@
-(ns pintoid.server.data.sounds
+(ns pintoid.assets.sounds
   (:use [pintoid.server.entity]))
 
 (def max-user-hear-distance 1500)

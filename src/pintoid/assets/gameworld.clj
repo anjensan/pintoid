@@ -1,15 +1,14 @@
-(ns pintoid.server.data.gameworld
+(ns pintoid.assets.gameworld
   (:use [pintoid.server.entity]
-        [pintoid.server.data consts proto assets])
+        [pintoid.assets proto sprites])
   (:require [pintoid.server.vec2 :as v2]))
 
 (defn- rand-pos [x]
-  (let [w world-radius
+  (let [w 4500
         w2 (* 2 w)
         h (hash x)
         f #(-> % (* h) (rem w2) (- w))]
     (v2/vec2 (f 11) (f 13))))
-
 
 (defentity center-bh
   (blackhole :position v2/zero))

@@ -1,4 +1,4 @@
-(ns pintoid.server.data.assets
+(ns pintoid.assets.sprites
   (:use pintoid.server.entity)
   (:require [pintoid.server.vec2 :as v2]))
 

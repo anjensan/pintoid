@@ -188,11 +188,11 @@
   (timbre/debug "Add player entity sprite" entity)
   (let [eid (:eid entity)
         sprite (if (:self-player entity)
-                 'pintoid.server.data.assets/racket-red
-                 'pintoid.server.data.assets/racket-blue)]
+                 'pintoid.assets.sprites/racket-red
+                 'pintoid.assets.sprites/racket-blue)]
     (g/new-sprite eid sprite entity)
     (g/new-sprite eid :score-label
-                  'pintoid.server.data.assets/player-score
+                  'pintoid.assets.sprites/player-score
                   (assoc entity :text (format-player-score entity))
   )))
 

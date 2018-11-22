@@ -1,6 +1,6 @@
 (ns pintoid.server.game.core
   (:use
-   [pintoid.server.data core consts]
+   [pintoid.assets core]
    [pintoid.server.game physics collide kill player sound]
    [pintoid.server vec2])
   (:require
@@ -17,6 +17,8 @@
    [mount.core :refer [defstate]]
    [taoensso.timbre :as timbre]
    ))
+
+(def max-user-view-distance 2500)
 
 (defstate last-stable-world
   :start (atom nil))

@@ -1,6 +1,6 @@
-(ns pintoid.server.data.starsky
+(ns pintoid.assets.starsky
   (:use [pintoid.server.entity]
-        [pintoid.server.data assets consts])
+        [pintoid.assets.sprites])
   (:require [pintoid.server.vec2 :as v2]))
 
 (defassets starsky-layers :layer
@@ -46,7 +46,7 @@
 (defasset static-circle-sprite :sprite
   {:type :graphics
    :do [['lineStyle 5 0x998899 0.6]
-        ['drawCircle 0 0 world-radius]
+        ['drawCircle 0 0 5000]
         ['endFill]]})
 
 (defentities starsky-tilemaps

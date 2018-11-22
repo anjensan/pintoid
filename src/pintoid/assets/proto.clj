@@ -1,6 +1,6 @@
-(ns pintoid.server.data.proto
+(ns pintoid.assets.proto
   (:use [pintoid.server.entity]
-        [pintoid.server.data consts assets])
+        [pintoid.assets.sprites])
   (:require [pintoid.server.vec2 :as v2]))
 
 (defproto player [& {:keys [position score nick] :or {score 0}}]

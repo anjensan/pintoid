@@ -1,11 +1,15 @@
 (ns pintoid.server.game.player
   (:use
-   [pintoid.server.data consts proto assets sounds]
+   [pintoid.assets proto sprites sounds]
    [pintoid.server.ecs core system])
   (:require
    [pintoid.server.game.sound :as snd]
    [pintoid.server.vec2 :as v2]
    [taoensso.timbre :as timbre]))
+
+(def engine-forward-force 0.08)
+(def engine-reverse-force 0.02)
+(def rotate-speed 0.21)
 
 (defn search-new-player-pos [w eid]
   (let [p (v2/vec2 (rand-int 2000) (rand-int 2000))]

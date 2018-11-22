@@ -1,11 +1,16 @@
 (ns pintoid.server.game.physics
-  (:use
-   [pintoid.server.ecs core system]
-   [pintoid.server.data consts])
+  (:use [pintoid.server.ecs core system])
   (:require
    [taoensso.tufte :as tufte]
    [pintoid.server.vec2 :as v2]
    [taoensso.timbre :as timbre]))
+
+(def gravity-g 0.00003)
+(def gravity-mind 0.001)
+(def gravity-thau 1)
+
+(def world-jelly-radius 5000)
+(def world-jelly-coef 0.01)
 
 (set! *unchecked-math* :warn-on-boxed)
 (set! *warn-on-reflection* true)
