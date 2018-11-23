@@ -1,10 +1,10 @@
-(ns pintoid.client.graphics.core
+(ns pintoid.client.graphics
   (:require
    [cljsjs.pixi]
-   [pintoid.client.graphics.animation :as a]
-   [pintoid.client.graphics.layer :as gl]
-   [pintoid.client.graphics.sprite :as s]
-   [pintoid.client.graphics.tilemap])
+   [pintoid.client.animation :as a]
+   [pintoid.client.layer :as gl]
+   [pintoid.client.sprite :as s]
+   [pintoid.client.tilemap])
   (:require-macros
    [taoensso.timbre :as timbre]
    [pintoid.client.macros :refer [foreach!]]))

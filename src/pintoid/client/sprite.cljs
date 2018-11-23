@@ -1,12 +1,12 @@
-(ns pintoid.client.graphics.sprite
+(ns pintoid.client.sprite
   (:require
    [cljsjs.pixi]
    [pintoid.client.asset :as as]
-   [pintoid.client.graphics.utils :refer
+   [pintoid.client.utils :refer
     [pi pi2 ->rectangle ->point point->vec
      ->blendmode vec->point minmax]]
-   [pintoid.client.graphics.animation :as a]
-   [pintoid.client.graphics.tilemap :as tm]
+   [pintoid.client.animation :as a]
+   [pintoid.client.tilemap :as tm]
    [pintoid.client.animloop :as al]
    [taoensso.timbre :as timbre :include-macros true])
   (:require-macros

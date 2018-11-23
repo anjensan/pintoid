@@ -13,9 +13,9 @@
    [pintoid.client.asset :as as]
    [pintoid.client.sound :as snd]
    [pintoid.client.animloop :as al]
-   [pintoid.client.graphics.animation :as a]
-   [pintoid.client.graphics.layer :as gl]
-   [pintoid.client.graphics.core :as g]
+   [pintoid.client.animation :as a]
+   [pintoid.client.layer :as gl]
+   [pintoid.client.graphics :as g]
    )
   (:require-macros
    [taoensso.timbre :as timbre]

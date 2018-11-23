@@ -1,7 +1,7 @@
 (ns pintoid.server.cswiring
   (:use
-   pintoid.server.game.core
-   pintoid.server.ecs.core)
+   pintoid.server.game
+   pintoid.ecs.core)
   (:require
    [clojure.data.int-map :as im]
    [mount.core :refer [defstate]]

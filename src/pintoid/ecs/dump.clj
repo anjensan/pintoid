@@ -1,5 +1,5 @@
-(ns pintoid.server.ecs.dump
-  (:use [pintoid.server.ecs core util]
+(ns pintoid.ecs.dump
+  (:use [pintoid.ecs core util]
         [clojure.algo.monads])
   (:require [clojure.data.int-map :as im])
   (:import [clojure.data.int_map PersistentIntMap]))

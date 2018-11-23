@@ -1,5 +1,5 @@
-(ns pintoid.server.ecs.data
-  (:use [pintoid.server.ecs core util])
+(ns pintoid.ecs.data
+  (:use [pintoid.ecs core util])
   (:require [clojure.data.int-map :as im]))
 
 (declare ->PersistentECSImpl)

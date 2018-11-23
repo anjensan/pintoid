@@ -1,6 +1,6 @@
 (ns pintoid.server.core
   (:use
-   [pintoid.server.game.core]
+   [pintoid.server.game]
    [pintoid.server cswiring web])
   (:require
    [mount.core :as mount :refer [defstate]]

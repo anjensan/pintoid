@@ -1,10 +1,9 @@
-(ns pintoid.client.graphics.tilemap
+(ns pintoid.client.tilemap
   (:require
    [cljsjs.pixi]
-   [pintoid.client.graphics.layer :as gl]
-   [pintoid.client.graphics.utils
-    :refer [minmax -inf +inf point->vec vec->point]]
-   [pintoid.client.graphics.layer :as gl])
+   [pintoid.client.layer :as gl]
+   [pintoid.client.utils :refer [minmax -inf +inf point->vec vec->point]]
+   [pintoid.client.layer :as gl])
   (:require-macros
    [taoensso.timbre :as timbre]
    [pintoid.client.macros :refer [defjsclass call-super foreach!]]))

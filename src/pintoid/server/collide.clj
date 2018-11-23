@@ -1,6 +1,6 @@
-(ns pintoid.server.game.collide
+(ns pintoid.server.collide
   (:use
-   [pintoid.server.ecs core system])
+   [pintoid.ecs core system])
   (:require
    [pintoid.server.vec2 :as v2]
    [taoensso.timbre :as timbre]))

@@ -1,6 +1,6 @@
-(ns pintoid.server.entity
+(ns pintoid.ecs.entity
   (:require [taoensso.timbre :as timbre])
-  (:use [pintoid.server.ecs core system]))
+  (:use [pintoid.ecs core system]))
 
 (defrecord ProtoInfo [deps var args last])
 

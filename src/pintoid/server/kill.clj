@@ -1,7 +1,7 @@
-(ns pintoid.server.game.kill
+(ns pintoid.server.kill
   (:use
-   [pintoid.server.ecs core system]
-   [pintoid.server.game player])
+   [pintoid.ecs core system]
+   [pintoid.server player])
   (:require
    [pintoid.server.vec2 :as v2]
    [taoensso.timbre :as timbre]))

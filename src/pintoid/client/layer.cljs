@@ -1,9 +1,9 @@
-(ns pintoid.client.graphics.layer
+(ns pintoid.client.layer
   (:require
    [cljsjs.pixi]
    [pintoid.client.asset :as as]
-   [pintoid.client.graphics.utils :refer [->point ->pair]]
-   [pintoid.client.graphics.animation :as a]
+   [pintoid.client.utils :refer [->point ->pair]]
+   [pintoid.client.animation :as a]
    [pintoid.client.animloop :as al]
    [taoensso.timbre :as timbre]))
 

@@ -1,9 +1,9 @@
-(ns pintoid.server.game.player
+(ns pintoid.server.player
   (:use
    [pintoid.assets proto sprites sounds]
-   [pintoid.server.ecs core system])
+   [pintoid.ecs core system])
   (:require
-   [pintoid.server.game.sound :as snd]
+   [pintoid.server.sound :as snd]
    [pintoid.server.vec2 :as v2]
    [taoensso.timbre :as timbre]))
 

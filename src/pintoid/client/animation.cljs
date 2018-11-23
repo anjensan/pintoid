@@ -1,8 +1,8 @@
-(ns pintoid.client.graphics.animation
+(ns pintoid.client.animation
   (:require
    [cljsjs.pixi]
    [pintoid.client.animloop :refer [action! animate!]]
-   [pintoid.client.graphics.utils :refer [pi2]])
+   [pintoid.client.utils :refer [pi2]])
   (:require-macros
    [taoensso.timbre :as timbre]
    [pintoid.client.macros :refer [defjsclass call-super]]))

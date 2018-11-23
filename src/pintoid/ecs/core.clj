@@ -1,5 +1,5 @@
-(ns pintoid.server.ecs.core
-  (:use [pintoid.server.ecs.util]))
+(ns pintoid.ecs.core
+  (:use [pintoid.ecs.util]))
 
 (defprotocol ImmutableECS
   (get-comp [w e c] [w e c d])

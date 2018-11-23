@@ -1,5 +1,5 @@
-(ns pintoid.server.ecs.system
-  (:use [pintoid.server.ecs core util]))
+(ns pintoid.ecs.system
+  (:use [pintoid.ecs core util]))
 
 (defmacro fn-> [& forms]
   `(fn [w#] (-> w# ~@forms)))

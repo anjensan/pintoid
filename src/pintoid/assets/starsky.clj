@@ -1,5 +1,5 @@
 (ns pintoid.assets.starsky
-  (:use [pintoid.server.entity]
+  (:use [pintoid.ecs.entity]
         [pintoid.assets.sprites])
   (:require [pintoid.server.vec2 :as v2]))
 

@@ -1,9 +1,9 @@
-(ns pintoid.server.game.sound
+(ns pintoid.server.sound
   (:use
-   [pintoid.server.ecs core system])
+   [pintoid.ecs core system])
   (:require
    [taoensso.timbre :as timbre]
-   [pintoid.server.ecs.core :refer :all]
+   [pintoid.ecs.core :refer :all]
    ))
 
 (def default-sound-duration (* 20 1000))

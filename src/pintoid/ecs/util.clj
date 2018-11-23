@@ -1,4 +1,4 @@
-(ns pintoid.server.ecs.util
+(ns pintoid.ecs.util
   (:require [clojure.data.int-map :as im])
   (:import [clojure.data.int_map PersistentIntMap]))
 

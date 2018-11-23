@@ -1,5 +1,5 @@
 (ns pintoid.assets.gameworld
-  (:use [pintoid.server.entity]
+  (:use [pintoid.ecs.entity]
         [pintoid.assets proto sprites])
   (:require [pintoid.server.vec2 :as v2]))
 

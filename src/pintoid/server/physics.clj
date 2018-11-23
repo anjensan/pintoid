@@ -1,5 +1,5 @@
-(ns pintoid.server.game.physics
-  (:use [pintoid.server.ecs core system])
+(ns pintoid.server.physics
+  (:use [pintoid.ecs core system])
   (:require
    [taoensso.tufte :as tufte]
    [pintoid.server.vec2 :as v2]

@@ -1,13 +1,12 @@
-(ns pintoid.server.game.core
+(ns pintoid.server.game
   (:use
    [pintoid.assets core]
-   [pintoid.server.game physics collide kill player sound]
-   [pintoid.server vec2])
+   [pintoid.server physics collide kill player sound vec2])
   (:require
    clojure.stacktrace
    [clojure.algo.monads :as m]
-   [pintoid.server.entity :refer :all]
-   [pintoid.server.ecs
+   [pintoid.ecs.entity :refer :all]
+   [pintoid.ecs
     [core :refer :all]
     [system :as ecss]
     [dump :as ecsd]
