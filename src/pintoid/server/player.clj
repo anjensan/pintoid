@@ -7,7 +7,7 @@
    [pintoid.server.vec2 :as v2]
    [taoensso.timbre :as timbre]))
 
-(def engine-forward-force 0.08)
+(def engine-forward-force 0.9108)
 (def engine-reverse-force 0.02)
 (def engine-rotate-speed 0.21)
 
