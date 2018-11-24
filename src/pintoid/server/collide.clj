@@ -67,7 +67,7 @@
         ccz (transduce
              (map (fn [[_ x1 x2 y1 y2]] (max (- x2 x1) (- y2 y1))))
              (completing max)
-             0
+             1
              mbrs)
         cm (persistent!
             (reduce

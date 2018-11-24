@@ -17,7 +17,7 @@
    [taoensso.timbre :as timbre]
    ))
 
-(def max-user-view-distance 2500)
+(def max-user-view-distance 3000)
 
 (defstate last-stable-world
   :start (atom nil))
@@ -119,10 +119,13 @@
           (fork :kill-collided #'asys-kill-collided-entities)
 
           (join :physics-vxy)
+          (fork :camera #'asys-udpate-cameras now)
 
           (fork :bullets #'asys-spawn-bullets now)
           (join :bullets)
           (join :kill-collided)
+
+          (join :camera)
 
           (sys-fixate-world-state)
           )))))
@@ -147,6 +150,13 @@
   (tufte/p [:dump c]
    (m/domonad m/state-m [d (apply ecsd/dumpc w c rs)] (vec d))))
 
+(defn dumpp [w p c]
+  (fn [s]
+    (let [v (get-comp w p c)]
+      (if (= s v)
+        [nil v]
+        [{p v} v]))))
+
 (defn dump-the-world [w pid]
   (timbre/tracef "Dump world for player %s" pid)
   (tufte/profile
@@ -156,6 +166,7 @@
     (let [vf (comp (memoize (visible-by-player? w pid max-user-view-distance)) key)]
       (ecsd/dumps-map
        :self-player  (dump-self-player pid)
+       :camera       (dumpp w pid :camera)
        :player       (dumpc w :player)
        :asset        (dumpc w :asset)
        :position     (dumpc w :position, :filter vf, :map v2/to-vec)

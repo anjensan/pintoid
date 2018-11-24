@@ -9,7 +9,14 @@
 
 (def engine-forward-force 0.08)
 (def engine-reverse-force 0.02)
-(def rotate-speed 0.21)
+(def engine-rotate-speed 0.21)
+
+(def camera-scale-factor 1)
+(def camera-scale-vxy-pow -0.33)
+(def camera-scale-vxy-add 3)
+(def camera-scale-min 0.25)
+(def camera-scale-max 1.25)
+(def camera-scale-inertia 300)
 
 (defn search-new-player-pos [w eid]
   (let [p (v2/vec2 (rand-int 2000) (rand-int 2000))]
@@ -39,7 +46,7 @@
                           ]
         (let [rd (:rotate-dir ui 0)
               ed (:engine-dir ui)
-              angle' (+ angle (* rd rotate-speed))
+              angle' (+ angle (* rd engine-rotate-speed))
               ef (case ed -1 (- engine-reverse-force) 1 engine-forward-force 0)
               fxy (v2/from-polar ef angle')
               snd (if (= ed 0)
@@ -79,6 +86,29 @@
                     :angle angle))
             (snd/play-sound bid (rand-nth bullet-bang-sounds))
             )))))))
+
+(defn calc-camera-scale-factor [v]
+  (-> v
+      (+ camera-scale-vxy-add)
+      (Math/pow camera-scale-vxy-pow)
+      (* camera-scale-factor)
+      (max camera-scale-min)
+      (min camera-scale-max)))
+
+(defn asys-udpate-cameras [w now]
+  (run-timed-system
+   w now
+   (fn [dt]
+     (combine-systems
+      (each-entity w eid [_ :player
+                          p :position
+                          v :velocity
+                          [_ _ s1] [:camera [0 0 1]]]
+        (let [s2 (calc-camera-scale-factor (v2/mag v))
+              a (min 1 (/ (double dt) camera-scale-inertia))
+              b (- 1 a)
+              s' (+ (* a s2) (* b s1))]
+          (fn-> (put-comp eid :camera [(:x p) (:y p) s']))))))))
 
 (defn remove-player [w eid]
   (remove-entity w eid))

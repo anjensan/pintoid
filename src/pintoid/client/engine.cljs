@@ -112,15 +112,16 @@
         t2 (world-time w2)
         p1 (player-entity w1)
         p2 (player-entity w2)
-        [x1 y1] (:position p1)
-        [x2 y2] (:position p2)]
+        [x1 y1 s1] (:camera p1)
+        [x2 y2 s2] (:camera p2)]
     (a/linear-animate
      t1 t2 1 0
      (fn [a]
        (let [b (- 1 a)]
          (gl/set-viewport!
           (+ (* a x1) (* b x2))
-          (+ (* a y1) (* b y2)) 1)
+          (+ (* a y1) (* b y2))
+          (+ (* a s1) (* b s2)))
          true)))))
 
 (defn handle-player-sound-pos [w1 w2 wpatch]

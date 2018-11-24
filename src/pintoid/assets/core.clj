@@ -6,4 +6,5 @@
       (load-entities-from-ns 'pintoid.assets.sprites)
       (load-entities-from-ns 'pintoid.assets.sounds)
       (load-entities-from-ns 'pintoid.assets.starsky)
-      (load-entities-from-ns 'pintoid.assets.gameworld)))
+      (load-entities-from-ns 'pintoid.assets.gameworld)
+      (load-entities-from-ns 'pintoid.assets.core)))
