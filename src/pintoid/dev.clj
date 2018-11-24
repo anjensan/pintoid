@@ -3,8 +3,8 @@
    [clojure.pprint :as pp]
    [clojure.set :refer [union]]
    [pintoid.server.cswiring :refer [avatars send-to-client]]
-   [pintoid.server.game.core :refer [world]]
-   [pintoid.server.ecs.core :as ecs]
+   [pintoid.server.game :refer [world]]
+   [pintoid.ecs.core :as ecs]
    [weasel.repl.websocket]
    [cider.piggieback])
   (:import
