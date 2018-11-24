@@ -17,6 +17,9 @@
 (defmulti load-asset (fn [aid proto] (:class proto)))
 (defmulti unload-asset (fn [aid proto asset] (:class proto)))
 
+(defmethod load-asset :const [aid proto] (:value proto))
+(defmethod unload-asset :const [aid proto asset])
+
 (defn asset-id? [aid]
   (or (number? aid) (symbol? aid)))
 

@@ -114,3 +114,11 @@
 (defmacro defassets [name cls bvec spec]
   `(defentities ~name ~bvec
      {:asset (assoc ~spec :class ~cls :name ~(emit-entity-name name))}))
+
+(defmacro defconst [name value]
+  (let [pn (symbol (str name "-asset"))]
+    `(let [c# ~value]
+       (def ~name ~value)
+       (defentity ~pn {:asset {:value ~value, :class :const, :name ~(emit-entity-name name)}})
+       (var ~name))))
+
