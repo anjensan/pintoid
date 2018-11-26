@@ -87,10 +87,14 @@
       vr
       (when-let [p (.-parent s)] (recur p)))))
 
-(defn init-layers-container [width height]
+(defn resize-layers-container [width height scale]
   (set! (.. lcontainer -position -x) (/ width 2))
   (set! (.. lcontainer -position -y) (/ height 2))
+  (set! (.. lcontainer -scale -x) scale)
+  (set! (.. lcontainer -scale -y) scale)
   (set! (.. lcontainer -viewrect) #js [[0 0] [width height]])
-  (reset! camera-size (constantly [width height]))
+  (reset! camera-size (constantly [width height])))
+
+(defn init-layers-container []
   (init-root-layer)
   lcontainer)

@@ -11,8 +11,8 @@
 (def engine-reverse-force 0.02)
 (def engine-rotate-speed 0.21)
 
-(def camera-scale-factor 1)
-(def camera-scale-vxy-pow -0.33)
+(def camera-scale-factor 0.8)
+(def camera-scale-vxy-pow -0.4)
 (def camera-scale-vxy-add 3)
 (def camera-scale-min 0.25)
 (def camera-scale-max 1.25)

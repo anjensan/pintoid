@@ -14,45 +14,26 @@
 
 (def pixi-layers nil)
 (def pixi-renderer nil)
+(def pixi-base-height nil)
+(def pixi-base-width nil)
 
-(defn- scale-canvas-to-window [c]
-  (let [w js/window
-        wiw (.-innerWidth w)
-        wih (.-innerHeight w)
-        cow (.-offsetWidth c)
-        coh (.-offsetHeight c)
-        sx (/ wiw cow)
-        sy (/ wih coh)
-        smm (/ (min sx sy) (max sx sy))
-        ;; when sx ~ sy use max to avoid white borders around the canvas
-        s (if (> smm 0.997) (max sx sy) (min sx sy))]
-    (set! (.. c -style -transformOrigin) "0 0")
-    (set! (.. c -style -transform) (str "scale(" s ")"))
-    (set! (.. c -style -paddingLeft) 0)
-    (set! (.. c -style -paddingRight) 0)
-    (set! (.. c -style -paddingTop) 0)
-    (set! (.. c -style -paddingBottom) 0)
-    (set! (.. c -display) "block")
-    (let [margin (str (/ (- wiw (* s cow)) 2) "px")]
-      (set! (.. c -style -marginLeft) margin)
-      (set! (.. c -style -marginRight) margin))
-    (let [margin (str (/ (- wih (* s coh)) 2) "px")]
-      (set! (.. c -style -marginTop) margin)
-      (set! (.. c -style -marginBottom) margin))))
-
-(defn init-autoscaling [canvas]
-  (timbre/info "Enable canvas autoscaling")
-  (.addEventListener
-   js/window "resize"
-   (fn [event]
-     (when pixi-renderer
-       (scale-canvas-to-window canvas))))
-  (scale-canvas-to-window canvas))
+(defn- scale-canvas-to-window [_]
+  (let [wiw (.-innerWidth js/window)
+        wih (.-innerHeight js/window)
+        sx (/ wiw pixi-base-width)
+        sy (/ wih pixi-base-height)
+        s (max sx sy)]
+    (.resize pixi-renderer wiw wih)
+    (gl/resize-layers-container wiw wih s)))
 
 (defn init-pixi-renderer [width height]
   (timbre/infof "Init pixi renderer, size [%s %s]" width height)
-  (set! pixi-renderer (js/PIXI.autoDetectRenderer width height #js {:antialias true}))
-  (set! pixi-layers (gl/init-layers-container width height))
+  (set! pixi-base-width width)
+  (set! pixi-base-height height)
+  (set! pixi-renderer (js/PIXI.autoDetectRenderer width height #js {:antialias true :autoResize true}))
+  (set! pixi-layers (gl/init-layers-container))
+  (.addEventListener js/window "resize" scale-canvas-to-window)
+  (scale-canvas-to-window nil)
   (.-view pixi-renderer))
 
 (defn get-sprite

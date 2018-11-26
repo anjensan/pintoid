@@ -18,9 +18,11 @@
    [dommy.core :refer [sel1]]
    ))
 
+(def base-gameview-height 900)
+(def base-gameview-width 1600)
+
 ;; TODO: implement adaptive interpolation lag (based on ping).
 (def animation-interpolation-lag 100)
-
 (def user-input-update-period 50)
 
 (defn drawing-loop [timestamp]
@@ -35,9 +37,7 @@
   (timbre/infof "Start application")
   (init-cs-communication)
   (init-user-input)
-  (let [c (g/init-pixi-renderer 3200 1800)]
-    (d/append! (sel1 :body) c)
-    (g/init-autoscaling c))
+  (d/append! (sel1 :body) (g/init-pixi-renderer base-gameview-width base-gameview-height))
   (spawn-user-input-sender get-user-input-state user-input-update-period)
   (drawing-loop 0))
 
