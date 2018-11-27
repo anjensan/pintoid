@@ -1,6 +1,6 @@
 (ns pintoid.server.ecs-test
   (:use clojure.test)
-  (:use [pintoid.server.ecs core data]))
+  (:use [pintoid.ecs core data]))
 
 (deftest test-empty-ecs
   (let [ecs (create-ecs)]
