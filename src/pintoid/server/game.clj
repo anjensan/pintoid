@@ -83,6 +83,12 @@
         fork (fn [w id as & rs] (apply fork' w id (profile-asys as) rs))]
     [fork join]))
 
+(defn sys-developer-tools [w]
+  (let [[fork join] (asys-fork-join)]
+    (-> w
+        (fork :collision-mbr #'asys-show-collision-mbrs true)
+        (join :collision-mbr))))
+
 (defn- sys-world-tick [w]
   (timbre/tracef "== Next world tick... ==")
   (tufte/profile {:dynamic? true}
@@ -128,6 +134,9 @@
           (join :camera)
 
           (sys-fixate-world-state)
+
+          ;; (sys-developer-tools)
+
           )))))
 
 (defn game-world-tick [done]

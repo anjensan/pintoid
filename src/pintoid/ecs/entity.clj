@@ -94,7 +94,7 @@
   (reduce maybe-add-entity w (->> ns ns-map vals (mapcat eid-proto-from-entity-var))))
 
 (defn load-entity-from-var [w v]
-  (timbre/debugf "Load entity from var %s" v)
+  (timbre/tracef "Load entity from var %s" v)
   (reduce maybe-add-entity w (or (eid-proto-from-entity-var v)
                                  (throw (ex-info "Invalid entity var" {:var v})))))
 
