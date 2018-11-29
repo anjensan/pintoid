@@ -12,6 +12,7 @@
   {:type :text
    :anchor [0.5 2.5]
    :layer hud-scores
+   :angle 0
    :style {"fill" "silver" "fontFamily" "Arial" "fontSize" "20px"}})
 
 (defn- mkas [image & {:as opts}]

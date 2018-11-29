@@ -33,21 +33,31 @@
   (let [s (:sprite entity)
         eid (:eid entity)]
     (if (map? s)
-      (foreach! [[k v] s] (g/new-sprite eid k v entity))
-      (g/new-sprite eid nil s entity))))
+      (foreach! [[k v] s] (g/new-sprite eid k v))
+      (g/new-sprite eid nil s))))
 
 (defmethod remove-entity-sprite :default [entity]
-  (timbre/debug "Remove entity sprite" entity)
+  (timbre/trace "Remove entity sprite" entity)
   (g/remove-sprites-by-eid (:eid entity)))
 
-(defmulti select-entity-sprites
-  (fn [purpose entity] [purpose (:type entity)]))
+(defn- foreach-entity-sprite [entity f]
+  (run! #(when % (f %)) (g/find-sprites-by-eid (:eid entity))))
 
-(defmethod select-entity-sprites :default [_ e]
-  (g/find-sprites-by-eid (:eid e)))
+(defn- do-add-entity-sprite [e]
+  (timbre/trace "Add sprite " e)
+  (let [eid (:eid e)
+        xy2 (:position e)
+        a2 (:angle e)
+        [_ deps] (as/track-used-assets add-entity-sprite e)]
+    (swap! used-assets-by-sprite assoc eid deps)
+    (when xy2 (foreach-entity-sprite e #(a/instant-move % 0 xy2)))
+    (when a2 (foreach-entity-sprite e #(a/instant-rotate % 0 a2)))))
 
-(defn- foreach-entity-sprite [action entity f]
-  (run! #(when % (f %)) (select-entity-sprites action entity)))
+(defn- do-remove-entity-sprite [e]
+  (let [eid (:eid e)]
+    (timbre/trace "Remove sprite " e)
+    (swap! used-assets-by-sprite dissoc eid))
+  (remove-entity-sprite e))
 
 (defn handle-addrem-assets [w1 w2 wpatch]
   (when-let [eids (seq (sort (changed-eids w1 wpatch :asset)))]
@@ -61,9 +71,8 @@
               (world-time w2)
               (fn []
                 (timbre/debug "Recreate sprite" eid)
-                (remove-entity-sprite e1)
-                (let [[_ deps] (as/track-used-assets add-entity-sprite e2)]
-                  (swap! used-assets-by-sprite assoc eid deps)))))))
+                (do-remove-entity-sprite e1)
+                (do-add-entity-sprite e2))))))
       (timbre/debug "Assets loaded"))))
 
 (defn handle-sprites-movement [w1 w2 wpatch]
@@ -81,7 +90,7 @@
            t1
            (fn []
              (foreach-entity-sprite
-              :move e2
+              e2
               (fn [obj]
                 (if (and xy1 (= tts1 tts2))
                   (a/linear-move obj t1 t2 xy1 xy2)
@@ -101,7 +110,7 @@
            t1
            (fn []
              (foreach-entity-sprite
-              :rotate e2
+              e2
               (fn [obj]
                 (if a1
                   (a/linear-rotate obj t1 t2 a1 a2)
@@ -130,38 +139,19 @@
         xy (:position p2)]
     (al/action! t2 #(snd/set-listener-pos xy))))
 
-(defn format-player-score [entity]
-  (let [{:keys [score nick]} (get entity :player)]
-    (str nick " " score)))
-
-(defn handle-players-score [w1 w2 wpatch]
-  (foreach! [eid (changed-eids w1 wpatch :player)]
-    (when-let [s (g/get-sprite eid :score-label)]
-      (let [t (format-player-score (entity w2 eid))]
-        (al/action!
-          (world-time w2)
-          #(set! (.-text s) t))))))
-
 (defn handle-add-sprites [w1 w2 wpatch]
   (foreach! [eid (changed-eids w1 wpatch :sprite)]
-    (let [e (entity w2 eid)]
+    (let [e (entity w2 eid)
+          t2 (world-time w2)]
       (when (:sprite e)
-        (al/action!
-         (world-time w2)
-         (fn []
-           (timbre/trace "Add sprite " e)
-           (let [[_ deps] (as/track-used-assets add-entity-sprite e)]
-             (swap! used-assets-by-sprite assoc eid deps))))))))
+        (al/action! t2 #(do-add-entity-sprite e))))))
 
 (defn handle-remove-sprites [w1 w2 wpatch]
   (foreach! [eid (changed-eids w1 wpatch :sprite)]
     (when-not (:sprite (entity w2 eid))
       (al/action!
        (world-time w2)
-       (fn []
-         (swap! used-assets-by-sprite dissoc eid)
-         (timbre/trace "Remove sprite " (entity w1 eid))
-         (remove-entity-sprite (entity w1 eid)))))))
+       #(do-remove-entity-sprite (entity w1 eid))))))
 
 (defn handle-addrem-sounds [w1 w2 wpatch]
   (foreach! [eid (changed-eids w1 wpatch :sound)]
@@ -185,20 +175,7 @@
         (when (:sound e2)
           (al/action! t2 #(snd/set-sound-pos eid (:position e2))))))))
 
-(defmethod add-entity-sprite :player [entity]
-  (timbre/debug "Add player entity sprite" entity)
-  (let [eid (:eid entity)
-        sprite (if (:self-player entity)
-                 'pintoid.assets.sprites/racket-red
-                 'pintoid.assets.sprites/racket-blue)]
-    (g/new-sprite eid sprite entity)
-    (g/new-sprite eid :score-label
-                  'pintoid.assets.sprites/player-score
-                  (assoc entity :text (format-player-score entity))
-  )))
-
-(defmethod select-entity-sprites [:rotate :player] [_ entity]
-  [(g/get-sprite (:eid entity))])
+(declare handle-players-score)
 
 (defn update-world-snapshot! [wpatch]
   (let [w1 @world, [w2 wpatch'] (apply-world-patch w1 wpatch)]
@@ -216,3 +193,29 @@
                ]]
       (f w1 w2 wpatch))
     (reset! world w2)))
+
+;; TODO: move into separate ns.
+
+(defn format-player-score [entity]
+  (let [{:keys [score nick]} (get entity :player)]
+    (str nick " " score)))
+
+(defn handle-players-score [w1 w2 wpatch]
+  (foreach! [eid (changed-eids w1 wpatch :player)]
+    (when-let [s (g/get-sprite eid :score-label)]
+      (let [t (format-player-score (entity w2 eid))]
+        (al/action! (world-time w2) #(set! (.-text s) t))))))
+
+(defmethod add-entity-sprite :player [entity]
+  (timbre/debug "Add player entity sprite" entity)
+  (add-entity-sprite (dissoc entity :type))
+  (let [s (:sprite entity)
+        eid (:eid entity)
+        sprite (if (:self-player entity)
+                 'pintoid.assets.sprites/racket-red
+                 'pintoid.assets.sprites/racket-blue)]
+    (timbre/trace "Recreate player sprite")
+    (g/new-sprite eid nil sprite)
+    (g/new-sprite eid :score-label
+                  'pintoid.assets.sprites/player-score
+                  {:text (format-player-score entity)})))

@@ -91,7 +91,7 @@
    ((get-sprite-factory spec) props)))
 
 (defn make-common-props-setter [props]
-  (let [{:keys [position scale pivot rotation alpha visible
+  (let [{:keys [position scale pivot angle alpha visible
                 anchor blend-mode mask cache-as-bitmap]} props
         mask-of (when mask (get-sprite-factory mask))
         blend-mode (->blendmode blend-mode)
@@ -100,15 +100,21 @@
         pivot (->point pivot)
         anchor (->point anchor)]
     (fn [obj]
+
+      (when position (a/mark-no-moveable obj))
+      (when angle (a/mark-no-rotatable obj))
+
       (when position (.copy (.-position obj) position))
       (when scale (set! (.-scale obj) scale))
       (when pivot (set! (.-pivot obj) pivot))
-      (when rotation (set! (.-rotation obj) rotation))
       (when visible (set! (.-visible obj) visible))
       (when alpha (set! (.-alpha obj) alpha))
+      (when angle (set! (.-rotation obj) angle))
+
       ;; FIXME: Temp workaround - 'blendMode' is not externed in cljsjs.pixi
       ;; (when (and blend-mode (not (zero? blend-mode))) (set! (.-blendMode obj) blend-mode))
       (when (and blend-mode (not (zero? blend-mode))) (aset obj "blendMode" blend-mode))
+
       (when mask (set! (.-mask obj) (mask-of)))
       (when cache-as-bitmap (set! (.-cacheAsBitmap obj) cache-as-bitmap))
       (when anchor (when-let [a (.-anchor obj)] (.copy a anchor)))
@@ -119,7 +125,7 @@
   (dissoc
    props
    ;; TODO: Review props - inherited or not.
-   :position :scale :pivot :rotation :alpha
+   :position :scale :pivot :angle :alpha
    :visible :anchor :mask :cache-as-bitmap
    ))
 
@@ -165,8 +171,9 @@
         (when child-factories
           (let [pp (dissoc-common-props props)]
             (foreach! [sf child-factories] (.addChild s (sf pp)))))
+        (when props
+          ((make-common-props-setter props) s))
         (sps s)
-        ((make-common-props-setter props) s)
         s))))
 
 (defmethod create-sprite-factory :container [proto]
@@ -177,8 +184,9 @@
         (when child-factories
           (let [pp (dissoc-common-props props)]
             (foreach! [sf child-factories] (.addChild s (sf pp)))))
+        (when props
+          ((make-common-props-setter props) s))
         (sps s)
-        ((make-common-props-setter props) s)
         s))))
 
 (defmethod create-sprite-factory :tiling-sprite [proto]
@@ -188,12 +196,12 @@
         sps (make-common-props-setter proto)
         tsps (make-tiling-sprite-props-setter proto)]
     (fn [props]
-      (-> (js/PIXI.extras.TilingSprite. t w h)
-          (tsps)
-          (sps)
-          ((make-tiling-sprite-props-setter props))
-          ((make-common-props-setter props))
-          ))))
+      (cond-> (js/PIXI.extras.TilingSprite. t w h)
+        props ((make-common-props-setter props))
+        props ((make-tiling-sprite-props-setter props))
+        true (sps)
+        true (tsps)
+        ))))
 
 (defmethod create-sprite-factory :random-tilemap [proto]
   (let [tiles-factories (mapv get-sprite-factory (:tiles proto))
@@ -205,10 +213,10 @@
                                    (count tiles-factories)))))
         tmfactory (tm/make-tilemap-sprite-factory create-sprite proto)]
     (fn [props]
-      (-> (tmfactory props)
-          (sps)
-          ((make-common-props-setter props))
-          ))))
+      (cond-> (tmfactory props)
+        props ((make-common-props-setter props))
+        true (sps)
+        ))))
 
 (defmethod create-sprite-factory :animator [proto]
   (let [sps (make-common-props-setter proto)
@@ -221,21 +229,21 @@
           :else (get-sprite-factory child))
         afactory (a/make-sprite-animator-factory child-factory proto)]
     (fn [props]
-      (-> (afactory (dissoc-common-props props))
-          (sps)
-          ((make-common-props-setter props))
-          ))))
+      (cond-> (afactory (dissoc-common-props props))
+        props ((make-common-props-setter props))
+        true (sps)
+        ))))
 
 (defmethod create-sprite-factory :text [proto]
   (let [sps (make-common-props-setter proto)
         tps (make-text-props-setter proto)]
     (fn [props]
-      (-> (js/PIXI.Text. (:text props ""))
-          (sps)
-          (tps)
-          ((make-common-props-setter props))
-          ((make-text-props-setter props))
-          ))))
+      (cond-> (js/PIXI.Text. (:text props ""))
+        props ((make-common-props-setter props))
+        props ((make-text-props-setter props))
+        true (sps)
+        true (tps)
+        ))))
 
 (defmethod create-sprite-factory :graphics [proto]
   (let [sps (make-common-props-setter proto)
@@ -244,9 +252,14 @@
                   (:do proto))]
     (fn [props]
       (let [s (js/PIXI.Graphics.)]
+        (when props
+          ((make-common-props-setter props) s))
         (sps s)
-        ((make-common-props-setter props) s)
-        (run! (fn [[m a]] (.apply (aget s m) s a)) dos)
+        (run! (fn [[m a]]
+                (let [f (aget s m)]
+                  (if f
+                    (.apply f s a)
+                    (timbre/warnf "Unknown graphics function %s" [m a])))) dos)
         s))))
 
 (def empty-sprite-factory

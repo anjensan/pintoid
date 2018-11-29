@@ -75,10 +75,12 @@
        (destroy-sprite s)))))
 
 (defn new-sprite
-  ([eid sprite props]
-   (new-sprite eid nil sprite props))
+  ([eid sprite]
+   (new-sprite eid nil sprite))
+  ([eid sid sprite]
+   (new-sprite eid sid sprite nil))
   ([eid sid sprite props]
-   (timbre/trace "Create sprite" sprite "for" [eid sid])
+   (timbre/tracef "Create sprite %s for %s" sprite [eid sid])
    (when-let [old-obj (get-sprite eid sid)]
      (.removeChild (.-parent old-obj) old-obj))
    (let [sprite-spec (s/get-sprite-spec sprite)

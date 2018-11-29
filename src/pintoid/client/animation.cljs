@@ -7,6 +7,20 @@
    [taoensso.timbre :as timbre]
    [pintoid.client.macros :refer [defjsclass call-super]]))
 
+(defn mark-no-rotatable
+  ([obj] (mark-no-rotatable obj true))
+  ([obj b] (set! (.-notrotatable obj) (boolean b))))
+
+(defn mark-no-moveable
+  ([obj] (mark-no-moveable obj true))
+  ([obj b] (set! (.-nomoveable obj) (boolean b))))
+
+(defn rotatable? [obj]
+  (not (.-notrotatable obj)))
+
+(defn moveable? [obj]
+  (not (.-nomoveable obj)))
+
 (defn- mk-linear-interpolator [t1 t2 v1 v2]
   (let [t2-t1 (- t2 t1)
         ddc (/ 1 t2-t1)]
@@ -20,45 +34,49 @@
 
 (defn linear-move [obj t1 t2 xy1 xy2]
   (timbre/trace "linear-move" obj t1 t2 xy1 xy2)
-  (animate!
-   t1 t2
-   (let [p (.-position obj)
-         [x1 y1] xy1
-         [x2 y2] xy2
-         xi (mk-linear-interpolator t1 t2 x1 x2)
-         yi (mk-linear-interpolator t1 t2 y1 y2)]
-     (fn [t]
-       (let [x' (xi t)
-             y' (yi t)]
-         (set! (.-x p) x')
-         (set! (.-y p) y'))
-       (< t t2)))))
+  (when (moveable? obj)
+    (animate!
+     t1 t2
+     (let [p (.-position obj)
+           [x1 y1] xy1
+           [x2 y2] xy2
+           xi (mk-linear-interpolator t1 t2 x1 x2)
+           yi (mk-linear-interpolator t1 t2 y1 y2)]
+       (fn [t]
+         (let [x' (xi t)
+               y' (yi t)]
+           (set! (.-x p) x')
+           (set! (.-y p) y'))
+         (< t t2))))))
 
 (defn instant-move [obj t2 xy2]
   (timbre/trace "instant-move" obj t2 xy2)
-  (action!
-   t2
-   (fn []
-     (when-let [p (.-position obj)]
-       (let [[x2 y2] xy2]
-         (set! (.-x p) x2)
-         (set! (.-y p) y2))))))
+  (when (moveable? obj)
+    (action!
+     t2
+     (fn []
+       (when-let [p (.-position obj)]
+         (let [[x2 y2] xy2]
+           (set! (.-x p) x2)
+           (set! (.-y p) y2)))))))
 
 (defn linear-rotate [obj t1 t2 angle1 angle2]
-  (timbre/trace "linear-rotate" obj t1 t2 angle1 angle2)
-  (animate!
-   t1 t2
-   (let [ai (mk-linear-interpolator t1 t2 angle1 angle2)]
-     (fn [t]
-       (set! (.-rotation obj) (ai t))
-       (< t t2)))))
+  (when (rotatable? obj)
+    (timbre/trace "linear-rotate" obj t1 t2 angle1 angle2)
+    (animate!
+     t1 t2
+     (let [ai (mk-linear-interpolator t1 t2 angle1 angle2)]
+       (fn [t]
+         (set! (.-rotation obj) (ai t))
+         (< t t2))))))
 
 (defn instant-rotate [obj t2 angle]
-  (timbre/trace "instant-rotate" obj t2 angle)
-  (action!
-   t2
-   (fn []
-     (set! (.-rotation obj) angle))))
+  (when (rotatable? obj)
+    (timbre/trace "instant-rotate" obj t2 angle)
+    (action!
+     t2
+     (fn []
+       (set! (.-rotation obj) angle)))))
 
 (defn linear-animate [t1 t2 v1 v2 setter]
   (animate! t1 t2 (comp setter (mk-linear-interpolator t1 t2 v1 v2))))
