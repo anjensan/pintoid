@@ -17,6 +17,8 @@
    [taoensso.timbre :as timbre]
    ))
 
+(def dev-asystems (atom {}))
+
 (def max-user-view-distance 3000)
 
 (defstate last-stable-world
@@ -84,10 +86,11 @@
     [fork join]))
 
 (defn sys-developer-tools [w]
-  (let [[fork join] (asys-fork-join)]
-    (-> w
-        (fork :collision-mbr #'asys-show-collision-mbrs true)
-        (join :collision-mbr))))
+  (let [ds @dev-asystems
+        [fork join] (asys-fork-join)]
+    (as-> w w
+      (reduce #(fork %1 (key %2) (val %2)) w ds)
+      (reduce #(join %1 (key %2)) w ds))))
 
 (defn- sys-world-tick [w]
   (timbre/tracef "== Next world tick... ==")

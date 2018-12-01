@@ -3,13 +3,14 @@
    [clojure.pprint :as pp]
    [clojure.set :refer [union]]
    [pintoid.server.cswiring :refer [avatars send-to-client]]
-   [pintoid.server.game :refer [world]]
+   [pintoid.server.game :refer [world dev-asystems]]
    [pintoid.ecs.core :as ecs]
    [weasel.repl.websocket]
-   [cider.piggieback])
+   [cider.piggieback]
+   [pintoid.server.collide]
+   )
   (:import
    java.net.InetAddress))
-
 
 (defn get-players []
   (for [[eid ava] @avatars]
@@ -45,10 +46,21 @@
 (defn players []
   (pp/print-table (get-players)))
 
-(defn asset [aid]
-  (-> aid @world :asset))
+(defn update-protos
+  ([] (update-protos true))
+  ([t] (if t
+        (swap! dev-asystems assoc :update-protos #'pintoid.ecs.entity/asys-actualize-entity-protos)
+        (swap! dev-asystems dissoc :update-protos))))
 
-;; TODO: update-entity, add-entity, etc
+(defn show-mbrs
+  ([] (show-mbrs true))
+  ([t] (swap! dev-asystems assoc :show-mbr #(pintoid.server.collide/asys-show-collision-mbrs % t))))
+
+(defn into-world [vs]
+  (send world into vs))
+
+(defn send-world [& rs]
+  (apply send world rs))
 
 (defn- localhost-address []
   (.getHostAddress (java.net.InetAddress/getLocalHost)))
