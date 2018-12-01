@@ -97,46 +97,36 @@
           [fork join] (asys-fork-join)]
       (-> w
           (sys-attach-world-time now)
-          (fork :actualize-protos #'asys-actualize-entity-protos)
 
+          (fork :collide #'asys-collide-entities)
+          (fork :physics-vxy #'asys-physics-update-vxy now)
+          (fork :physics-move #'asys-physics-move now)
+          (fork :physics-bound #'asys-physics-bound-circle now)
+
+          (fork :handle-ui #'asys-change-engine-based-on-ui now)
           (fork :sounds #'asys-garbage-sounds now)
           (fork :kill-outdated #'asys-kill-outdated-entities now)
           (fork :kill-out-of-gamefield #'asys-kill-entities-out-of-gamefield)
-          (fork :engine #'asys-change-engine-based-on-ui now)
-
-          (join :actualize-protos)
-
-          (fork :physics-vxy #'asys-physics-update-vxy now)
-          (fork :physics-move #'asys-physics-move now)
-
-          (fork :physics-bound #'asys-physics-bound-circle now)
-
-          (fork :collide #'asys-collide-entities)
-          (join :collide)
 
           (join :kill-outdated)
-          (join :sounds)
-          (join :engine)
           (join :kill-out-of-gamefield)
-
-          (join :physics-bound)
           (join :physics-move)
+          (join :sounds)
+          (join :handle-ui)
+          (join :physics-bound)
+          (join :physics-vxy)
+          (join :collide)
 
           (fork :kill-collided #'asys-kill-collided-entities)
-
-          (join :physics-vxy)
+          (fork :bullets #'asys-spawn-bullets now)
           (fork :camera #'asys-udpate-cameras now)
 
-          (fork :bullets #'asys-spawn-bullets now)
-          (join :bullets)
           (join :kill-collided)
-
+          (join :bullets)
           (join :camera)
 
+          (sys-developer-tools)
           (sys-fixate-world-state)
-
-          ;; (sys-developer-tools)
-
           )))))
 
 (defn game-world-tick [done]
