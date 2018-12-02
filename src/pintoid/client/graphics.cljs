@@ -49,10 +49,8 @@
     (vals s)))
 
 (defn- destroy-sprite [obj]
-  (when obj
-    (when-let [p (.-parent obj)]
-      (.removeChild p obj))
-    (.destroy obj)))
+  (timbre/tracef "Destroy %s" obj)
+  (.destroy obj #js {:children true}))
 
 (defn remove-sprites-by-eid [eid]
   (when-let [m (get @sprites eid)]
@@ -82,7 +80,7 @@
   ([eid sid sprite props]
    (timbre/tracef "Create sprite %s for %s" sprite [eid sid])
    (when-let [old-obj (get-sprite eid sid)]
-     (.removeChild (.-parent old-obj) old-obj))
+     (destroy-sprite old-obj))
    (let [sprite-spec (s/get-sprite-spec sprite)
          layer-id (or (:layer props) (:layer sprite-spec))
          sprite (s/make-sprite sprite props)]

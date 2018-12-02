@@ -16,10 +16,10 @@
   ([obj b] (set! (.-nomoveable obj) (boolean b))))
 
 (defn rotatable? [obj]
-  (not (.-notrotatable obj)))
+  (and obj (.-transform obj) (not (.-notrotatable obj))))
 
 (defn moveable? [obj]
-  (not (.-nomoveable obj)))
+  (and obj (.-transform obj) (not (.-nomoveable obj))))
 
 (defn- mk-linear-interpolator [t1 t2 v1 v2]
   (let [t2-t1 (- t2 t1)
