@@ -27,7 +27,8 @@
        ;; TODO: move out, use multimethods/protocols?
        (cond
          ;; everything kills player except own bullets
-         (and (= et :player) (some #(not= eid (:owner (w % :bullet))) cw))
+         ;; (and (= et :player) (some #(not= eid (:owner (w % :bullet))) cw))
+         (= et :player)
          (let [all-bullets-owners (keep #(:owner (w % :bullet)) cw)
                bullets-owners (remove #(= eid %) all-bullets-owners)]
            (fn->
