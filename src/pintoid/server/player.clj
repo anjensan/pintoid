@@ -10,6 +10,7 @@
 (def engine-forward-force 0.08)
 (def engine-reverse-force 0.02)
 (def engine-rotate-speed 0.21)
+(def spawn-bullet-distance 50)
 
 (def camera-scale-factor 0.8)
 (def camera-scale-vxy-pow -0.4)
@@ -71,7 +72,7 @@
          (let [b-proto (if (:fire? ui) (bullet) (bullet-alt))
                b (:bullet b-proto)
                b-vxy (v2/v+ vxy (v2/from-polar (:velocity b) angle))
-               b-xy xy
+               b-xy (v2/v+ xy (v2/from-polar spawn-bullet-distance angle))  ;; advance by 50px
                bid (next-entity)]
            (timbre/debugf "Spawn bullet for %s" eid)
            (fn->
