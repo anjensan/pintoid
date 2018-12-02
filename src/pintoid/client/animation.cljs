@@ -117,8 +117,8 @@
         mmx #(+ min (* dx %))
         funx (case kind
                :saw #(-> %)
-               :sin #(-> % (* 6) js/Math.sin (+ 1) (* 0.5))
-               :cos #(-> % (* 6) js/Math.cos (+ 1) (* 0.5))
+               :sin #(-> % (* js/Math.PI) js/Math.sin (+ 1) (* 0.5))
+               :cos #(-> % (* js/Math.PI) js/Math.cos (+ 1) (* 0.5))
                :sqr #(if (< (mod % 1) 0.5) 0 1)
                :tri #(if (< % 0.5) (-> % (* 2)) (->> % (* 2) (- 2))))]
     #(-> % normx funx powx mmx)))
@@ -128,10 +128,16 @@
                    (or (:a-scale-x proto)
                        (:a-scale-y proto))))]}
   (let [shift (case (:shift proto :random)
-                :random (rand-int 1e10)
-                :start (- (int (js/performance.now)))
-                :none 0
-                (-> proto :shift int))
+                :random #(rand-int 1e10)
+                :start #(- (int (js/performance.now)))
+                :none (constantly 0)
+                (constantly (-> proto :shift int)))
+        get-shift (fn [obj]
+                    (if-let [s (.-pintoid-animation-shift obj)]
+                      s
+                      (let [s (shift)]
+                        (set! (.-pintoid-animation-shift obj) s)
+                        s)))
         wwf (fn [k setter]
               (when-let [fs (get proto k)]
                 (let [wf (wave-function fs)]
@@ -147,9 +153,9 @@
         anims (vec (remove nil? maybe-anims))]
     (if (== 1 (count anims))
       (let [f (first anims)]
-        #(f %1 (+ %2 shift)))
+        #(f %1 (+ %2 (get-shift %1))))
       (fn [obj t]
-        (let [tt (+ t shift)]
+        (let [tt (+ t (get-shift obj))]
           (run! #(% obj tt) anims))))))
 
 (defn make-sprite-animator-factory [create-sprite proto]
