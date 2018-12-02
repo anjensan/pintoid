@@ -74,10 +74,10 @@
   ([n as]
    (fn [w & rs]
      (timbre/tracef "Spawn system %s" n)
-     (let [f (tufte/p [:run n] (apply as w rs))]
+     (let [f (tufte/p [:run-sys n] (apply as w rs))]
        (fn [w']
          (timbre/tracef "Fixup system %s" n)
-         (tufte/p [:fixup n] (f w'))
+         (tufte/p  [:fixup-sys n] (f w'))
          )))))
 
 (defn sys-developer-tools [w]
@@ -89,7 +89,7 @@
 
 (defn- sys-world-tick [w]
   (timbre/tracef "== Next world tick... ==")
-  (tufte/profile {:dynamic? true}
+  (tufte/profile {:dynamic? true, :level 4}
    (tufte/p :sys-world-tick
     (let [now (current-time w)
           [fork' join] (ecss/asys-fork-join)
@@ -145,7 +145,7 @@
          (< (v2/dist pos pp) max-dist))))))
 
 (defn dumpc [w c & rs]
-  (tufte/p [:dump c]
+  (tufte/p [:dump-component c]
    (m/domonad m/state-m [d (apply ecsd/dumpc w c rs)] (vec d))))
 
 (defn dumpp [w p c]
@@ -157,10 +157,8 @@
 
 (defn dump-the-world [w pid]
   (timbre/tracef "Dump world for player %s" pid)
-  (tufte/profile
-   {:dynamic? true}
-   (tufte/p
-    :dump-the-world
+  (tufte/profile {:dynamic? true, :level 3}
+   (tufte/p :dump-the-world
     (let [vf (comp (memoize (visible-by-player? w pid max-user-view-distance)) key)]
       (ecsd/dumps-map
        :self-player  (dump-self-player pid)

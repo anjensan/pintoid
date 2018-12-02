@@ -12,8 +12,7 @@
        :port 8080}
 
  :profile {:enabled true
-           :level 3
-           :period 10000
+           :period 30000
            :ns-pattern "*"}
 
  :log {:level :debug}
