@@ -7,16 +7,16 @@
    [pintoid.server.vec2 :as v2]
    [taoensso.timbre :as timbre]))
 
-(def engine-forward-force 0.08)
-(def engine-reverse-force 0.02)
+(def engine-forward-force 0.03)
+(def engine-reverse-force 0.01)
 (def engine-rotate-speed 0.21)
 (def spawn-bullet-distance 50)
 
-(def camera-scale-factor 0.8)
-(def camera-scale-vxy-pow -0.4)
+(def camera-scale-factor 0.85)
+(def camera-scale-vxy-pow -0.5)
 (def camera-scale-vxy-add 3)
-(def camera-scale-min 0.25)
-(def camera-scale-max 1.25)
+(def camera-scale-min 0.2)
+(def camera-scale-max 1.2)
 (def camera-scale-inertia 300)
 
 (defn search-new-player-pos [w eid]

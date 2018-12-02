@@ -5,7 +5,7 @@
    [pintoid.server.vec2 :as v2]
    [taoensso.timbre :as timbre]))
 
-(def gravity-g 0.00003)
+(def gravity-g 0.000005)
 (def gravity-mind 0.001)
 (def gravity-thau 1)
 
