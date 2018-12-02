@@ -69,15 +69,18 @@
 
 (defn get-sprite-factory [id]
   (cond
-    (as/asset-id? id) (if-let [x (as/asset :sprite id)]
-                    (:factory x)
-                    (do
-                      (timbre/warnf "Unknown sprite %s" id)
-                      empty-sprite-factory))
-    (map? id) (create-sprite-factory id)
-    :else (do
-            (timbre/warnf "Invalid sprite id %s" id)
-            empty-sprite-factory)))
+    (as/asset-id? id)
+    (if-let [x (as/asset :sprite id)]
+      (:factory x)
+      (do
+        (timbre/warnf "Unknown sprite %s" id)
+        empty-sprite-factory))
+    (map? id)
+    (create-sprite-factory id)
+    :else
+    (do
+      (timbre/warnf "Invalid sprite id %s" id)
+      empty-sprite-factory)))
 
 (defn get-sprite-spec [id]
   (cond

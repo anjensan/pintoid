@@ -59,6 +59,17 @@
     (swap! used-assets-by-sprite dissoc eid))
   (remove-entity-sprite e))
 
+(defn- do-update-entity-sprites [e1 e2]
+  (let [s1 (:sprites e1 {})
+        s2 (:sprites e2 {})
+        s1 (if (map? s1) s1 {nil s1})
+        s2 (if (map? s2) s2 {nil s2})
+        common (map key (filter #(= (val %) (get s1 (key %))) s2))
+        s1 (apply dissoc s1 common)
+        s2 (apply dissoc s2 common)]
+    (do-remove-entity-sprite (assoc e1 :sprites s1))
+    (do-add-entity-sprite (assoc e2 :sprites s2))))
+
 (defn handle-addrem-assets [w1 w2 wpatch]
   (when-let [eids (seq (sort (changed-eids w1 wpatch :asset)))]
     (let [ass (into (sorted-map) (map (fn [e] [e (:asset (entity w2 e))])) eids)
@@ -141,10 +152,11 @@
 
 (defn handle-add-sprites [w1 w2 wpatch]
   (foreach! [eid (changed-eids w1 wpatch :sprite)]
-    (let [e (entity w2 eid)
+    (let [e1 (entity w1 eid)
+          e2 (entity w2 eid)
           t2 (world-time w2)]
-      (when (:sprite e)
-        (al/action! t2 #(do-add-entity-sprite e))))))
+      (when (and (not (:sprite e1)) (:sprite e2))
+        (al/action! t2 #(do-add-entity-sprite e2))))))
 
 (defn handle-remove-sprites [w1 w2 wpatch]
   (foreach! [eid (changed-eids w1 wpatch :sprite)]
@@ -152,6 +164,14 @@
       (al/action!
        (world-time w2)
        #(do-remove-entity-sprite (entity w1 eid))))))
+
+(defn handle-update-sprites [w1 w2 wpatch]
+  (foreach! [eid (changed-eids w1 wpatch :sprite)]
+    (let [e1 (entity w1 eid)
+          e2 (entity w2 eid)
+          t2 (world-time w2)]
+      (when (and e1 e2)
+        (al/action! t2 #(do-update-entity-sprites e1 e2))))))
 
 (defn handle-addrem-sounds [w1 w2 wpatch]
   (foreach! [eid (changed-eids w1 wpatch :sound)]
@@ -182,6 +202,7 @@
     (doseq [f [
                handle-remove-sprites
                handle-addrem-assets
+               handle-update-sprites
                handle-add-sprites
                handle-sprites-movement
                handle-sprites-rotation
