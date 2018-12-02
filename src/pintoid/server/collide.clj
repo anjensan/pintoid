@@ -124,53 +124,15 @@
 
 ;; ===
 
-(defasset mbr-boxes-layer :layer
-  {:zorder 1000})
-
-(defn- mbr-sprite [w eid]
-  (let-entity w eid [p :position]
-    (let [[a1 a2] (mbr w eid)
-          {x1 :x y1 :y} (v2/v- a1 p)
-          {x2 :x y2 :y} (v2/v- a2 p)
-          cl (if (seq (get-comp w eid :collide-with))
-               0xff3333
-               0x22ff22)]
-      {:type :graphics
-       :layer mbr-boxes-layer
-       :angle 0
-       :do [['lineStyle 3 cl 0.75]
-            ['drawRect x1 y1 (- x2 x1) (- y2 y1)]
-            ['endFill]]})))
-
-(defn- add-mbr-sprite [s m]
-  (assoc (if (map? s) s {nil s}) ::mbr m))
-
-(defn asys-show-collision-mbrs [w show]
-  (if show
-    (comp
-     #(load-entity-from-var % #'mbr-boxes-layer)
-     (combine-systems
-      (each-entity w eid [_ :collide, p :position]
-        (let [ss (mbr-sprite w eid)]
-          (fn->
-           (put-comp eid ::show-mbr true)
-           (update-comp eid :sprite add-mbr-sprite ss))))))
-    (combine-systems
-     (each-entity w eid [_ ::show-mbr, s :sprite]
-       (when (::mbr s)
-         (fn-> (update-comp eid :sprite dissoc ::mbr)))))))
-
-;; ===
-
 (defmethod mbr :circle [w eid]
   (let-entity w eid [p :position, r :radius]
-              (let [rv (v2/vec2 r r)]
-                [(v2/v- p rv)
-                 (v2/v+ p rv)])))
+    (let [rv (v2/vec2 r r)]
+      [(v2/v- p rv)
+       (v2/v+ p rv)])))
 
 (defmethod collide? [:circle :circle] [w e1 e2]
   (let-entity w e1 [p1 :position, r1 :radius]
-              (let-entity w e2 [p2 :position, r2 :radius]
-                          (<= (v2/dist p1 p2) (+ r1 r2)))))
+    (let-entity w e2 [p2 :position, r2 :radius]
+      (<= (v2/dist p1 p2) (+ r1 r2)))))
 
 

@@ -7,7 +7,7 @@
    [pintoid.ecs.core :as ecs]
    [weasel.repl.websocket]
    [cider.piggieback]
-   [pintoid.server.collide]
+   [pintoid.server.devtools]
    )
   (:import
    java.net.InetAddress))
@@ -41,7 +41,7 @@
   ([q f]
    (let [es (get-entities q f)
          ks (transduce (map (comp set keys)) union #{} es)]
-     (pp/print-table (sort ks) es))))
+     (pp/print-table (sort (filter simple-keyword? ks)) es))))
 
 (defn players []
   (pp/print-table (get-players)))
@@ -54,7 +54,7 @@
 
 (defn show-mbrs
   ([] (show-mbrs true))
-  ([t] (swap! dev-asystems assoc :show-mbr #(pintoid.server.collide/asys-show-collision-mbrs % t))))
+  ([t] (swap! dev-asystems assoc :show-mbr #(pintoid.server.devtools/asys-show-collision-mbrs % t))))
 
 (defn into-world [vs]
   (send world into vs))
