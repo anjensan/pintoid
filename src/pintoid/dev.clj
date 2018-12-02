@@ -3,7 +3,7 @@
    [clojure.pprint :as pp]
    [clojure.set :refer [union]]
    [pintoid.server.cswiring :refer [avatars send-to-client]]
-   [pintoid.server.game :refer [world dev-asystems]]
+   [pintoid.server.game :refer [world dev-asystems time-speed]]
    [pintoid.ecs.core :as ecs]
    [pintoid.ecs.entity :as ecse]
    [weasel.repl.websocket]
@@ -90,6 +90,15 @@
        (apply weasel.repl.websocket/repl-env (mapcat identity opts)))
       (println "No user with pid" pid))))
 
-;; init
+(defn speed [s]
+  (assert (<= 0 s 10))
+  (reset! time-speed s))
+
+(defn pause []
+  (speed 0))
+
+(defn resume []
+  (speed 1))
+
 (do
   (auto-update-protos))

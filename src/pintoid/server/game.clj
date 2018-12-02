@@ -18,8 +18,8 @@
    ))
 
 (def dev-asystems (atom {}))
-
 (def max-user-view-distance 3000)
+(def time-speed (atom 1))
 
 (defstate last-stable-world
   :start (atom nil))
@@ -38,20 +38,13 @@
 
 (def ^:private time-eid (next-entity))
 
-(defn- world-time [w]
-  (w time-eid ::time))
-
-(defn- sys-attach-world-time [w now]
-  (timbre/tracef "Atatch time %s to world" now)
-  (add-entity w time-eid {::time now}))
-
 (defn- sys-fixate-world-state [w]
   (timbre/tracef "Fixate world state")
   (reset! last-stable-world w))
 
 (defn get-world []
   (let [w (or @last-stable-world @world)]
-    [(world-time w) w]))
+    [(:real (get-comp w time-eid ::time)) w]))
 
 (defn game-remove-player [eid]
   (timbre/debugf "Remove player %s" eid)
@@ -65,7 +58,7 @@
   (timbre/tracef "User input from %s: %s" eid user-input)
   (send world process-uinput eid user-input))
 
-(defn- current-time [w]
+(defn- current-real-time [w]
   (System/currentTimeMillis))
 
 (defn profile-asys
@@ -89,13 +82,17 @@
 
 (defn- sys-world-tick [w]
   (timbre/tracef "== Next world tick... ==")
-  (tufte/profile {:dynamic? true, :level 4}
-   (tufte/p :sys-world-tick
-    (let [now (current-time w)
+  (tufte/profile
+   {:dynamic? true, :level 4}
+   (tufte/p
+    :sys-world-tick
+    (let [{rnow' :real, now' :game, :or {rnow' 0 now' 0}} (get-comp w time-eid ::time)
+          rnow (current-real-time w)
+          now (+ now' (* @time-speed (- rnow rnow')))
           [fork' join] (ecss/asys-fork-join)
           fork (fn [w id as & rs] (apply fork' w id (profile-asys id as) rs))]
       (-> w
-          (sys-attach-world-time now)
+          (add-entity time-eid {::time {:real rnow, :game now}})
 
           (fork :collide #'asys-collide-entities)
           (fork :physics-vxy #'asys-physics-update-vxy now)
@@ -105,10 +102,8 @@
           (fork :handle-ui #'asys-change-engine-based-on-ui now)
           (fork :sounds #'asys-garbage-sounds now)
           (fork :kill-outdated #'asys-kill-outdated-entities now)
-          (fork :kill-out-of-gamefield #'asys-kill-entities-out-of-gamefield)
 
           (join :kill-outdated)
-          (join :kill-out-of-gamefield)
           (join :physics-move)
           (join :sounds)
           (join :handle-ui)
@@ -116,10 +111,12 @@
           (join :physics-vxy)
           (join :collide)
 
+          (fork :kill-out-of-gamefield #'asys-kill-entities-out-of-gamefield)
           (fork :kill-collided #'asys-kill-collided-entities)
           (fork :bullets #'asys-spawn-bullets now)
           (fork :camera #'asys-udpate-cameras now)
 
+          (join :kill-out-of-gamefield)
           (join :kill-collided)
           (join :bullets)
           (join :camera)
