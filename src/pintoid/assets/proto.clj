@@ -10,10 +10,10 @@
    :fog-of-war true
    :position position
    :fxy v2/zero
-   :mass 200
+   :mass 100
    :angle 0
-   :radius 30
    :collide :circle
+   :radius 20
    :sprite racket-red
    })
 
@@ -23,30 +23,30 @@
    :fxy v2/zero
    :phys-move true
    :fog-of-war true
-   :mass 100
+   :mass 3
    :angle 0
-   :radius 20
+   :radius 17
    :collide :circle
-   :bullet {:lifetime 5000
-            :cooldown 200
-            :velocity 1.0}
+   :bullet {:lifetime 8000
+            :cooldown 100
+            :velocity 0.75}
    })
 
 (defproto bullet-alt []
   {:type :bullet
-   :sprite bullet-sprite
+   :sprite bullet-alt-sprite
    :fxy (v2/vec2 0 0)
    :position (v2/vec2 0 0)
    :phys-move true
    :phys-act true
    :fog-of-war true
-   :mass 8000
+   :mass 100
    :angle 0
-   :radius 10
+   :radius 20
    :collide :circle
-   :bullet {:lifetime 10000
-            :cooldown 1200
-            :velocity 2.1}
+   :bullet {:lifetime 15000
+            :cooldown 800
+            :velocity 2.5}
    })
 
 (defproto star [& {:keys [position mass sprite radius]}]
@@ -76,8 +76,8 @@
   (assoc
    cm
    :type :asteroid
-   :mass 50
-   :radius 5
+   :mass 20
+   :radius 10
    :collide :circle
    :phys-move true
    :fog-of-war true
@@ -87,9 +87,10 @@
   (assoc
    cm
    :type :black
-   :mass 10000
    :phys-act true
    :fog-of-war true
+   :radius 1
+   :collide :circle
    :sprite blackhole-sprite
    :radius 2
    ))

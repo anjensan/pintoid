@@ -15,6 +15,18 @@
    :angle 0
    :style {"fill" "silver" "fontFamily" "Arial" "fontSize" "20px"}})
 
+(defn rotate [s period]
+  {:type :animator
+   :shift :random
+   :a-rotation {:kind :saw :period period :min 0 :max 6.3}
+   :child s})
+
+(defn pulsate [s period range]
+  {:type :animator
+   :shift :random
+   :a-scale {:kind :sin :period period :min (- 1 range) :max (+ 1 range)}
+   :child s})
+
 (defn- mkas [image & {:as opts}]
   (assoc opts :anchor [0.5 0.5] :texture (str "/img/" image)))
 
@@ -25,27 +37,52 @@
   (mkas "racket_red.png"))
 
 (defasset star1 :sprite
-  (mkas "star1.png"))
+  (->
+   (mkas "star1.png")
+   (rotate 25000)
+   (pulsate 9000 0.08)
+   ))
 
 (defasset star2 :sprite
-  (mkas "star2.png"))
+  (->
+   (mkas "star2.png")
+   (rotate 10000)
+   (pulsate 3000 0.01)
+   ))
 
 (defasset star3 :sprite
-  (mkas "star3.png"))
+  (->
+   (mkas "star3.png")
+   (rotate 100000)
+   (rotate 10000)
+   ))
+
+(defasset star4 :sprite
+  (->
+   (mkas "star4.png")
+   (rotate 100000)
+   (rotate 10000)
+   ))
 
 (defasset planet1 :sprite
-  (mkas "pink_planet1.png"))
+  (-> (mkas "pink_planet1.png")
+      (assoc :anchor [0.45 0.5])
+   ))
 
 (defasset planet2 :sprite
-  (mkas "green_planet1.png"))
+  (->
+   (mkas "green_planet1.png")
+   ))
 
 (defassets ast-static-sprites :sprite
-  [i (range 1 6)]
-  {:anchor [0.5 0.5], :texture (str "/img/ast" i ".png")})
+  [i (range 1 5)]
+  {:anchor [0.5 0.5]
+   :texture (str "/img/ast" i ".png")})
 
 (defassets ast-sprites :sprite
-  [x (range 1 30)]
+  [x (range 1 35)]
   {:type :animator
+   :scale 0.6
    :a-rotation {:kind :saw
                 :period (* (+ 0.1 (rand)) 10000)
                 :min 0
@@ -53,31 +90,40 @@
    :child (rand-nth ast-static-sprites)})
 
 (defasset bullet-texture :texture
-  {:image "/img/ast6.png"})
+  {:image "/img/bullet.png"})
+
+(defasset bullet-alt-texture :texture
+  {:image "/img/bullet-alt.png"})
 
 (defasset bullet-sprite :sprite
-  (letfn [(f [p] {:class :sprite
-                  :texture bullet-texture
-                  :anchor [0.5 0.5]
-                  :scale 0.4,
-                  :position p})]
-    {:type :animator
-     :shift :start
-     :a-rotation {:kind :saw :period 200 :min 0 :max 6.3}
-     :a-scale {:kind :sin :period 300 :min 0.2 :max 0.4}
-     :child [(f [0 30])
-             (f [-20 -8])
-             (f [20 -8])]}))
+  (->
+   {:texture bullet-texture
+    :anchor [0.5 0.5]
+    :alpha 0.8}
+   (pulsate 200 0.2)
+   (assoc :scale 0.9)
+   ))
+
+(defasset bullet-alt-sprite :sprite
+  (->
+   {:texture bullet-alt-texture
+    :anchor [0.5 0.5]
+    :alpha 0.9}
+   (pulsate 1222 0.5)
+   (pulsate 1333 0.5)
+   (pulsate 1700 0.5)
+   (assoc :scale 0.5)
+   ))
 
 (defasset blackhole-texture :texture
   {:image "/img/black1.png" :anchor [0.5 0.5]})
 
 (defasset blackhole-sprite :sprite
-  {:type :animator
-   :layer lstars1
-   :a-scale {:kind :sin :period 5000 :min 0.8 :max 1.2 :power 1.5}
-   :a-rotation {:kind :sin :period 3777 :min 0 :max 3.1415}
-   :child {:type :animator
-           :class :sprite
-           :a-rotation {:kind :saw :min 0 :max 314.1592 :period 10000}
-           :child {:class :sprite :texture "/img/black1.png" :anchor [0.5 0.5]}}})
+  (-> {:class :sprite :texture "/img/black1.png"}
+      (assoc :anchor [0.5 0.5])
+      (rotate 100)
+      (rotate 233)
+      (rotate 750)
+      (pulsate 500 0.3)
+      (assoc :layer lstars1)))
+
