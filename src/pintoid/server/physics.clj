@@ -129,4 +129,7 @@
           (when (> m 0)
             (let [fxy (v2/v+' (mt-gravity w eid mt) sfxy)
                   dvxy (v2/scale fxy (/ dt m))]
-              (fn-> (update-comp! eid :velocity v2/v+' dvxy))))))))))
+              (fn->
+               (put-comp! eid :force fxy)
+               (update-comp! eid :velocity v2/v+' dvxy)
+               )))))))))

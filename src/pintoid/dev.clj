@@ -5,9 +5,10 @@
    [pintoid.server.cswiring :refer [avatars send-to-client]]
    [pintoid.server.game :refer [world dev-asystems]]
    [pintoid.ecs.core :as ecs]
+   [pintoid.ecs.entity :as ecse]
    [weasel.repl.websocket]
    [cider.piggieback]
-   [pintoid.server.devtools]
+   [pintoid.server.devtools :as dt]
    )
   (:import
    java.net.InetAddress))
@@ -46,15 +47,22 @@
 (defn players []
   (pp/print-table (get-players)))
 
-(defn update-protos
-  ([] (update-protos true))
+(defn auto-update-protos
+  ([] (auto-update-protos true))
   ([t] (if t
-        (swap! dev-asystems assoc :update-protos #'pintoid.ecs.entity/asys-actualize-entity-protos)
-        (swap! dev-asystems dissoc :update-protos))))
+        (swap! dev-asystems assoc ::update-protos #'ecse/asys-actualize-entity-protos)
+        (swap! dev-asystems dissoc ::update-protos))
+   t))
 
-(defn show-mbrs
-  ([] (show-mbrs true))
-  ([t] (swap! dev-asystems assoc :show-mbr #(pintoid.server.devtools/asys-show-collision-mbrs % t))))
+(defn- make-show-fn [k asys]
+  (letfn [(show
+            ([] (show true))
+            ([t] (swap! dev-asystems assoc k #(asys % t)) t))]
+    show))
+
+(def show-mbr (make-show-fn ::mbr #'dt/asys-show-collision-mbrs))
+(def show-vxy (make-show-fn ::vxy #'dt/asys-show-velocity))
+(def show-fxy (make-show-fn ::fxy #'dt/asys-show-force))
 
 (defn into-world [vs]
   (send world into vs))

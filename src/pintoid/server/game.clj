@@ -80,14 +80,9 @@
          (tufte/p [:fixup n] (f w'))
          )))))
 
-(defn asys-fork-join []
-  (let [[fork' join] (ecss/asys-fork-join)
-        fork (fn [w id as & rs] (apply fork' w id (profile-asys as) rs))]
-    [fork join]))
-
 (defn sys-developer-tools [w]
   (let [ds @dev-asystems
-        [fork join] (asys-fork-join)]
+        [fork join] (ecss/asys-fork-join)]
     (as-> w w
       (reduce #(fork %1 (key %2) (val %2)) w ds)
       (reduce #(join %1 (key %2)) w ds))))
@@ -97,7 +92,8 @@
   (tufte/profile {:dynamic? true}
    (tufte/p :sys-world-tick
     (let [now (current-time w)
-          [fork join] (asys-fork-join)]
+          [fork' join] (ecss/asys-fork-join)
+          fork (fn [w id as & rs] (apply fork' w id (profile-asys id as) rs))]
       (-> w
           (sys-attach-world-time now)
 
