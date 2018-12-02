@@ -21,10 +21,14 @@
 
 (defn start-nrepl
   [{:keys [enabled bind port]
-    :or {enabled false bind "127.0.0.1" port 9891}}]
+    :or {enabled true
+         bind "127.0.0.1"
+         port 9891}}]
   (when enabled
     (timbre/infof "Start nrepl server at port %s" port)
-    (nrepl/start-server :bind bind :port port :init-ns 'pintoid.dev)))
+    (nrepl/start-server :bind bind
+                        :port port
+                        :greeting-fn (fn [_] (use 'pintoid.dev)))))
 
 (defn stop-nrepl [s]
   (when s

@@ -68,7 +68,10 @@
                                            :output-dir "target/resources/js"
                                            :pretty-print true
                                            }}}}
-    :repl-options {:nrepl-middleware [cider.piggieback/wrap-cljs-repl]}}
+    :repl-options {:host "127.0.0.1"
+                   :port 9891
+                   :init-ns 'pintoid.dev
+                   :nrepl-middleware [cider.piggieback/wrap-cljs-repl]}}
 
    :prod
    {:env-vars {:TIMBRE_LEVEL :info}

@@ -14,8 +14,11 @@
    java.net.InetAddress))
 
 (defn get-players []
-  (for [[eid ava] @avatars]
-    {:pid eid :host (:host ava)}))
+  (for [[eid ava] @avatars
+        :let [a @ava]]
+    (into
+     (array-map :pid eid :host (:host a))
+     (ecs/get-comp @world eid :player))))
 
 (defn get-entity [eid]
   (assoc (ecs/get-full-entity @world eid) :eid eid))
@@ -34,7 +37,7 @@
   (pp/pprint (get @avatars pid)))
 
 (defn entity [eid]
-  (pp/pprint (get-entity eid)))
+  (pp/pprint (into {} (filter (comp simple-keyword? key) (get-entity eid)))))
 
 (defn print-entities
   ([q]
@@ -86,3 +89,7 @@
       (cider.piggieback/cljs-repl
        (apply weasel.repl.websocket/repl-env (mapcat identity opts)))
       (println "No user with pid" pid))))
+
+;; init
+(do
+  (auto-update-protos))
