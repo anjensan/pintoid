@@ -1,7 +1,6 @@
 (ns pintoid.client.engine
   (:use [pintoid.client.ceh :only
          [entity
-          all-entities
           world-time
           changed-eids
           empty-world
@@ -198,7 +197,8 @@
 (declare handle-players-score)
 
 (defn update-world-snapshot! [wpatch]
-  (let [w1 @world, [w2 wpatch'] (apply-world-patch w1 wpatch)]
+  (let [w1 @world
+       w2 (apply-world-patch w1 wpatch)]
     (doseq [f [
                handle-remove-sprites
                handle-addrem-assets
