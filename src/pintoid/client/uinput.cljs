@@ -6,47 +6,59 @@
    [pintoid.client.utils :refer [point->vec]]
    [pintoid.client.engine :refer [world]]
    [pintoid.client.ceh :refer [player-entity]]
-   [clojure.set :refer [map-invert]]))
+   ))
 
 (def active-keys (atom #{}))
 
-(def key-to-keycode
-  {:space 32
-   :arrow-left 37
-   :arrow-right 39
-   :arrow-up 38
-   :arrow-down 40
-   :enter 13})
+(def keyname-to-key
+  {"ArrowLeft"  :arrow-left
+   "ArrowRight" :arrow-right
+   "ArrowUp"    :arrow-up
+   "ArrowDown"  :arrow-down
+   "Shift"      :shift
+   "Enter"      :enter
+   " "          :space
+   })
 
-(def keycode-to-key
-  (map-invert key-to-keycode))
+(def button-to-key
+  {0 :mouse-left
+   1 :mouse-middle
+   2 :mouse-right
+   })
 
 (defn handle-keypress [e]
-  (let [evt (or e (.event js/window))
-        key-code (or (.-keyCode evt) (.-which evt))
-        key (keycode-to-key key-code)
-        type (.-type e)]
-    (case type
+  (when-let [key (keyname-to-key (.-key e))]
+    (case (.-type e)
       "keydown" (swap! active-keys conj key)
-      "keyup" (swap! active-keys disj key))))
+      "keyup"   (swap! active-keys disj key))))
+
+(defn handle-mousepress [e]
+  (when-let [btn (button-to-key (.-button e))]
+    (case (.-type e)
+      "mousedown" (swap! active-keys conj btn)
+      "mouseup"   (swap! active-keys disj btn))))
 
 (defn init-user-input []
-  (.addEventListener js/window "keydown" handle-keypress false)
-  (.addEventListener js/window "keyup" handle-keypress false))
+  (let [ael #(.addEventListener js/window %1 %2 false)]
+    (ael "keydown" handle-keypress)
+    (ael "keyup" handle-keypress)
+    (ael "mousedown" handle-mousepress)
+    (ael "mouseup" handle-mousepress)
+    (ael "contextmenu" #(.preventDefault %)))
+  )
 
-(defn key-pressed? [key]
-  (@active-keys key))
-
-(defn- get-global-mouse []
-  (point->vec (.. pintoid.client.graphics/pixi-renderer -plugins -interaction -mouse -global)))
+(defn- get-game-mouse-pos []
+  (pintoid.client.layer/to-game-coords
+   (point->vec (.. pintoid.client.graphics/pixi-renderer
+                   -plugins -interaction -mouse -global))))
 
 (defn get-user-input-state []
-  (let [[mx my] (pintoid.client.layer/to-game-coords (get-global-mouse))
+  (let [[mx my] (get-game-mouse-pos)
         [px py] (:position (player-entity @world))
         a (js/Math.atan2 (- my py) (- mx px))
         ac @active-keys
         tc1 #(if (ac %1) %2 0)]
-    {:engine-dir (+ (tc1 :arrow-up 1) (tc1 :arrow-down -1))
+    {:engine-dir (+ (tc1 :space 1) (tc1 :shift -1))
      :rotate a
-     :fire? (ac :space)
-     :alt-fire? (ac :enter)}))
+     :fire?     (ac :mouse-left)
+     :alt-fire? (ac :mouse-right)}))
