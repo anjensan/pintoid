@@ -139,8 +139,8 @@
      (fn [a]
        (let [b (- 1 a)]
          (gl/set-viewport!
-          (+ (* a x1) (* b x2))
-          (+ (* a y1) (* b y2))
+          [(+ (* a x1) (* b x2))
+           (+ (* a y1) (* b y2))]
           (+ (* a s1) (* b s2)))
          true)))))
 

@@ -1,5 +1,12 @@
 (ns pintoid.client.uinput
-  (:use [clojure.set :only [map-invert]]))
+  (:require
+   [pintoid.client.graphics]
+   [pintoid.client.layer]
+   [taoensso.timbre :as timbre]
+   [pintoid.client.utils :refer [point->vec]]
+   [pintoid.client.engine :refer [world]]
+   [pintoid.client.ceh :refer [player-entity]]
+   [clojure.set :refer [map-invert]]))
 
 (def active-keys (atom #{}))
 
@@ -30,10 +37,16 @@
 (defn key-pressed? [key]
   (@active-keys key))
 
+(defn- get-global-mouse []
+  (point->vec (.. pintoid.client.graphics/pixi-renderer -plugins -interaction -mouse -global)))
+
 (defn get-user-input-state []
-  (let [ac @active-keys
+  (let [[mx my] (pintoid.client.layer/to-game-coords (get-global-mouse))
+        [px py] (:position (player-entity @world))
+        a (js/Math.atan2 (- my py) (- mx px))
+        ac @active-keys
         tc1 #(if (ac %1) %2 0)]
-    {:rotate-dir (+ (tc1 :arrow-left -1) (tc1 :arrow-right 1))
-     :engine-dir (+ (tc1 :arrow-up 1) (tc1 :arrow-down -1))
+    {:engine-dir (+ (tc1 :arrow-up 1) (tc1 :arrow-down -1))
+     :rotate a
      :fire? (ac :space)
      :alt-fire? (ac :enter)}))

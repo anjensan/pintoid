@@ -45,9 +45,8 @@
                           ui ::user-input
                           angle [:angle 0]
                           ]
-        (let [rd (:rotate-dir ui 0)
-              ed (:engine-dir ui)
-              angle' (+ angle (* rd engine-rotate-speed))
+        (let [ed (:engine-dir ui)
+              angle' (:rotate ui angle)
               ef (case ed -1 (- engine-reverse-force) 1 engine-forward-force 0)
               fxy (v2/from-polar ef angle')
               snd (if (= ed 0)

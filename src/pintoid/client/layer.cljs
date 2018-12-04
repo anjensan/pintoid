@@ -2,7 +2,7 @@
   (:require
    [cljsjs.pixi]
    [pintoid.client.asset :as as]
-   [pintoid.client.utils :refer [->point ->pair]]
+   [pintoid.client.utils :refer [->point ->pair point->vec]]
    [pintoid.client.animation :as a]
    [pintoid.client.animloop :as al]
    [taoensso.timbre :as timbre]))
@@ -75,11 +75,15 @@
     (set! (.. obj -scale -y) ssy)))
 
 (defn set-viewport!
-  ([x y s]
-   (set-viewport! x y s s))
-  ([x y sx sy]
-   (doseq [lid @layers]
-     (set-viewport-for-layer! (get-layer-asset lid) x y sx sy))))
+  ([xy s]
+   (let [[x y] (->pair xy)
+         [sx sy] (->pair s)]
+     (doseq [lid @layers]
+       (set-viewport-for-layer! (get-layer-asset lid) x y sx sy)))))
+
+(defn to-game-coords
+  ([xy] (to-game-coords xy nil))
+  ([xy layer] (point->vec (.toLocal (:pixi-obj (get-layer-asset layer)) (->point xy)))))
 
 (defn get-sprite-view-rect [sprite]
   (loop [s sprite]
