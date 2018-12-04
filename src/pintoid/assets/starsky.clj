@@ -8,7 +8,8 @@
           [0.85 -980]
           [0.95 -970]
           [1.15 100]]]
-  {:parallax p
+  {:preload true
+   :parallax p
    :scale-rate (/ (+ p 1) 2)
    :zorder z}
   )
@@ -30,15 +31,16 @@
    :texture t})
 
 (defassets starsky-tilemap-sprites :sprite
-  [[a s] [[0.7 0.5]
-          [0.85 0.75]
-          [0.95 1]
-          [0.30 1.8]]]
+  [[i a s] [[0 0.7 0.5]
+            [1 0.85 0.75]
+            [2 0.95 1]
+            [3 0.30 1.8]]]
   {:type :random-tilemap
    :hash-seed (hash [a s])
    :tile-size [512 512]
    :tile-advance 2
    :tile-group [4 4]
+   :layer (nth starsky-layers i)
    :alpha a
    :scale s
    :tiles starsky-titles})
@@ -53,7 +55,6 @@
   [[i x l] (map vector (range) starsky-tilemap-sprites starsky-layers)]
   {:type :static
    :position (v2/vec2 (* 97 i) (* 47 i))
-   :layer l
    :sprite {nil x}})
 
 (defentity static-circle
