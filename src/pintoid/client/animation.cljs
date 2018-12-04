@@ -2,7 +2,7 @@
   (:require
    [cljsjs.pixi]
    [pintoid.client.animloop :refer [action! animate!]]
-   [pintoid.client.utils :refer [pi2]])
+   [pintoid.client.utils :refer [pi pi2]])
   (:require-macros
    [taoensso.timbre :as timbre]
    [pintoid.client.macros :refer [defjsclass call-super]]))
@@ -65,7 +65,11 @@
     (timbre/trace "linear-rotate" obj t1 t2 angle1 angle2)
     (animate!
      t1 t2
-     (let [ai (mk-linear-interpolator t1 t2 angle1 angle2)]
+     (let [a1 (mod angle1 pi2)
+           a2 (mod angle2 pi2)
+           da (- a2 a1)
+           a1 (if (< da pi) a1 (+ a1 pi2))
+           ai (mk-linear-interpolator t1 t2 a1 a2)]
        (fn [t]
          (set! (.-rotation obj) (ai t))
          (< t t2))))))
