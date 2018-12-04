@@ -133,13 +133,14 @@
   (fn [s] [(when-not s {pid true}) true]))
 
 (defn- visible-by-player? [w pid max-dist]
-  (let-entity w pid [pp :position]
-    (fn [eid]
-      (let-entity w eid [fow [:fog-of-war false]
-                         pos :position]
-        (or
-         (not fow)
-         (< (v2/dist pos pp) max-dist))))))
+  (let [max-dist (double max-dist)]
+    (let-entity w pid [pp :position]
+      (fn [eid]
+        (let-entity w eid [fow [:fog-of-war false]
+                           pos :position]
+          (or
+           (not fow)
+           (< (v2/dist pos pp) max-dist)))))))
 
 (defn dumpc [w c & rs]
   (tufte/p [:dump-component c]
@@ -152,6 +153,14 @@
         [nil v]
         [{p v} v]))))
 
+(defn- round-float [^double d ^double m]
+  (-> d (* m) (+ 0.5) (long) (/ m)))
+
+(defn- to-rounded-pos [p]
+  (when p
+    [(-> p :x (round-float 100))
+     (-> p :y (round-float 100))]))
+
 (defn dump-the-world [w pid]
   (timbre/tracef "Dump world for player %s" pid)
   (tufte/profile {:dynamic? true, :level 3}
@@ -162,7 +171,7 @@
        :camera       (dumpp w pid :camera)
        :player       (dumpc w :player)
        :asset        (dumpc w :asset)
-       :position     (dumpc w :position, :filter vf, :map v2/to-vec)
+       :position     (dumpc w :position, :filter vf, :map to-rounded-pos)
        :position-tts (dumpc w :position-tts, :filter vf)
        :sprite       (dumpc w :sprite, :filter vf)
        :layer        (dumpc w :layer, :filter vf)
