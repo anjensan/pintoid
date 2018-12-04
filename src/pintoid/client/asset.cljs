@@ -4,7 +4,7 @@
   (:require-macros
    [pintoid.client.macros :refer [foreach!]]))
 
-(def preload-assets false)
+(def preload-all-assets false)
 
 (defrecord Asset [name class proto obj deps])
 
@@ -98,9 +98,10 @@
         (timbre/debug "Add asset" aid (:name proto))
         (swap! name-to-aids update (:name proto) (fnil conj []) aid)
         (swap! assets assoc aid (->Asset (:name proto) (:class proto) proto nil nil)))
-      (when preload-assets
-        (timbre/info "Preload assets...")
-        (run! asset ids)))
+      (timbre/info "Preload assets...")
+      (doseq [[aid proto] ass]
+        (when (or (:preload proto) preload-all-assets)
+          (asset aid))))
     @*updated-assets*))
 
 (defn add-asset [aid proto]
