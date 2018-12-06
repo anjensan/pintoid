@@ -7,7 +7,8 @@
    [aero.core :as aero]
    [taoensso.timbre :as timbre]
    [taoensso.tufte :as tufte]
-   [clojure.tools.nrepl.server :as nrepl]
+   [nrepl.server :as nrepl]
+   [cider.piggieback]
    [org.httpkit.server :as hkit])
   (:import
    [java.util.concurrent
@@ -26,9 +27,11 @@
          port 9891}}]
   (when enabled
     (timbre/infof "Start nrepl server at port %s" port)
-    (nrepl/start-server :bind bind
-                        :port port
-                        :greeting-fn (fn [_] (use 'pintoid.dev)))))
+    (nrepl/start-server
+     :bind bind
+     :port port
+     :handler (nrepl/default-handler #'cider.piggieback/wrap-cljs-repl)
+     )))
 
 (defn stop-nrepl [s]
   (when s

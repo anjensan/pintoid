@@ -8,7 +8,8 @@
                  [org.clojure/core.async "0.4.474"]
                  [org.clojure/data.int-map "0.2.4"]
                  [org.clojure/data.xml "0.2.0-alpha5"]
-                 [org.clojure/tools.nrepl "0.2.13"]
+                 [nrepl/nrepl "0.5.1"]
+                 [cider/piggieback "0.3.10"]
                  [cljsbuild/cljsbuild "1.1.7"]
                  [cljsjs/pixi "4.7.0-0"]
                  [cljsjs/howler "2.0.5-0"]
@@ -23,7 +24,6 @@
                  [mount/mount "0.1.14"]
                  [prismatic/dommy "1.1.0"]
                  [ring/ring-core "1.7.1"]
-                 [cider/piggieback "0.3.10"]
                  [aero/aero "1.1.3"]
                  [weasel/weasel "0.7.0"]
                  ]
@@ -61,18 +61,16 @@
                       :optimizations :whitespace
                       :main pintoid.client.core}}}}
 
+  :repl-options {:port 9891}
+
   :profiles
-  {:dev
+  {
+   :dev
    {:cljsbuild {:builds {:main {:compiler {:optimizations :whitespace
                                            :source-map "target/resources/js/pintoid.js.map"
                                            :output-dir "target/resources/js"
                                            :pretty-print true
-                                           }}}}
-    :repl-options {:host "127.0.0.1"
-                   :port 9891
-                   :init-ns 'pintoid.dev
-                   :nrepl-middleware [cider.piggieback/wrap-cljs-repl]}}
-
+                                           }}}}}
    :prod
    {:env-vars {:TIMBRE_LEVEL :info}
     :cljsbuild {:builds {:main {:jar true

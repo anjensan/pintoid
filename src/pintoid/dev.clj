@@ -7,8 +7,8 @@
    [pintoid.ecs.core :as ecs]
    [pintoid.ecs.entity :as ecse]
    [weasel.repl.websocket]
-   [cider.piggieback]
    [pintoid.server.devtools :as dt]
+   [cider.piggieback]
    )
   (:import
    java.net.InetAddress))
@@ -73,23 +73,6 @@
 (defn send-world [& rs]
   (apply send world rs))
 
-(defn- localhost-address []
-  (.getHostAddress (java.net.InetAddress/getLocalHost)))
-
-(defn client-repl [pid & {:keys [ip port] :as opts}]
-  (let [port (or port 9001)
-        ip (or ip (localhost-address))
-        ws-url (str "ws://" ip ":" port)
-        avatar (get @avatars pid)
-        connect-client #(send-to-client pid {:command :repl :ws-url ws-url})
-        opts (assoc opts
-                    :ip ip :port port
-                    :pre-connect connect-client)]
-    (if avatar
-      (cider.piggieback/cljs-repl
-       (apply weasel.repl.websocket/repl-env (mapcat identity opts)))
-      (println "No user with pid" pid))))
-
 (defn speed [s]
   (assert (<= 0 s 10))
   (reset! time-speed s))
@@ -99,6 +82,37 @@
 
 (defn resume []
   (speed 1))
+
+(defn- localhost-address []
+  (.getHostAddress (java.net.InetAddress/getLocalHost)))
+
+(defn client-repl-connect
+  [pid & {:keys [ip port] :as opts}]
+  (let [port (or port 9001)
+        ip (or ip (localhost-address))
+        ws-url (str "ws://" ip ":" port)]
+    (send-to-client pid {:command :repl :ws-url ws-url})
+    nil))
+
+(defn- find-single-pid []
+  (let [as @avatars]
+    (when (== 1 (count as)) (ffirst as))))
+
+(defn client-repl
+  [& {:keys [pid ip port] :as opts
+      :or {pid (find-single-pid)
+           ip (localhost-address)
+           port 9001}}]
+  (if-let [avatar (get @avatars pid)]
+    (let [ws-url (str "ws://" ip ":" port)
+          connect-client #(send-to-client pid {:command :repl :ws-url ws-url})
+          opts (assoc opts
+                      :ip ip
+                      :port port
+                      :pre-connect connect-client)
+          env (apply weasel.repl.websocket/repl-env (mapcat identity opts))]
+      (cider.piggieback/cljs-repl env))
+    (println "No user with pid" pid)))
 
 (do
   (auto-update-protos))
