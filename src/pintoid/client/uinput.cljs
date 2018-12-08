@@ -5,6 +5,7 @@
    [taoensso.timbre :as timbre]
    [pintoid.client.utils :refer [point->vec]]
    [pintoid.client.engine :refer [world]]
+   [pintoid.client.graphics :refer [get-sprite]]
    [pintoid.client.ceh :refer [player-entity]]
    ))
 
@@ -47,18 +48,20 @@
     (ael "contextmenu" #(.preventDefault %)))
   )
 
-(defn- get-game-mouse-pos []
-  (pintoid.client.layer/to-game-coords
-   (point->vec (.. pintoid.client.graphics/pixi-renderer
-                   -plugins -interaction -mouse -global))))
+(defn- get-real-mouse-pos []
+  (point->vec (.. pintoid.client.graphics/pixi-renderer
+                  -plugins -interaction -mouse -global)))
+
+(defn- get-player-angle []
+  (when-let [ps (get-sprite (:eid (player-entity @world)))]
+    (let [[px py] (point->vec (.-position ps))
+          [mx my] (pintoid.client.layer/to-game-coords (get-real-mouse-pos))]
+        (js/Math.atan2 (- my py) (- mx px)))))
 
 (defn get-user-input-state []
-  (let [[mx my] (get-game-mouse-pos)
-        [px py] (:position (player-entity @world))
-        a (js/Math.atan2 (- my py) (- mx px))
-        ac @active-keys
+  (let [ac @active-keys
         tc1 #(if (ac %1) %2 0)]
     {:engine-dir (+ (tc1 :space 1) (tc1 :shift -1))
-     :rotate a
+     :rotate (get-player-angle)
      :fire?     (ac :mouse-left)
      :alt-fire? (ac :mouse-right)}))

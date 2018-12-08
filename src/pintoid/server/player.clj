@@ -46,7 +46,7 @@
                           angle [:angle 0]
                           ]
         (let [ed (:engine-dir ui)
-              angle' (:rotate ui angle)
+              angle' (or (:rotate ui) angle)
               ef (case ed -1 (- engine-reverse-force) 1 engine-forward-force 0)
               fxy (v2/from-polar ef angle')
               snd (if (= ed 0)
